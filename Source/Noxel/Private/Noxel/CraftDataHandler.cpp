@@ -1,0 +1,669 @@
+//Copyright 2016-2020 Gabriel Zerbib (Moddingear). All rights reserved.
+
+#include "Noxel/CraftDataHandler.h"
+#include "Noxel.h"
+
+#include "Net/UnrealNetwork.h"
+
+#include "Noxel/NoxelDataComponent.h"
+#include "Noxel/NodesContainer.h"
+#include "Noxel/NoxelContainer.h"
+#include "Connectors/ConnectorBase.h"
+
+#include "NObjects/NoxelPart.h"
+#include "NObjects/NObjectInterface.h"
+#include "FunctionLibrary.h"
+#include "NoxelDataAsset.h"
+
+#include "JsonObjectConverter.h"
+
+//Initialization --------------------------------------------------------------------------------------------------------------------------------
+UCraftDataHandler::UCraftDataHandler()
+{
+	SetIsReplicatedByDefault(true);
+	SpawnContext = ECraftSpawnContext::None;
+	Scale = 10.0f;
+	static ConstructorHelpers::FObjectFinder<UDataTable> DataConstructor(OBJECTLIBRARY_PATH);
+	if(DataConstructor.Succeeded()){
+		DataTable = DataConstructor.Object;
+	}
+}
+
+void UCraftDataHandler::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const {
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+	// Here we list the variables we want to replicate + a condition if wanted
+	DOREPLIFETIME(UCraftDataHandler, Name);
+	DOREPLIFETIME(UCraftDataHandler, Scale);
+	DOREPLIFETIME(UCraftDataHandler, Components);
+}
+
+void UCraftDataHandler::BeginPlay(){
+	Super::BeginPlay();
+	//UE_LOG(Noxel, Log, TEXT("[UCraftDataHandler::BeginPlay] %s : %d components"), *GetFullName(), Components.Num());
+}
+
+void UCraftDataHandler::EndPlay(const EEndPlayReason::Type EndPlayReason) {
+	//kill all remaining components
+	destroyCraft();
+
+	Super::EndPlay(EndPlayReason);
+}
+
+TArray<AActor*> UCraftDataHandler::GetComponents()
+{
+	return Components;
+}
+
+TArray<ANoxelPart*> UCraftDataHandler::GetParts()
+{
+	TArray<ANoxelPart*> Parts;
+	for (AActor* Component : Components)
+	{
+		if ((ANoxelPart*)Component)
+		{
+			Parts.Add((ANoxelPart*)Component);
+		}
+	}
+	return Parts;
+}
+
+AActor* UCraftDataHandler::AddComponent(TSubclassOf<AActor> Class, FTransform Location, FActorSpawnParameters SpawnParameters, bool bSetSpawnContext, bool bFinishSpawning)
+{
+	if (!Class)
+	{
+		UE_LOG(Noxel, Error, TEXT("[UCraftDataHandler::AddComponent] Class is invalid"));
+		return nullptr;
+	}
+	//UE_LOG(Noxel, Log, TEXT("[UCraftDataHandler::AddComponent] Spawning actor"));
+	AActor* Spawned = GetWorld()->SpawnActorDeferred<AActor>(Class, Location, SpawnParameters.Owner, GetOwner()->GetInstigator(), SpawnParameters.SpawnCollisionHandlingOverride);
+#ifdef WITH_EDITOR
+	if (!Spawned->GetIsReplicated() || !Spawned->IsReplicatingMovement())
+	{
+		UE_LOG(Noxel, Error, TEXT("Class %s is not set to replicate correctly"), *Class->GetName());
+	}
+#endif // WITH_EDITOR
+
+	if (bSetSpawnContext)
+	{
+		TArray<UNoxelDataComponent*> containers;
+		Spawned->GetComponents<UNoxelDataComponent>(containers);
+		for (UNoxelDataComponent* container : containers)
+		{
+			container->SetSpawnContext(SpawnContext);
+			if (container->IsA<UNodesContainer>())
+			{
+				UNodesContainer* nc = ((UNodesContainer*)container);
+				/*if (!nc->NodeSizeAbsolute)
+				{
+					nc->SetNodeSize(Scale);
+				}*/
+			}
+		}
+		//UE_LOG(Noxel, Log, TEXT("[UCraftDataHandler::AddComponent] Setting Spawn context : %d containers found"), containers.Num());
+	}
+	if (bFinishSpawning)
+	{
+		//UE_LOG(Noxel, Log, TEXT("[UCraftDataHandler::AddComponent] Actor finished spawning"));
+		Spawned->FinishSpawning(Location);
+	}
+
+	//Spawned->AttachToActor(GetOwner(), FAttachmentTransformRules(EAttachmentRule::KeepWorld, false));
+	Components.Emplace(Spawned);
+	//UE_LOG(Noxel, Warning, TEXT("[UCraftDataHandler::AddComponent] Added one actor to the list : Length %d; Class %s"), Components.Num(), *Class->GetName());
+	return Spawned;
+}
+
+bool UCraftDataHandler::RemoveComponent(AActor * Component)
+{
+	if (GetWorld()->IsServer()) 
+	{
+		if (Components.Contains(Component))
+		{
+			Components.Remove(Component);
+			Component->Destroy();
+			return true;
+		}
+	}
+	return false;
+}
+
+//Saving and loading --------------------------------------------------------------------------------------------------------------------------------
+void UCraftDataHandler::destroyCraft()
+{
+	if(GetWorld()->IsServer())
+	{
+		for(int i = Components.Num()-1; i >= 0; i--)
+		{
+			AActor* comp = Components[i];
+			Components.RemoveAt(i);
+			comp->Destroy();
+		}
+	}
+}
+
+FCraftSave UCraftDataHandler::saveCraft()
+{
+	//UE_LOG(Noxel, Log, TEXT("[UCraftDataHandler::saveCraft] Starting save"));
+	//UE_LOG(Noxel, Log, TEXT("[UCraftDataHandler::saveCraft] %s : %d components"), *GetFullName(), Components.Num());
+	TArray<FComponentSave> SavedComponents;
+	TMap <FNodeID, FNodeSavedRedirector> redirmap;
+	for (int i = 0; i < Components.Num(); i++) //Save all the nodes first to first construct the redirector map
+	{
+		if(!Components[i]){
+			UE_LOG(NoxelData, Warning, TEXT("[UCraftDataHandler::saveCraft] Skipped an invalid component"));
+			continue;
+		}
+		SavedComponents.Add(FComponentSave(Components[i]));
+		SavedComponents[i].ComponentID = UNoxelDataAsset::getComponentIDFromClass(DataTable, Components[i]->GetClass());
+		TArray<UNodesContainer*> containers;
+		Components[i]->GetComponents<UNodesContainer>(containers);
+		for (int j = 0; j < containers.Num(); j++)
+		{
+			FNodesContainerSave cn;
+			saveNodesContainer(containers[j], i, j, cn, redirmap);
+			cn.ComponentName = containers[j]->GetName();
+			SavedComponents[i].SavedNodes.Add(cn);
+		}
+	}
+	
+	for (int i = 0; i < Components.Num(); i++)
+	{
+		if(!Components[i]){
+			continue;
+		}
+
+		//Savings noxels
+		TArray<UNoxelContainer*> containers;
+		Components[i]->GetComponents<UNoxelContainer>(containers);
+		for (int j = 0; j < containers.Num(); j++)
+		{
+			FNoxelContainerSave cn;
+			saveNoxelContainer(containers[j], redirmap, cn);
+			cn.ComponentName = containers[j]->GetName();
+			SavedComponents[i].SavedNoxels.Add(cn);
+		}
+
+		//Saving connectors
+		TArray<UConnectorBase*> connectors;
+		Components[i]->GetComponents<UConnectorBase>(connectors);
+		for (UConnectorBase* connector : connectors)
+		{
+			if (connector->bIsMale)
+			{
+				FConnectorSavedRedirector cn;
+				saveConnector(connector, Components, cn);
+				SavedComponents[i].SavedConnectors.Add(cn);
+			}
+		}
+
+		if (Components[i]->IsA<UNObjectInterface>())
+		{
+			INObjectInterface* ComponentInterface = (INObjectInterface*)Components[i];
+			SavedComponents[i].SavedMetadata = ComponentInterface->Execute_OnReadMetadata(Components[i]);
+		}
+	}
+
+	FCraftSave Craft = FCraftSave(Name, Scale);
+	Craft.Components = SavedComponents;
+	return Craft;
+}
+
+void UCraftDataHandler::loadCraft(FCraftSave Craft, FTransform transform)
+{
+	//UE_LOG(NoxelData, Warning, TEXT("[CraftDataHandler] Loading craft, spawn context : %s"), *UFunctionLibrary::GetEnumValueAsString<ECraftSpawnContext>(FString("ECraftSpawnContext"), SpawnContext));
+	if(!GetWorld()->IsServer()){
+		UE_LOG(NoxelData, Warning, TEXT("[CraftDataHandler] Loading aborted, client isn't server"));
+		return;
+	}
+	destroyCraft();
+
+	Name = Craft.CraftName;
+	Scale = Craft.CraftScale;
+
+	TMap<FNodeSavedRedirector, FNodeID> redirmap;
+
+	TArray<AActor*> tempcomp;
+	TArray<ANoxelPart*> Parts;
+	//Spawning components and setting nodes
+	for(int i = 0; i < Craft.Components.Num(); i++)
+	{
+		FComponentSave comp = Craft.Components[i];
+		TSubclassOf<AActor> compclass = UNoxelDataAsset::getClassFromComponentID(DataTable, comp.ComponentID);
+		if (!compclass) {
+			UE_LOG(NoxelData, Error, TEXT("[CraftDataHandler] Invalid class from component ID %s"), *comp.ComponentID);
+			continue;
+		}
+		FTransform savedTransform = comp.ComponentLocation;
+		savedTransform.SetScale3D(FVector::OneVector);
+		FTransform finalTransform = UKismetMathLibrary::ComposeTransforms(transform, savedTransform);
+
+		AActor* spawnactor = AddComponent(compclass, finalTransform, FActorSpawnParameters(), true, true); //Spawn part
+		tempcomp.Add(spawnactor);
+		if (spawnactor->IsA<ANoxelPart>())
+		{
+			Parts.Add((ANoxelPart*)spawnactor);
+		}
+		TArray<UNodesContainer*> containers;
+		spawnactor->GetComponents<UNodesContainer>(containers); 	//Get all nodes container
+
+		for(int j = 0; j < containers.Num(); j++)
+		{
+			for(int k = 0; k < comp.SavedNodes.Num(); k++)
+			{
+				if (comp.SavedNodes[k].ComponentName == containers[j]->GetName()) {				//Load if name matches the saved
+					FNodesContainerSave load = comp.SavedNodes[k];
+					loadNodesContainer(containers[j], i, k, load, redirmap);	
+					break;
+				}
+			}
+		}
+	}
+
+	
+	for (int i = 0; i < Craft.Components.Num(); i++)
+	{
+		FComponentSave comp = Craft.Components[i];
+		if (!tempcomp.IsValidIndex(i)) {
+			continue;
+		}
+		if (!tempcomp[i]) {
+			continue;
+		}
+
+		//Setting noxels
+		TArray<UNoxelContainer*> containers;
+		tempcomp[i]->GetComponents<UNoxelContainer>(containers); 								//Get all noxel container
+		for (int j = 0; j < containers.Num(); j++)
+		{
+			containers[j]->SetSpawnContext(SpawnContext);
+			for (int k = 0; k < comp.SavedNoxels.Num(); k++)
+			{
+				if (comp.SavedNoxels[k].ComponentName == containers[j]->GetName()) {			//Load if name matches the saved
+					loadNoxelContainer(containers[j], redirmap, comp.SavedNoxels[k]);
+					break;
+				}
+			}
+		}
+
+		//Setting connectors
+		TArray<UConnectorBase*> connectors;
+		tempcomp[i]->GetComponents<UConnectorBase>(connectors);
+		for (FConnectorSavedRedirector save : comp.SavedConnectors)
+		{
+			for (UConnectorBase* connector : connectors)
+			{
+				if (save.ConnectorName == connector->GetName())
+				{
+					loadConnector(connector, tempcomp, save);
+					break;
+				}
+			}
+		}
+
+		if (tempcomp[i]->IsA<UNObjectInterface>())
+		{
+			INObjectInterface* ComponentInterface = (INObjectInterface*)tempcomp[i];
+			ComponentInterface->OnWriteMetadata(comp.SavedMetadata);
+		}
+	}
+
+	for (ANoxelPart* Part : Parts)
+	{
+		for (UNodesContainer* connected : Part->GetNoxelContainer()->GetConnectedNodesContainers())
+		{
+			AActor* NObject = connected->GetOwner();
+			if (NObject != Part)
+			{
+				NObject->bNetUseOwnerRelevancy = true;
+				NObject->SetOwner(Part);
+			}
+		}
+	}
+
+	//UE_LOG(Noxel, Log, TEXT("[UCraftDataHandler::loadCraft] Broadcasting OnCraftLoadedEvent"));
+	if (OnCraftLoadedEvent.IsBound())
+	{
+		OnCraftLoadedEvent.Broadcast();
+	}
+	else 
+	{
+		UE_LOG(Noxel, Warning, TEXT("[UCraftDataHandler::loadCraft] OnCraftLoadedEvent not bound"));
+	}
+	//UE_LOG(Noxel, Log, TEXT("[UCraftDataHandler::loadCraft] %s : %d components"), *GetFullName(), Components.Num());
+}
+
+void UCraftDataHandler::enableCraft()
+{
+	UE_LOG(Noxel, Log, TEXT("[UCraftDataHandler::enableCraft]"));
+	TArray<ANoxelPart*> Parts;
+	for (AActor* NObject : Components) //Enable components
+	{
+		if (NObject->GetClass()->ImplementsInterface(UNObjectInterface::StaticClass()))
+		{
+			UE_LOG(Noxel, Log, TEXT("[UCraftDataHandler::enableCraft] Calling Enable on %s"), *NObject->GetName());
+			INObjectInterface::Execute_OnNObjectEnable(NObject, this);
+		}
+		if (NObject->IsA<ANoxelPart>())
+		{
+			Parts.Add((ANoxelPart*)NObject);
+		}
+	}
+
+	for (ANoxelPart* Part : Parts) //Attach components together
+	{
+		TArray<AActor*> AlreadyConnected = {Part};
+		for (UNodesContainer* NodeContainer : Part->GetNoxelContainer()->GetConnectedNodesContainers())
+		{
+			AActor* NObject = NodeContainer->GetOwner();
+			if (AlreadyConnected.Contains(NObject))
+			{
+				continue;
+			}
+			if (NObject->GetClass()->ImplementsInterface(UNObjectInterface::StaticClass()))
+			{
+				if (INObjectInterface::Execute_OnNObjectAttach(NObject, Part))
+				{
+					AlreadyConnected.Add(NObject);
+					continue;
+				}
+			}
+			NObject->AttachToActor(Part, FAttachmentTransformRules::KeepWorldTransform);
+			AlreadyConnected.Add(NObject);
+		}
+	}
+	for (AActor* NObject : Components)
+	{
+		if (NObject->GetAttachParentActor() == nullptr)
+		{
+			if (UPrimitiveComponent* rootPrimitive = (UPrimitiveComponent*)NObject->GetRootComponent())
+			{
+				if (URuntimeMeshComponent* rootRuntime = (URuntimeMeshComponent*)rootPrimitive)
+				{
+					//rootRuntime->CookCollisionNow();
+				}
+				rootPrimitive->SetSimulatePhysics(true);
+			}
+			/*else
+			{
+				UE_LOG(Noxel, Log, TEXT("[UCraftDataHandler::enableCraft] %s root is not a primitive"), *NObject->GetName());
+			}*/
+		}
+		/*else 
+		{
+			UE_LOG(Noxel, Log, TEXT("[UCraftDataHandler::enableCraft] %s is attached"), *NObject->GetName());
+		}*/
+	}
+}
+
+FNoxelNetwork UCraftDataHandler::saveNoxelNetwork(UNoxelContainer * noxel)
+{
+	FNoxelNetwork save;
+	save.Noxel = noxel; //Store ref to noxel
+	save.NodesConnected = noxel->GetConnectedNodesContainers(); //Store ref to nodes connected to the noxel
+	save.NodesSave.SetNum(save.NodesConnected.Num());
+	TMap <FNodeID, FNodeSavedRedirector> redirmap;
+	for (int i = 0; i < save.NodesConnected.Num(); i++)
+	{
+		saveNodesContainer(save.NodesConnected[i], 0, i, save.NodesSave[i], redirmap); //Save nodes
+	}
+	saveNoxelContainer(noxel, redirmap, save.NoxelSave); //Save noxel
+	return save;
+}
+
+bool UCraftDataHandler::loadNoxelNetwork(FNoxelNetwork save)
+{
+	TMap<FNodeSavedRedirector, FNodeID> redirmap;
+	for (UNodesContainer* Container : save.NodesConnected)
+	{
+		if (Container == nullptr)
+		{
+			return false;
+		}
+	}
+	for (int i = 0; i < save.NodesConnected.Num(); i++)
+	{
+		loadNodesContainer(save.NodesConnected[i], 0, i, save.NodesSave[i], redirmap); //Load nodes while building the redirmap like it was deconstructed
+	}
+	loadNoxelContainer(save.Noxel, redirmap, save.NoxelSave); //Load noxel
+	return true;
+}
+
+FNodesNetwork UCraftDataHandler::saveNodesNetwork(UNodesContainer * nodes)
+{
+	FNodesNetwork save;
+	save.Nodes = nodes;
+	TMap<FNodeID, FNodeSavedRedirector> RedirectorMap;
+	saveNodesContainer(nodes, 0, 0, save.NodesSave, RedirectorMap);
+	return save;
+}
+
+void UCraftDataHandler::loadNodesNetwork(FNodesNetwork save)
+{
+	TMap<FNodeSavedRedirector, FNodeID> RedirectorMap;
+	loadNodesContainer(save.Nodes, 0, 0, save.NodesSave, RedirectorMap);
+}
+
+FString UCraftDataHandler::getCraftSaveLocation()
+{
+	return FPaths::ConvertRelativePathToFull(FPaths::ProjectDir()) + TEXT("Crafts/");
+}
+
+TArray<FString> UCraftDataHandler::getSavedCrafts()
+{
+	IPlatformFile& PlatformFile = FPlatformFileManager::Get().GetPlatformFile();
+	if (PlatformFile.CreateDirectoryTree(*getCraftSaveLocation())) 
+	{
+		FJsonSerializableArray files;
+		PlatformFile.FindFiles(files, *getCraftSaveLocation(), TEXT(".json"));
+		return files;
+	}
+	return TArray<FString>();
+}
+
+bool UCraftDataHandler::getCraftSave(FString path, FCraftSave & Save)
+{
+	IPlatformFile& PlatformFile = FPlatformFileManager::Get().GetPlatformFile();
+	FString text;
+	if (FFileHelper::LoadFileToString(text, *path)) {
+		return FJsonObjectConverter::JsonObjectStringToUStruct<FCraftSave>(text, &Save, 0, 0);
+	}
+	return false;
+}
+
+void UCraftDataHandler::setCraftSave(FString path, FCraftSave Save)
+{
+	IPlatformFile& PlatformFile = FPlatformFileManager::Get().GetPlatformFile();
+	FString text;
+	FJsonObjectConverter::UStructToJsonObjectString<FCraftSave>(Save, text);
+	FFileHelper::SaveStringToFile(text, *path);
+}
+
+FCraftSave UCraftDataHandler::GetDefaultCraftSave()
+{
+	FCraftSave save;
+	save.CraftName = TEXT("");
+	FComponentSave comp;
+	comp.ComponentLocation = FTransform::Identity;
+	comp.ComponentID = TEXT("Part");
+	save.Components.Add(comp);
+	return save;
+}
+
+// Serialise to JSON text for debug ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+void UCraftDataHandler::nodeSaveToText(FNodesContainerSave SavedData)
+{
+	FString string;
+	FJsonObjectConverter::UStructToJsonObjectString<FNodesContainerSave>(SavedData, string);
+	UE_LOG(NoxelData, Warning, TEXT("%s"), *string);
+}
+
+void UCraftDataHandler::noxelSaveToText(FNoxelContainerSave SavedData)
+{
+	FString string;
+	FJsonObjectConverter::UStructToJsonObjectString<FNoxelContainerSave>(SavedData, string);
+	UE_LOG(NoxelData, Warning, TEXT("%s"), *string);
+}
+
+void UCraftDataHandler::noxelNetworkToText(FNoxelNetwork SavedData)
+{
+	FString string;
+	FJsonObjectConverter::UStructToJsonObjectString<FNoxelNetwork>(SavedData, string);
+	UE_LOG(NoxelData, Warning, TEXT("%s"), *string);
+}
+
+void UCraftDataHandler::craftSaveToText(FCraftSave save)
+{
+	FString string;
+	FJsonObjectConverter::UStructToJsonObjectString<FCraftSave>(save, string);
+	UE_LOG(NoxelData, Warning, TEXT("%s"), *string);
+}
+
+void UCraftDataHandler::OnRep_Components()
+{
+	OnComponentsReplicatedEvent.Broadcast();
+}
+
+// Loading and saving of specific nodes / noxels --------------------------------------------------------------------------------------------------------------------------------
+
+//Nodes ----------------------------------------------------------------
+void UCraftDataHandler::saveNodesContainer(UNodesContainer * NodesContainer, int32 parentIndex, int32 nodesContainerIndex, FNodesContainerSave & SavedData, TMap<FNodeID, FNodeSavedRedirector>& RedirectorMap)
+{
+	SavedData = FNodesContainerSave(NodesContainer->GetName(), NodesContainer->GetNodeSize());
+
+	TArray<FNodeID> Nodes = NodesContainer->GenerateNodesKeyArray();
+	for (int i = 0; i < Nodes.Num(); i++)
+	{
+		SavedData.Nodes.Add(Nodes[i].Location);
+		FNodeSavedRedirector redir = FNodeSavedRedirector(parentIndex, nodesContainerIndex, i);
+		RedirectorMap.Add(Nodes[i], redir);
+	}
+}
+
+bool UCraftDataHandler::loadNodesContainer(UNodesContainer * NodesContainer, int32 parentIndex, int32 nodesContainerIndex, FNodesContainerSave SavedData, TMap<FNodeSavedRedirector, FNodeID>& RedirectorMap)
+{
+	if (!NodesContainer)
+	{
+		return false;
+	}
+	if (NodesContainer->IsPlayerEditable()) {
+		//Remove all present nodes
+		TArray<FNodeID> oldnodes = NodesContainer->GenerateNodesKeyArray();
+		for (int i = 0; i > oldnodes.Num(); i++)
+		{
+			NodesContainer->RemoveNode(oldnodes[i]);
+		}
+		//UE_LOG(NoxelData, Log, TEXT("Loading with node size %f"), SavedData.NodeSize);
+		NodesContainer->SetNodeSize(SavedData.NodeSize);
+		//Add nodes from save and build redirector map
+		for (int i = 0; i < SavedData.Nodes.Num(); i++)
+		{
+			FNodeID newnode = FNodeID(NodesContainer, SavedData.Nodes[i]);
+			NodesContainer->AddNode(newnode);
+			RedirectorMap.Add(FNodeSavedRedirector(parentIndex, nodesContainerIndex, i), newnode);
+		}
+	}
+	else {
+		//Build redirector map by finding the nodes
+		for (int i = 0; i < SavedData.Nodes.Num(); i++)
+		{
+			FNodeID newnode;
+			if (NodesContainer->FindNode(SavedData.Nodes[i], newnode)) {
+				RedirectorMap.Add(FNodeSavedRedirector(parentIndex, nodesContainerIndex, i), newnode);
+			}
+		}
+	}
+	return true;
+}
+
+//Noxel ----------------------------------------------------------------
+void UCraftDataHandler::saveNoxelContainer(UNoxelContainer * NoxelContainer, TMap<FNodeID, FNodeSavedRedirector>& RedirectorMap, FNoxelContainerSave & SavedData)
+{
+	SavedData = FNoxelContainerSave(NoxelContainer->GetName());
+
+	TArray<FPanelData> Panels = NoxelContainer->GetPanels();
+	for (int i = 0; i < Panels.Num(); i++)
+	{
+		FPanelData data = Panels[i];
+		FPanelSavedData panel = FPanelSavedData(data);
+		for (FNodeID node : data.Nodes)
+		{
+			if (RedirectorMap.Contains(node)) {
+				panel.Nodes.Add(*RedirectorMap.Find(node));
+			}
+			else {
+				UE_LOG(NoxelData, Error, TEXT("Redirector map is missing a node"));
+			}
+		}
+		SavedData.Panels.Add(panel);
+	}
+}
+
+bool UCraftDataHandler::loadNoxelContainer(UNoxelContainer * NoxelContainer, TMap<FNodeSavedRedirector, FNodeID>& RedirectorMap, FNoxelContainerSave SavedData)
+{
+	if (!NoxelContainer)
+	{
+		return false;
+	}
+	//Delete all old panels
+	TArray<FPanelData> oldpanels = NoxelContainer->GetPanels();
+	for (int i = 0; i < oldpanels.Num(); i++)
+	{
+		NoxelContainer->RemovePanel(oldpanels[i].PanelIndex);
+	}
+
+	for (int i = 0; i < SavedData.Panels.Num(); i++)
+	{
+		//Rebuild the panel data
+		FPanelSavedData sdata = SavedData.Panels[i];
+		TArray<FNodeID> nodes;
+		for (int j = 0; j < sdata.Nodes.Num(); j++)
+		{
+			if (RedirectorMap.Contains(sdata.Nodes[j])) {
+				nodes.Add(*RedirectorMap.Find(sdata.Nodes[j]));
+			}
+		}
+		FPanelData data = FPanelData(nodes, sdata.ThicknessNormal, sdata.ThicknessAntiNormal, sdata.Virtual);
+
+		NoxelContainer->AddPanel(data);
+	}
+
+	return true;
+}
+
+//Connectors -----------------------------------------------------------
+void UCraftDataHandler::saveConnector(UConnectorBase * Connector, TArray<AActor*>& Components, FConnectorSavedRedirector & SavedData)
+{
+	if (!Connector->bIsMale)
+	{
+		return;
+	}
+	SavedData.ConnectorName = Connector->GetName();
+	SavedData.parentIndex.Empty(Connector->Connected.Num());
+	SavedData.OtherConnectorName.Empty(Connector->Connected.Num());
+	for (UConnectorBase* OtherConnector : Connector->Connected)
+	{
+		SavedData.parentIndex.Add(Components.Find(OtherConnector->GetOwner()));
+		SavedData.OtherConnectorName.Add(OtherConnector->GetName());
+	}
+}
+
+void UCraftDataHandler::loadConnector(UConnectorBase * Connector, TArray<AActor*>& Components, FConnectorSavedRedirector SavedData)
+{
+	for (int32 SaveIdx = 0; SaveIdx < SavedData.parentIndex.Num(); SaveIdx++)
+	{
+		AActor* Parent = Components[SavedData.parentIndex[SaveIdx]];
+		FString ConnectorName = SavedData.OtherConnectorName[SaveIdx];
+		TArray<UConnectorBase*> connectors;
+		Parent->GetComponents<UConnectorBase>(connectors);
+		for (UConnectorBase* OtherConnector : connectors)	
+		{
+			if (ConnectorName == OtherConnector->GetName())
+			{
+				Connector->Connect(OtherConnector);
+				break;
+			}
+		}
+	}
+}
+

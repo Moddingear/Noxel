@@ -1,0 +1,5 @@
+---,DisplayName,ComponentID,Class,ObjectType
+Part,"LOCTABLE(""/Game/_Blueprints/NObjects/NObjectsNameStringTable.NObjectsNameStringTable"", ""Part"")","Part","/Game/_Blueprints/NObjects/Part.Part_C","live_object"
+Server,"LOCTABLE(""/Game/_Blueprints/NObjects/NObjectsNameStringTable.NObjectsNameStringTable"", ""Server"")","Server","/Script/NObjects.Server","live_object"
+LaserCube,"LOCTABLE(""/Game/_Blueprints/NObjects/NObjectsNameStringTable.NObjectsNameStringTable"", ""LaserCube"")","LaserCube","/Game/_Blueprints/NObjects/LaserCube.LaserCube_C","live_object"
+NewRow,"LOCTABLE(""/Game/_Blueprints/NObjects/NObjectsNameStringTable.NObjectsNameStringTable"", ""EDF"")","EDF","/Script/NObjects.EDF","live_object"

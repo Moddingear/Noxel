@@ -1,0 +1,40 @@
+{
+	"colors": [
+		{
+			"name": "ENoxelColor::NodeInactive",
+			"hexColor": "02D856BF"
+		},
+		{
+			"name": "ENoxelColor::NodeFocus1",
+			"hexColor": "0000FFBF"
+		},
+		{
+			"name": "ENoxelColor::NodeFocus2",
+			"hexColor": "0060C4BF"
+		},
+		{
+			"name": "ENoxelColor::NodeSelected1",
+			"hexColor": "0200FFBF"
+		},
+		{
+			"name": "ENoxelColor::NodeSelected2",
+			"hexColor": "020099BF"
+		},
+		{
+			"name": "ENoxelColor::LineColor",
+			"hexColor": "FF8E00BF"
+		},
+		{
+			"name": "ENoxelColor::PlaneColor",
+			"hexColor": "0263517F"
+		},
+		{
+			"name": "ENoxelColor::MoveColor1",
+			"hexColor": "004FFF3F"
+		},
+		{
+			"name": "ENoxelColor::MoveColor2",
+			"hexColor": "00CCFF66"
+		}
+	]
+}

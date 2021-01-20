@@ -1,0 +1,62 @@
+//Copyright 2016-2020 Gabriel Zerbib (Moddingear). All rights reserved.
+#pragma once
+
+#include "CoreMinimal.h"
+#include "Macros/NoxelMacroBase.h"
+
+#include "NoxelDataAsset.h"
+#include "Noxel/NoxelNetworkingAgent.h"
+
+#include "M_ObjectPlacer.generated.h"
+
+/**
+ * 
+ */
+UCLASS(ClassGroup = "Noxel Macros")
+class NOXEL_API AM_ObjectPlacer : public ANoxelMacroBase
+{
+	GENERATED_BODY()
+	
+public:
+	AM_ObjectPlacer();
+
+protected:
+	// Called when the game starts
+	virtual void BeginPlay() override;
+
+	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
+
+public:
+	float placementDistance = 100.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Widgets")
+		TSubclassOf<class UUserWidget> wInventory;
+
+	UUserWidget* Inventory;
+
+	FObjectPermissionDelegate onObjectDelegate;
+
+	AActor* ObjectSpawned;
+
+	// Called every frame
+	virtual void Tick(float DeltaTime) override;
+
+	virtual void leftClickPressed_Implementation() override;
+
+	virtual void leftClickReleased_Implementation() override;
+
+	virtual void middleClickPressed_Implementation() override;
+
+	virtual void rightClickPressed_Implementation() override;
+
+	UFUNCTION(BlueprintCallable)
+	void ObjectSelected(FNoxelObjectData Object);
+
+	UFUNCTION(BlueprintCallable)
+	void NothingSelected();
+
+	UFUNCTION()
+	void onObjectCall(AActor* Actor);
+
+	FVector getObjectLocation();
+};
