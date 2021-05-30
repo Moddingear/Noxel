@@ -4,6 +4,7 @@
 #include "Noxel/NoxelCombatLibrary.h"
 #include "Noxel/NodesContainer.h"
 #include "EditorCharacter.h"
+#include "Noxel/NoxelNetworkingAgent.h"
 #include "Components/WidgetInteractionComponent.h"
 
 AM_Nodes::AM_Nodes() 
@@ -154,19 +155,22 @@ void AM_Nodes::leftClickPressed_Implementation()
 	{
 		if (!Alternate) { //Adding nodes or panels
 			if (selectedNodes.Num() < 3) { //If a panel can't be created
-				FNodeID id;
+				FNodeID id; //Add a node
 				id.Location = getNodePlacement(placementDistance, getSelectedNodesContainer());
 				id.Object = getSelectedNodesContainer();
-				//networkingAgent->AddNode(id);
+				FEditorQueue* queue = GetNoxelNetworkingAgent()->CreateEditorQueue();
+				queue->AddNodeReferenceOrder({id.Location}, id.Object);
+				queue->AddNodeAddOrder({0});
+				GetNoxelNetworkingAgent()->SendCommandQueue(queue, true);
 			}
-			else {
-				//networkingAgent->AddPanel(FPanelID(getSelectedNoxelContainer()), FPanelData(selectedNodes, 1.0f, false));
-				//if (getSelectedNoxelContainer()->Panels.Num() >= 2) {
-					//TArray<FPanelID> keys;
-					//getSelectedNoxelContainer()->Panels.GetKeys(keys);
-					//bool result = UNoxelCombatLibrary::isPanelConnected(keys[0], keys[keys.Num() - 1]);
-					//UE_LOG(NoxelMacro, Warning, TEXT("AStar : %s"), (result ? TEXT("True") : TEXT("False")));
-				//}
+			else { //Connect a panel
+				FEditorQueue* queue = GetNoxelNetworkingAgent()->CreateEditorQueue();
+				auto nodeMap = queue->CreateNodeReferenceOrdersFromNodeList(selectedNodes);
+				queue->AddPanelAddOrder(getSelectedNoxelContainer(), 10, 10, false);
+				TArray<int32> noderefs = queue->NodeListToNodeReferences(selectedNodes, nodeMap);
+				TArray<int32> panelrefs; panelrefs.Init(0, selectedNodes.Num());
+				queue->AddNodeConnectOrder(noderefs, panelrefs);
+				GetNoxelNetworkingAgent()->SendCommandQueue(queue, true);
 			}
 			resetNodesColor(); //Clear all selected node
 			selectedNodes.Empty();

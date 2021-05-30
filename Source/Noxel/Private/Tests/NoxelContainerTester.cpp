@@ -1,7 +1,10 @@
 // Copyright 2016-2020 Gabriel Zerbib (Moddingear). All rights reserved.
 
 
-#include "NoxelContainerTester.h"
+#include "Tests/NoxelContainerTester.h"
+
+#include "Noxel/NodesContainer.h"
+#include "Noxel/NoxelDataStructs.h"
 
 ANoxelContainerTester::ANoxelContainerTester()
 {

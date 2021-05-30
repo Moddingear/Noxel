@@ -86,12 +86,10 @@ public:
 	//Set the default configuration of nodes, use in constructor only
 	bool SetNodesDefault(TArray<FVector> InNodes, bool bInPlayerEditable);
 
-private:
 	bool AttachNode(FVector Location, FPanelID Panel);
 
 	bool DetachNode(FVector Location, FPanelID Panel);
 
-public:
 	//Does not allow removing a node that is connected to panels
 	bool RemoveNode(FVector Location);
 
@@ -105,16 +103,20 @@ public:
 
 	TArray<FNodeID> GenerateNodesKeyArray();
 
+	static bool GetNodeHit(FHitResult Hit, FNodeID& HitNode);
+
 private:
 	void MarkMeshDirty();
-
-	void UpdateMesh();
 
 	void AttachToNoxelContainer(UNoxelContainer* NoxelContainer);
 
 public:
-
+	
 	virtual void SetSpawnContext(ECraftSpawnContext Context) override;
+	//Always returns true : the Nodes container blocks directly on modification
+	virtual bool CheckDataValidity() override;
 
-	friend class UNoxelContainer; //Allow calls to AttachNode and DetachNode
+	virtual void UpdateMesh() override;
+
+	//friend class UNoxelContainer; //Allow calls to AttachNode and DetachNode
 };

@@ -2,20 +2,21 @@
 
 #include "Macros/NoxelMacroBase.h"
 
-#include "UObject/UnrealType.h"
+#include "CoreMinimal.h"
+
 
 #include "EditorCharacter.h"
-#include "NoxelPlayerController.h"
 #include "NoxelHangarBase.h"
 
 #include "Noxel/NoxelDataStructs.h"
 #include "Noxel/NodesContainer.h"
 #include "Noxel/NoxelContainer.h"
-#include "Noxel/NoxelCombatLibrary.h"
 
 #include "NObjects/NoxelPart.h"
 
 #include "Voxel/VoxelComponent.h"
+
+#include "Noxel.h"
 
 DEFINE_LOG_CATEGORY(NoxelMacro);
 
@@ -258,7 +259,7 @@ bool ANoxelMacroBase::tracePart(FVector start, FVector end, ANoxelPart* & Part)
 {
 	FHitResult hit;
 	if (GetWorld()->LineTraceSingleByChannel(hit, start, end, ECollisionChannel::ECC_GameTraceChannel1)) { //If something was hit in noxel collision channel
-		if (hit.Actor->GetClass()->IsChildOf<ANoxelPart>()) {
+		if (hit.Actor->IsA<ANoxelPart>()) {
 			Part = Cast<ANoxelPart>(hit.Actor.Get());
 			return true;
 		}
@@ -270,12 +271,12 @@ bool ANoxelMacroBase::traceNodes(FVector start, FVector end, FNodeID & id)
 {
 	FHitResult hit;
 	if (GetWorld()->LineTraceSingleByChannel(hit, start, end, ECollisionChannel::ECC_GameTraceChannel1, UNoxelLibrary::getCollisionParameters())) { //If something was hit in noxel collision channel
-		FNodeID node;
-		/*if (UNoxelLibrary::GetNodeHit(hit, node)) {
+		FNodeID node; //TODO
+		if (UNodesContainer::GetNodeHit(hit, node)) {
 			id = node;
 			//UE_LOG(NoxelMacro, Warning, TEXT("Node was hit : %s"), *id.Location.ToString());
 			return true;
-		}*/
+		}
 	}
 	return false;
 }
@@ -284,7 +285,7 @@ bool ANoxelMacroBase::tracePanels(FVector start, FVector end, FPanelID & id)
 {
 	FHitResult hit;
 	if (GetWorld()->LineTraceSingleByChannel(hit, start, end, ECollisionChannel::ECC_GameTraceChannel1, UNoxelLibrary::getCollisionParameters())) { //If something was hit in noxel collision channel
-		//return UNoxelLibrary::GetPanelHit(hit, id);
+		return UNoxelContainer::GetPanelHit(hit, id);
 	}
 	return false;
 }

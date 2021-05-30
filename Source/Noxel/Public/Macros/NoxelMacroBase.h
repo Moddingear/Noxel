@@ -147,6 +147,7 @@ public:
 	UFUNCTION(BlueprintCallable)
 	bool tracePart(FVector start, FVector end, ANoxelPart* & Part);
 
+	UFUNCTION(BlueprintCallable)
 	bool traceNodes(FVector start, FVector end, FNodeID& id);
 
 	UFUNCTION(BlueprintCallable)

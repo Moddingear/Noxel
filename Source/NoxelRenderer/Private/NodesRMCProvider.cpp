@@ -67,7 +67,8 @@ void UNodesRMCProvider::SetNodesMaterial(UMaterialInterface* InNodesMaterial)
 bool UNodesRMCProvider::GetHitNodeIndex(int32 faceIndex, int32 & HitNode)
 {
 	FScopeLock Lock(&PropertySyncRoot);
-	return faceIndex / StaticMeshCollidable.Triangles.Num();
+	HitNode = faceIndex / StaticMeshCollidable.Triangles.Num();
+	return Nodes.IsValidIndex(HitNode);
 }
 
 
@@ -85,7 +86,7 @@ void UNodesRMCProvider::Initialize()
 	Properties.bCastsShadow = true;
 	Properties.bIsVisible = true;
 	Properties.MaterialSlot = 0;
-	Properties.UpdateFrequency = ERuntimeMeshUpdateFrequency::Infrequent;
+	Properties.UpdateFrequency = ERuntimeMeshUpdateFrequency::Frequent;
 	CreateSection(0, 0, Properties);
 
 	MarkAllLODsDirty();

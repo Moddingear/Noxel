@@ -7,6 +7,7 @@ public class NoxelEditorTarget : TargetRules
 {
 	public NoxelEditorTarget(TargetInfo Target) : base(Target)
     {
+	    DefaultBuildSettings = BuildSettingsVersion.V2;
 		Type = TargetType.Editor;
         ExtraModuleNames.Add("Noxel");
         ExtraModuleNames.Add("NObjects");

@@ -34,24 +34,57 @@ private:
 
 	TArray<UNodesContainer*> ConnectedNodesContainers; //Used for networking, automatically populated by the nodes container, though unlikely to run out
 
-private:
-
 	UNoxelRMCProvider* NoxelProvider;
 
 	TArray<int32> UnusedIndices; //Reuse PanelIndex indices when they got deleted
 	int32 MaxIndex; //Maximum given index, to use when UnusedIndices is empty
 
-	//OutPanels is an array of PanelIndex
+	TArray<int32> ModifiedPanels;
+
+	TArray<int32> DifferedPanels;
+
+	//OutPanels is an array of PanelIndex, outOccurences is the number of nodes this panel shares with this collection,
+	//OutNodesAttachedBy are the nodes shared, IgnoreFilter is an array of PanelIndex to ignore
 	bool FindPanelsByNodes(TArray<FNodeID>& Nodes, TArray<int32>& OutPanels, TArray<int32>& OutOccurences,
-		TArray<TArray<FNodeID>>& OutNodesAttachedBy);
+		TArray<TArray<FNodeID>>& OutNodesAttachedBy, TArray<int32> IgnoreFilter);
 
 	//Gives the index in Panels of the panel with the wanted PanelIndex
 	bool GetIndexOfPanelByPanelIndex(int32 PanelIndex, int32& OutIndexInArray);
 
+private:
+	
+	bool IsPanelValid(FPanelData &data);
+
+	//Checks panel validity and outputs intermediate adjacency computations
+	bool IsPanelValid(FPanelData &data, TArray<int32> &AdjacentPanels,TArray<int32> &Occurrences, TArray<TArray<FNodeID>> &NodesAttachedBy);
+
+	//Fits a plane, reorder nodes and computes area
+	void ComputePanelGeometricData(FPanelData &data);
+
+	//Fills the adjacent panels information from given adjacency computations
+	void GetAdjacentPanelsFromNodes(FPanelData &data, const TArray<int32> &AdjacentPanels, const TArray<int32> &Occurrences, const TArray<TArray<FNodeID>> &NodesAttachedBy);
+
+	//Pops an unused index or gives a new one
+	int32 GetNewPanelIndex();
+
 public:
+	//Allocates a panel for use with differing functions
+	bool AddPanelDiffered(FPanelData data, int32& Index);
+	//Checks the panel for validity
+	bool FinishAddPanel(int32 Index);
+
+	//Connect a node to a panel, checks that the NodeContainer can
+	bool ConnectNodeDiffered(int32 Index, FNodeID Node);
+
+	//disconnects a node from a panel
+	bool DisconnectNodeDiffered(int32 Index, FNodeID Node);
+
+	//Removes a panel, only works if the panel is already disconnected
+	bool RemovePanelDiffered(int32 Index);
+
 	UFUNCTION(BlueprintCallable)
 	bool AddPanel(FPanelData data);
-
+	
 	UFUNCTION(BlueprintCallable)
 	bool RemovePanel(int32 index);
 
@@ -65,17 +98,26 @@ public:
 	UFUNCTION(BlueprintPure)
 	TArray<FPanelData> GetPanels();
 
-	UFUNCTION(BlueprintCallable)
 	bool getPanelHit(FHitResult hit, FPanelID& PanelHit);
+
+	UFUNCTION(BlueprintCallable)
+	static bool GetPanelHit(FHitResult hit, FPanelID& PanelHit);
 
 	UFUNCTION(BlueprintPure)
 	TArray<UNodesContainer*> GetConnectedNodesContainers();
 
 	void Empty();
 
+	
+
 private:
 	void UpdateProviderData();
 
 public:
+
+	virtual bool CheckDataValidity() override;
+
+	virtual void UpdateMesh() override;
+	
 	friend class UNodesContainer;
 };

@@ -25,3 +25,12 @@ void UNoxelDataComponent::SetSpawnContext(ECraftSpawnContext Context)
 		}
 	}
 }
+
+bool UNoxelDataComponent::CheckDataValidity()
+{
+	return true;
+}
+
+void UNoxelDataComponent::UpdateMesh()
+{
+}

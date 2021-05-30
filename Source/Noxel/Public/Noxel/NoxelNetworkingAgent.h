@@ -11,6 +11,7 @@
 #include "NodesContainer.h"
 #include "NoxelContainer.h"
 #include "CraftDataHandler.h"
+#include "EditorCommandQueue.h"
 #include "Voxel/VoxelComponent.h"
 
 #include "Connectors/ConnectorBase.h"
@@ -18,21 +19,7 @@
 #include "Components/ActorComponent.h"
 #include "NoxelNetworkingAgent.generated.h"
 
-UENUM()
-enum class ENodeOperation : uint8
-{
-	Add 				UMETA(DisplayName = "Add Node"),
-	Move 				UMETA(DisplayName = "Move Node"),
-	Remove 				UMETA(DisplayName = "Remove Node")
-};
-
-UENUM()
-enum class EPanelOperation : uint8
-{
-	Add 				UMETA(DisplayName = "Add Panel"),
-	Edit 				UMETA(DisplayName = "Edit Panel"),
-	Remove 				UMETA(DisplayName = "Remove Panel")
-};
+#define NOXELEDITORQUEUEBUFFERLENGTH 256
 
 UENUM()
 enum class EVoxelOperation : uint8
@@ -72,11 +59,35 @@ protected:
 	TMap<FDateTime, FObjectPermissionDelegate> ObjectCallbacks;
 	TMap<int32, FObjectPermissionDelegate> ObjectsWaiting;
 
+	TArray<int32> QueuesWaiting;
+
+	TArray<FEditorQueue*, TInlineAllocator<NOXELEDITORQUEUEBUFFERLENGTH>> QueuesBuffer;
+	
+	int32 NextQueueIndex = 0;
+
 public:	
 
 	// Called every frame
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
 
+	FEditorQueue* CreateEditorQueue();
+	//client executes the queue, if valid sends gives it an ID and sends it 
+	void SendCommandQueue(FEditorQueue* Queue, bool ShouldExecute);
+
+private:
+	//Send to server to check
+	UFUNCTION(Server, Reliable, WithValidation)
+	void ServerReceiveCommandQueue(FEditorQueueNetworkable Networkable, bool ShouldExecute);
+
+	//Replicate to other players
+	UFUNCTION(NetMulticast, Reliable)
+	void ClientsReceiveCommandQueue(FEditorQueueNetworkable Networkable, bool ShouldExecute);
+
+	//Client was wrong, should undo
+	UFUNCTION(Client, Reliable)
+	void ClientRectifyCommandQueue(FEditorQueueNetworkable Networkable, bool ShouldExecute);
+	
+public:
 	UFUNCTION(BlueprintCallable)
 		void AddBlock(UVoxelComponent* Container, FIntVector Location);
 

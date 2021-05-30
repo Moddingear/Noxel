@@ -3,24 +3,33 @@
 #pragma once
 
 #include "CoreMinimal.h"
+
 #include "Noxel/NoxelDataStructs.h"
 
 #include "EditorCommandQueue.generated.h"
+
+DECLARE_LOG_CATEGORY_EXTERN(LogEditorCommandQueue, Log, All);
 
 UENUM()
 enum class EEditorQueueOrderType : uint8
 {
 	None				UMETA(DisplayName = "None"),
+	NodeReference		UMETA(DisplayName = "Reference Nodes"),
 	NodeAdd 			UMETA(DisplayName = "Add Node"), //Elementary actions
 	NodeRemove 			UMETA(DisplayName = "Remove Node"),
-	PanelAdd			UMETA(DisplayName = "Add Node"),
-	PanelRemove 		UMETA(DisplayName = "Remove Node"),
-	NodeMove			UMETA(DisplayName = "Move Node"), //Derived actions
-	PanelMove 			UMETA(DisplayName = "Move Panel"),
-	PanelThickness 		UMETA(DisplayName = "Change Panel Thickness"),
-	PanelVirtual 		UMETA(DisplayName = "Change Panel Virtuality")
+	NodeConnect			UMETA(DisplayName = "Connect Node"),
+	NodeDisconnect 		UMETA(DisplayName = "Disconnect Node"),
+	PanelReference		UMETA(DisplayName = "Reference Panels"),
+	PanelAdd			UMETA(DisplayName = "Add Panel"),
+	PanelRemove 		UMETA(DisplayName = "Remove Panel"),
+	PanelProperties 	UMETA(DisplayName = "Change Panel Properties"),
+	ObjectAdd			UMETA(DisplayName = "Add Object"), //TODO
+	ObjectRemove		UMETA(DisplayName = "Remove Object"),
+	ConnectorConnect	UMETA(DisplayName = "Connect Connector"), //TODO
+	ConnectorDisconnect	UMETA(DisplayName = "Disconnect Connector")
 };
 
+class UNoxelDataComponent;
 class UEditorCommandQueue;
 class UNodesContainer;
 class UNoxelContainer;
@@ -28,6 +37,7 @@ class UNoxelContainer;
 struct FEditorQueueOrderNetworkable;
 struct FEditorQueueNetworkable;
 struct FEditorQueueOrderTemplate;
+struct FEditorQueue;
 
 USTRUCT()
 struct NOXEL_API FEditorQueueOrderNetworkable
@@ -38,58 +48,66 @@ struct NOXEL_API FEditorQueueOrderNetworkable
 	EEditorQueueOrderType OrderType;
 
 	UPROPERTY()
-	TArray<int32> intArgs;
-
-	UPROPERTY()
-	TArray<float> floatArgs;
-
-	UPROPERTY()
-	TArray<UObject*> ptrArgs;
+	TArray<int32> Args;
 
 	FEditorQueueOrderNetworkable()
 		:OrderType(EEditorQueueOrderType::None),
-		intArgs(),
-		floatArgs(),
-		ptrArgs()
+		Args()
 	{}
 
 	FEditorQueueOrderNetworkable(const EEditorQueueOrderType InType)
 		:OrderType(InType)
 	{}
 
-	FEditorQueueOrderNetworkable(const EEditorQueueOrderType InType, const TArray<int32>& InIntArgs, const TArray<float>& InFloatArgs, const TArray<UObject*>& InPtrArgs)
+	FEditorQueueOrderNetworkable(const EEditorQueueOrderType InType, const TArray<int32>& InArgs)
 		:OrderType(InType),
-		intArgs(InIntArgs),
-		floatArgs(InFloatArgs),
-		ptrArgs(InPtrArgs)
+		Args(InArgs)
 	{}
+
+	void AddFloat(float InFloat)
+	{
+		int32 i = *reinterpret_cast<int32*>(&InFloat);
+		Args.Add(i);
+	}
+
+	float GetFloat(int32 index)
+	{
+		int32 i = Args[index];
+		return *reinterpret_cast<float*>(&i);
+	}
+
+	float PopFloat()
+	{
+		int32 i = Args.Pop();
+		return *reinterpret_cast<float*>(&i);
+	}
 
 	void AddVector(FVector InVector)
 	{
-		floatArgs.Append({ InVector.X, InVector.Y, InVector.Z });
+		AddFloat(InVector.X);
+		AddFloat(InVector.Y);
+		AddFloat(InVector.Z);
 	}
 
 	FVector PopVector()
 	{
 		FVector vec;
-		vec.Z = floatArgs.Pop();
-		vec.Y = floatArgs.Pop();
-		vec.X = floatArgs.Pop();
+		vec.Z = PopFloat();
+		vec.Y = PopFloat();
+		vec.X = PopFloat();
 		return vec;
 	}
 
-	void AddNode(FNodeID Node)
+	void AddNode(FVector Location, int32 ObjectPtrIdx)
 	{
-		AddVector(Node.Location);
-		ptrArgs.Add(Cast<UObject>(Node.Object));
+		AddVector(Location);
+		Args.Add(ObjectPtrIdx);
 	}
 
-	FNodeID PopNode()
+	void PopNode(FVector& Location, int32& ObjectPtrIdx)
 	{
-		FNodeID node = FNodeID();
-		node.Location = PopVector();
-		node.Object = Cast<UNodesContainer>(ptrArgs.Pop());
-		return node;
+		ObjectPtrIdx = Args.Pop();
+		Location = PopVector();
 	}
 };
 
@@ -98,22 +116,66 @@ struct NOXEL_API FEditorQueueNetworkable
 {
 	GENERATED_BODY()
 
+	int32 OrderNumber;
+
+	UPROPERTY()
+	TArray<UObject*> Pointers;
+	
 	UPROPERTY()
 	TArray<FEditorQueueOrderNetworkable> Orders;
 
 	FEditorQueueNetworkable()
-		:Orders()
+		:OrderNumber(-1)
 	{}
 
-	void AddOrder(FEditorQueueOrderTemplate* Order);
-	static bool OrderFromNetworkable(FEditorQueueOrderNetworkable Networkable, FEditorQueueOrderTemplate* OutOrder);
+	int32 AddPointer(UObject* InPtr);
+	UObject* GetPointer(int32 InIndex);
 
-	void AddNodeAddOrder(FNodeID NodeToAdd);
-	void AddNodeRemoveOrder(FNodeID NodeToRemove);
-
-	void AddPanelAddOrder(UNoxelContainer* InObject, const TArray<FNodeID> &InNodes,
-		const float InThicknessNormal, const float InThicknessAntiNormal, const bool InVirtual);
+	//Decodes the instruction from a networkable, allocates inherited structs
+	bool OrderFromNetworkable(int32 OrderIndex, FEditorQueueOrderTemplate** OutOrder);
+	//Decodes all of the instructions, allocates space
+	bool DecodeQueue(FEditorQueue** Decoded);
 };
+
+struct NOXEL_API FEditorQueue
+{
+	TArray<FEditorQueueOrderTemplate*> Orders;
+
+	TArray<FNodeID> NodeReferences;
+	TArray<FPanelID> PanelReferences;
+
+	int32 OrderNumber;
+
+	FEditorQueue()
+		:OrderNumber(-1)
+	{}
+
+	~FEditorQueue();
+
+	bool RunQueue(bool bShouldExecute);
+	//Decodes then executes queue. If fail at some points, undoes
+	bool ExecuteQueue();
+	//Decodes then calls undo on queue. If fail at some point, redoes
+	bool UndoQueue();
+
+	void AddNodeReferenceOrder(TArray<FVector> Locations, UNodesContainer* Container);
+
+	TMap<FNodeID, int32> CreateNodeReferenceOrdersFromNodeList(TArray<FNodeID> Nodes);
+
+	static TArray<int32> NodeListToNodeReferences(TArray<FNodeID> Nodes, TMap<FNodeID, int32> NodeMap);
+
+	void AddNodeAddOrder(TArray<int32> NodeToAdd);
+	void AddNodeRemoveOrder(TArray<int32> NodeToRemove);
+
+	void AddPanelAddOrder(UNoxelContainer* InObject,
+		const float InThicknessNormal, const float InThicknessAntiNormal, const bool InVirtual);
+
+	void AddNodeConnectOrder(TArray<int32> Nodes, TArray<int32> Panels);
+
+	bool ToNetworkable(FEditorQueueNetworkable& Networkable);
+};
+
+
 
 struct NOXEL_API FEditorQueueOrderTemplate
 {
@@ -127,126 +189,187 @@ struct NOXEL_API FEditorQueueOrderTemplate
 		: OrderType(InOrderType)
 	{}
 
-	virtual bool ExecuteOrder(const TArray<FEditorQueueOrderTemplate*> &OrderList) //66
+	virtual bool ExecuteOrder(FEditorQueue* Parent) //66
 	{
 		return false;
 	};
 
-	virtual bool UndoOrder(const TArray<FEditorQueueOrderTemplate*> &OrderList)
+	virtual bool UndoOrder(FEditorQueue* Parent)
 	{
 		return true;
 	};
 
-	virtual FEditorQueueOrderNetworkable ToNetworkable()
+	virtual FEditorQueueOrderNetworkable ToNetworkable(FEditorQueueNetworkable* Parent)
 	{
 		return FEditorQueueOrderNetworkable(OrderType);
 	}
 
-	virtual bool FromNetworkable(FEditorQueueOrderNetworkable& InData)
+	virtual bool FromNetworkable(FEditorQueueNetworkable* Parent, int32 OrderIndex)
 	{
-		OrderType = InData.OrderType;
+		OrderType = Parent->Orders[OrderIndex].OrderType;
 		return true;
+	}
+
+	virtual TArray<UNoxelDataComponent*> GetAffectedDataComponents(FEditorQueue* Parent)
+	{
+		return TArray<UNoxelDataComponent*>();
 	}
 
 	virtual FString ToString()
 	{
 		return FString::Printf(TEXT("QueueOrderType = %i"), OrderType);
-	};
+	}
 };
 
-struct NOXEL_API FEditorQueueOrderNodeAdd : public FEditorQueueOrderTemplate
+//Creates the references to node belonging to one nodes container
+struct NOXEL_API FEditorQueueOrderNodeReference : public FEditorQueueOrderTemplate
 {
-	FNodeID NodeToAdd;
+	UNodesContainer* Container;
+	TArray<FVector> Locations;
 
-	FEditorQueueOrderNodeAdd()
+	FEditorQueueOrderNodeReference()
+		:FEditorQueueOrderTemplate(EEditorQueueOrderType::NodeReference)
+	{}
+
+	FEditorQueueOrderNodeReference(TArray<FVector> InLocations, UNodesContainer* InContainer)
+		:FEditorQueueOrderTemplate(EEditorQueueOrderType::NodeReference),
+		Container(InContainer), Locations(InLocations)
+	{}
+
+	virtual ~FEditorQueueOrderNodeReference(){};
+
+	virtual bool ExecuteOrder(FEditorQueue* Parent) override;
+
+	virtual bool UndoOrder(FEditorQueue* Parent) override;
+
+	virtual FEditorQueueOrderNetworkable ToNetworkable(FEditorQueueNetworkable* Parent) override;
+
+	virtual bool FromNetworkable(FEditorQueueNetworkable* Parent, int32 OrderIndex) override;
+
+	virtual TArray<UNoxelDataComponent*> GetAffectedDataComponents(FEditorQueue* Parent) override;
+
+	virtual FString ToString() override;
+};
+
+struct NOXEL_API FEditorQueueOrderNodeAddRemove : public FEditorQueueOrderTemplate
+{
+	TArray<int32> NodesToAddRemove;
+	bool Add;
+
+	FEditorQueueOrderNodeAddRemove()
 		:FEditorQueueOrderTemplate(EEditorQueueOrderType::NodeAdd),
-		NodeToAdd()
-	{};
+		NodesToAddRemove(),
+		Add(true)
+	{}
 
-	FEditorQueueOrderNodeAdd(FNodeID InNodeToAdd)
-		:FEditorQueueOrderTemplate(EEditorQueueOrderType::NodeAdd),
-		NodeToAdd(InNodeToAdd)
-	{};
+	FEditorQueueOrderNodeAddRemove(TArray<int32> InNodesToAddRemove, bool InAdd)
+		:FEditorQueueOrderTemplate(InAdd ? EEditorQueueOrderType::NodeAdd : EEditorQueueOrderType::NodeRemove),
+		NodesToAddRemove(InNodesToAddRemove),
+		Add(InAdd)
+	{}
 
-	virtual ~FEditorQueueOrderNodeAdd() {};
+	virtual ~FEditorQueueOrderNodeAddRemove() {}
 
-	virtual bool ExecuteOrder(const TArray<FEditorQueueOrderTemplate*> &OrderList) override;
+	virtual bool ExecuteOrder(FEditorQueue* Parent) override;
 
-	virtual bool UndoOrder(const TArray<FEditorQueueOrderTemplate*> &OrderList) override;
+	virtual bool UndoOrder(FEditorQueue* Parent) override;
 
-	virtual FEditorQueueOrderNetworkable ToNetworkable() override;
+	bool DoAdd(FEditorQueue* Parent);
+	bool DoRemove(FEditorQueue* Parent);
+	virtual FEditorQueueOrderNetworkable ToNetworkable(FEditorQueueNetworkable* Parent) override;
 
-	virtual bool FromNetworkable(FEditorQueueOrderNetworkable& InData) override;
+	virtual bool FromNetworkable(FEditorQueueNetworkable* Parent, int32 OrderIndex) override;
+
+	virtual TArray<UNoxelDataComponent*> GetAffectedDataComponents(FEditorQueue* Parent) override;
 
 	virtual FString ToString() override;
 
 };
 
-struct NOXEL_API FEditorQueueOrderNodeRemove : public FEditorQueueOrderTemplate
+struct NOXEL_API FEditorQueueOrderNodeDisConnect : public FEditorQueueOrderTemplate
 {
-	FNodeID NodeToRemove;
+	TArray<int32> Nodes;
+	TArray<int32> Panels;
+	bool Connect;
 
-	FEditorQueueOrderNodeRemove()
-		:FEditorQueueOrderTemplate(EEditorQueueOrderType::NodeRemove),
-		NodeToRemove()
-	{};
+	FEditorQueueOrderNodeDisConnect()
+		:FEditorQueueOrderTemplate(EEditorQueueOrderType::NodeConnect),
+		Nodes(), Panels(),
+		Connect(true)
+	{}
 
-	FEditorQueueOrderNodeRemove(const FNodeID InNodeToRemove)
-		:FEditorQueueOrderTemplate(EEditorQueueOrderType::NodeRemove),
-		NodeToRemove(InNodeToRemove)
-	{};
+	FEditorQueueOrderNodeDisConnect(TArray<int32> InNodes, TArray<int32> InPanels, bool InConnect)
+		:FEditorQueueOrderTemplate(InConnect ? EEditorQueueOrderType::NodeConnect : EEditorQueueOrderType::NodeDisconnect),
+		Nodes(InNodes), Panels(InPanels),
+		Connect(InConnect)
+	{}
 
-	virtual ~FEditorQueueOrderNodeRemove() {};
+	virtual ~FEditorQueueOrderNodeDisConnect() {}
 
-	virtual bool ExecuteOrder(const TArray<FEditorQueueOrderTemplate*> &OrderList) override;
+	virtual bool ExecuteOrder(FEditorQueue* Parent) override;
 
-	virtual bool UndoOrder(const TArray<FEditorQueueOrderTemplate*> &OrderList) override;
+	virtual bool UndoOrder(FEditorQueue* Parent) override;
 
-	virtual FEditorQueueOrderNetworkable ToNetworkable() override;
+	bool DoConnect(FEditorQueue* Parent);
+	
+	bool DoDisconnect(FEditorQueue* Parent);
+	
+	virtual FEditorQueueOrderNetworkable ToNetworkable(FEditorQueueNetworkable* Parent) override;
 
-	virtual bool FromNetworkable(FEditorQueueOrderNetworkable& InData) override;
+	virtual bool FromNetworkable(FEditorQueueNetworkable* Parent, int32 OrderIndex) override;
+
+	virtual TArray<UNoxelDataComponent*> GetAffectedDataComponents(FEditorQueue* Parent) override;
 
 	virtual FString ToString() override;
 
 };
 
 
-struct NOXEL_API FEditorQueueOrderPanelAdd : public FEditorQueueOrderTemplate
+struct NOXEL_API FEditorQueueOrderPanelAddRemove : public FEditorQueueOrderTemplate
 {
 	UNoxelContainer* Object;
-	TArray<FNodeID> Nodes;
 	float ThicknessNormal;
 	float ThicknessAntiNormal;
 	bool Virtual;
 
-	FEditorQueueOrderPanelAdd()
+	int32 PanelIndex;
+
+	bool Add;
+
+	FEditorQueueOrderPanelAddRemove()
 		:FEditorQueueOrderTemplate(EEditorQueueOrderType::PanelAdd),
 		Object(),
-		Nodes(),
 		ThicknessNormal(0.5f),
 		ThicknessAntiNormal(0.5f),
-		Virtual(false)
+		Virtual(false),
+		Add(true)
 	{};
 
-	FEditorQueueOrderPanelAdd(UNoxelContainer* InObject, const TArray<FNodeID> &InNodes, 
-		const float InThicknessNormal, const float InThicknessAntiNormal, const bool InVirtual)
+	FEditorQueueOrderPanelAddRemove(UNoxelContainer* InObject, 
+		const float InThicknessNormal, const float InThicknessAntiNormal, const bool InVirtual, bool InAdd)
 		:FEditorQueueOrderTemplate(EEditorQueueOrderType::PanelAdd),
 		Object(InObject),
-		Nodes(InNodes),
 		ThicknessNormal(InThicknessNormal),
 		ThicknessAntiNormal(InThicknessAntiNormal),
-		Virtual(InVirtual)
+		Virtual(InVirtual),
+		Add(InAdd)
 	{};
 
-	virtual ~FEditorQueueOrderPanelAdd() {};
+	virtual ~FEditorQueueOrderPanelAddRemove() {}
 
-	virtual bool ExecuteOrder(const TArray<FEditorQueueOrderTemplate*> &OrderList) override;
+	bool DoAdd(FEditorQueue* Parent);
 
-	virtual bool UndoOrder(const TArray<FEditorQueueOrderTemplate*> &OrderList) override;
+	bool DoRemove(FEditorQueue* Parent);
+	
+	virtual bool ExecuteOrder(FEditorQueue* Parent) override;
 
-	virtual FEditorQueueOrderNetworkable ToNetworkable() override;
+	virtual bool UndoOrder(FEditorQueue* Parent) override;
 
-	virtual bool FromNetworkable(FEditorQueueOrderNetworkable& InData) override;
+	virtual FEditorQueueOrderNetworkable ToNetworkable(FEditorQueueNetworkable* Parent) override;
+
+	virtual bool FromNetworkable(FEditorQueueNetworkable* Parent, int32 OrderIndex) override;
+	
+	virtual TArray<UNoxelDataComponent*> GetAffectedDataComponents(FEditorQueue* Parent) override;
 
 	virtual FString ToString() override;
 };

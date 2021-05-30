@@ -1,6 +1,7 @@
 //Copyright 2016-2020 Gabriel Zerbib (Moddingear). All rights reserved.
 
 #include "Noxel/NoxelNetworkingAgent.h"
+
 #include "Noxel.h"
 #include "EditorGameState.h"
 
@@ -53,6 +54,119 @@ void UNoxelNetworkingAgent::TickComponent(float DeltaTime, ELevelTick TickType, 
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 
 	// ...
+}
+
+FEditorQueue* UNoxelNetworkingAgent::CreateEditorQueue()
+{
+	//TODO : Register in GC
+	FEditorQueue* Queue = new FEditorQueue();
+	if (QueuesBuffer.Num() == NOXELEDITORQUEUEBUFFERLENGTH)
+	{
+		delete QueuesBuffer[0];
+		QueuesBuffer.RemoveAt(0);
+	}
+	QueuesBuffer.Add(Queue);
+	return Queue;
+}
+
+void UNoxelNetworkingAgent::SendCommandQueue(FEditorQueue* Queue, bool ShouldExecute = true)
+{
+	bool valid = false;
+	if (ShouldExecute)
+	{
+		valid = Queue->ExecuteQueue();
+	}
+	else
+	{
+		valid = Queue->UndoQueue();
+	}
+	if (valid)
+	{
+		Queue->OrderNumber = NextQueueIndex++;
+		QueuesWaiting.Add(Queue->OrderNumber);
+		FEditorQueueNetworkable Networkable;
+		if (Queue->ToNetworkable(Networkable))
+		{
+			if (GetWorld()->IsServer()) //skip verification
+            {
+            	ClientsReceiveCommandQueue(Networkable, ShouldExecute);
+            }
+            else
+            {
+                ServerReceiveCommandQueue(Networkable, ShouldExecute);
+            }
+		}
+	}
+}
+
+void UNoxelNetworkingAgent::ServerReceiveCommandQueue_Implementation(FEditorQueueNetworkable Networkable, bool ShouldExecute)
+{
+	bool valid = false;
+	FEditorQueue* Queue;
+	valid = Networkable.DecodeQueue(&Queue);
+	if (valid)
+	{
+		valid = Queue->RunQueue(ShouldExecute);
+	}
+	
+	if (valid)
+	{
+		QueuesWaiting.Add(Queue->OrderNumber);
+		ClientsReceiveCommandQueue(Networkable, ShouldExecute);
+	}
+	else
+	{
+		ClientRectifyCommandQueue(Networkable, ShouldExecute);
+	}
+	//TODO : Add queue to buffer
+	delete Queue;
+}
+
+bool UNoxelNetworkingAgent::ServerReceiveCommandQueue_Validate(FEditorQueueNetworkable Networkable, bool ShouldExecute)
+{
+	return true;
+}
+
+void UNoxelNetworkingAgent::ClientsReceiveCommandQueue_Implementation(FEditorQueueNetworkable Networkable, bool ShouldExecute)
+{
+	if (QueuesWaiting.Contains(Networkable.OrderNumber))
+	{
+		QueuesWaiting.Remove(Networkable.OrderNumber);
+	}
+	else
+	{
+		FEditorQueue* Queue;
+		if(Networkable.DecodeQueue(&Queue))
+		{
+			if (ShouldExecute)
+			{
+				Queue->ExecuteQueue();
+			}
+			else
+			{
+				Queue->UndoQueue();
+			}
+		}
+	}
+}
+
+void UNoxelNetworkingAgent::ClientRectifyCommandQueue_Implementation(FEditorQueueNetworkable Networkable, bool ShouldExecute)
+{
+	//TODO : Instead of sending the queue, refer to it in the buffer
+	FEditorQueue* Queue;
+	QueuesWaiting.Remove(Networkable.OrderNumber);
+	if(Networkable.DecodeQueue(&Queue))
+	{
+		
+		if (ShouldExecute)
+		{
+			Queue->UndoQueue();
+		}
+		else
+		{
+			Queue->ExecuteQueue();
+		}
+	}
 }
 
 void UNoxelNetworkingAgent::AddBlock(UVoxelComponent* Container, FIntVector Location)

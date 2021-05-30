@@ -31,4 +31,8 @@ public:
 	Sets the spawn context for the components to react accordingly (for example, the nodes won't create a mesh in battle)
 	*/
 	virtual void SetSpawnContext(ECraftSpawnContext Context);
+
+	virtual bool CheckDataValidity();
+
+	virtual void UpdateMesh();
 };

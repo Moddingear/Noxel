@@ -230,12 +230,48 @@ TArray<FNodeID> UNodesContainer::GenerateNodesKeyArray()
 	return Keys;
 }
 
+bool UNodesContainer::GetNodeHit(FHitResult Hit, FNodeID& HitNode)
+{
+	if (Hit.bBlockingHit)
+	{
+		if (Hit.GetComponent()->IsA<UNodesContainer>())
+		{
+			UNodesContainer* HitComp =Cast<UNodesContainer>(Hit.GetComponent());
+			if (Hit.FaceIndex != INDEX_NONE)
+			{
+				int32 HitNodeIdx;
+				if(HitComp->NodesProvider->GetHitNodeIndex(Hit.FaceIndex, HitNodeIdx))
+				{
+					HitNode = FNodeID(HitComp, HitComp->Nodes[HitNodeIdx].Location);
+					return true;
+				}
+				else
+				{
+					UE_LOG(NoxelData, Warning, TEXT("[UNodesContainer::GetNodeHit] Failed because it couldn't find a hit node"));
+				}
+			}
+			else
+			{
+				UE_LOG(NoxelData, Warning, TEXT("[UNodesContainer::GetNodeHit] Failed because face index is INDEX_NONE"));
+			}
+		}
+		else
+		{
+			UE_LOG(NoxelData, Warning, TEXT("[UNodesContainer::GetNodeHit] Failed because hit component isn't a NodesContainer"));
+		}
+	}
+	else
+	{
+		UE_LOG(NoxelData, Warning, TEXT("[UNodesContainer::GetNodeHit] Failed because hit result was non-blocking"));
+	}
+	return false;
+	
+}
+
 bool UNodesContainer::IsPlayerEditable() const
 {
 	return bPlayerEditable;
 }
-
-
 
 void UNodesContainer::MarkMeshDirty()
 {
@@ -244,12 +280,14 @@ void UNodesContainer::MarkMeshDirty()
 
 void UNodesContainer::UpdateMesh()
 {
+	Super::UpdateMesh();
+	UE_LOG(NoxelData, Log, TEXT("[UNodesContainer::UpdateMesh@%p] Called"), this);
 	bIsMeshDirty = false;
 	TArray<FNoxelRendererNodeData> RendererNodes;
 	RendererNodes.Reserve(Nodes.Num());
 	for (int32 NodeIdx = 0; NodeIdx < Nodes.Num(); NodeIdx++)
 	{
-		RendererNodes.Emplace(Nodes[NodeIdx].Location, Nodes[NodeIdx].Color);
+		RendererNodes.EmplaceAt(NodeIdx, Nodes[NodeIdx].Location, Nodes[NodeIdx].Color);
 	}
 	NodesProvider->SetNodes(RendererNodes);
 }
@@ -281,5 +319,10 @@ void UNodesContainer::SetSpawnContext(ECraftSpawnContext Context)
 {
 	Super::SetSpawnContext(Context);
 	//UE_LOG(Noxel, Log, TEXT("[UNodesContainer::SetSpawnContext] Spawn context set"));
+}
+
+bool UNodesContainer::CheckDataValidity()
+{
+	return true;
 }
 
