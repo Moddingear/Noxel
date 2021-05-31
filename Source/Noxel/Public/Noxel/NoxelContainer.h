@@ -98,8 +98,6 @@ public:
 	UFUNCTION(BlueprintPure)
 	TArray<FPanelData> GetPanels();
 
-	bool getPanelHit(FHitResult hit, FPanelID& PanelHit);
-
 	UFUNCTION(BlueprintCallable)
 	static bool GetPanelHit(FHitResult hit, FPanelID& PanelHit);
 

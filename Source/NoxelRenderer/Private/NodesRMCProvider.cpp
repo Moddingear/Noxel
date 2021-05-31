@@ -48,7 +48,7 @@ void UNodesRMCProvider::SetNodes(const TArray<FNoxelRendererNodeData>& InNodes)
 	BakedNodeBounds = FBoxSphereBounds(TArray<FVector>(InNodes), InNodes.Num());
 	Nodes = InNodes;
 	MarkCollisionDirty();
-	MarkAllLODsDirty();
+	MarkSectionDirty(0, 0);
 }
 
 UMaterialInterface* UNodesRMCProvider::GetNodesMaterial() const
@@ -67,7 +67,8 @@ void UNodesRMCProvider::SetNodesMaterial(UMaterialInterface* InNodesMaterial)
 bool UNodesRMCProvider::GetHitNodeIndex(int32 faceIndex, int32 & HitNode)
 {
 	FScopeLock Lock(&PropertySyncRoot);
-	HitNode = faceIndex / StaticMeshCollidable.Triangles.Num();
+	HitNode = faceIndex / (StaticMeshCollidable.Triangles.Num());
+	UE_LOG(NoxelRendererLog, Log, TEXT("[UNodesRMCProvider::GetHitNodeIndex(%d, %d)] NumTriangles = %d"), faceIndex, HitNode, StaticMeshCollidable.Triangles.Num());
 	return Nodes.IsValidIndex(HitNode);
 }
 
@@ -89,7 +90,7 @@ void UNodesRMCProvider::Initialize()
 	Properties.UpdateFrequency = ERuntimeMeshUpdateFrequency::Frequent;
 	CreateSection(0, 0, Properties);
 
-	MarkAllLODsDirty();
+	MarkSectionDirty(0, 0);
 	MarkCollisionDirty();
 }
 
@@ -108,9 +109,9 @@ bool UNodesRMCProvider::GetSectionMeshForLOD(int32 LODIndex, int32 SectionId, FR
 
 	FRuntimeMeshRenderableMeshData TempStaticMeshRenderable; TArray<FNoxelRendererNodeData> TempNodes;
 	GetShapeMeshParams(TempStaticMeshRenderable, TempNodes);
-	int32 NumNodes = TempNodes.Num();
-	int32 NumVerts = TempStaticMeshRenderable.Positions.Num();
-	int32 NumTris = TempStaticMeshRenderable.Triangles.Num();
+	const int32 NumNodes = TempNodes.Num();
+	const int32 NumVerts = TempStaticMeshRenderable.Positions.Num();
+	const int32 NumTris = TempStaticMeshRenderable.Triangles.Num();
 	MeshData.Positions.Reserve(NumNodes * NumVerts);
 	MeshData.Tangents.Reserve(NumNodes * NumVerts);
 	MeshData.Colors.Reserve(NumNodes * NumVerts);
@@ -138,7 +139,31 @@ bool UNodesRMCProvider::GetSectionMeshForLOD(int32 LODIndex, int32 SectionId, FR
 			MeshData.Triangles.Add(TempStaticMeshRenderable.Triangles.GetVertexIndex(TrisIdx) + NodeIdx * NumVerts);
 		}
 	}
-
+	/*UE_LOG(NoxelRendererLog, Log, TEXT("[UNodesRMCProvider::GetSectionMeshForLOD] Printing"))
+	FString Positions;
+	for (int i = 0; i < MeshData.Positions.Num(); ++i)
+	{
+		Positions += FString::Printf(TEXT("[%d]=(%s) | "), i, *MeshData.Positions.GetPosition(i).ToCompactString());
+	}
+	UE_LOG(NoxelRendererLog, Log, TEXT("Positions (%d) = %s"), MeshData.Positions.Num(), *Positions)
+	FString Tangents;
+	for (int i = 0; i < MeshData.Tangents.Num(); ++i)
+	{
+		Tangents += FString::Printf(TEXT("[%d]=(%s / %s) | "), i, *MeshData.Tangents.GetNormal(i).ToCompactString(), *MeshData.Tangents.GetTangent(i).ToCompactString());
+	}
+	UE_LOG(NoxelRendererLog, Log, TEXT("Tangents (%d) = %s"), MeshData.Tangents.Num(), *Tangents)
+	FString Colors;
+	for (int i = 0; i < MeshData.Colors.Num(); ++i)
+	{
+		Colors += FString::Printf(TEXT("[%d]=%s | "), i, *MeshData.Colors.GetColor(i).ToString());
+	}
+	UE_LOG(NoxelRendererLog, Log, TEXT("Colors (%d) = %s"), MeshData.Colors.Num(), *Colors)
+	FString Triangles;
+	for (int i = 0; i < MeshData.Triangles.Num(); ++i)
+	{
+		Triangles += FString::Printf(TEXT("[%d]=%d | "), i, MeshData.Triangles.GetVertexIndex(i));
+	}
+	UE_LOG(NoxelRendererLog, Log, TEXT("Triangles (%d) = %s"), MeshData.Triangles.Num(), *Triangles)*/
 	return true;
 }
 
@@ -194,16 +219,17 @@ bool UNodesRMCProvider::GetCollisionMesh(FRuntimeMeshCollisionData& CollisionDat
 		{
 			int32 A, B, C;
 			TempStaticMeshCollidable.Triangles.GetTriangleIndices(TrisIdx, A, B, C);
-			CollisionData.Triangles.SetTriangleIndices(TrisIdx + NodeIdx * NumTris, A + NodeIdx * NumTris, B + NodeIdx * NumTris, C + NodeIdx * NumTris);
+			CollisionData.Triangles.SetTriangleIndices(TrisIdx + NodeIdx * NumTris, A + NodeIdx * NumTris * 3, B + NodeIdx * NumTris * 3, C + NodeIdx * NumTris * 3);
 		}
 	}
+	UE_LOG(NoxelRendererLog, Log, TEXT("[UNodesRMCProvider::GetCollisionMesh] Recreated, %d nodes"), NumNodes);
 
 	return true;
 }
 
 bool UNodesRMCProvider::IsThreadSafe()
 {
-	return true;
+	return false;
 }
 
 void UNodesRMCProvider::PrepareStaticMesh()

@@ -65,6 +65,9 @@ public:
 	UPROPERTY(BlueprintReadOnly)
 	bool Alternate = false;
 
+	UPROPERTY(BlueprintReadWrite)
+	USceneComponent* FollowComponent;
+
 	//Hint display as the left click on the side of the hangar
 	UPROPERTY(BlueprintReadWrite, EditAnywhere)
 	FText LeftClickHint;

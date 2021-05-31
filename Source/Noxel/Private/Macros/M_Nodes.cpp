@@ -23,6 +23,7 @@ void AM_Nodes::BeginPlay()
 void AM_Nodes::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
+	//UE_LOG(NoxelMacro, Log, TEXT("[AM_Nodes::leftClickPressed_Implementation] Macro is at transform %s"), *GetTransform().ToString());
 	if (false/*TransformGizmo*/) 
 	{
 		FVector Position, Direction;
@@ -122,7 +123,7 @@ void AM_Nodes::Tick(float DeltaTime)
 
 void AM_Nodes::leftClickPressed_Implementation()
 {
-	UE_LOG(NoxelMacro, Log, TEXT("Left click"));
+	//UE_LOG(NoxelMacro, Log, TEXT("[AM_Nodes::leftClickPressed_Implementation] Macro is at transform %s"), *GetTransform().ToHumanReadableString());
 	if (false/*TransformGizmo*/)
 	{
 		/*if (Alternate)
@@ -181,7 +182,7 @@ void AM_Nodes::leftClickPressed_Implementation()
 			end = location + direction * ray_length;
 			FNodeID id;
 			if (traceNodes(location, end, id)) {
-				//UE_LOG(NoxelMacro, Warning, TEXT("Trace sucessful"));
+				UE_LOG(NoxelMacro, Warning, TEXT("[AM_Nodes::leftClickPressed_Implementation]Trace sucessful"));
 				if (!selectedNodes.Contains(id)) { //If the node wasn't already selected
 					setNodeColor(id, ENoxelColor::NodeSelected1); //Set the color of the node
 					selectedNodes.Add(id);
@@ -242,16 +243,20 @@ void AM_Nodes::rightClickPressed_Implementation()
 			end = location + direction * ray_length;
 			if (selectedNodes.Num() > 0) {
 				resetNodesColor();
-				for (int i = 0; i < selectedNodes.Num(); i++)
-				{
-					//UE_LOG(NoxelMacro, Warning, TEXT("Asking to remove selected node, macro"));
-					//networkingAgent->RemoveNode(selectedNodes[i]);
-				}
+				FEditorQueue* queue = GetNoxelNetworkingAgent()->CreateEditorQueue();
+				auto nodeMap = queue->CreateNodeReferenceOrdersFromNodeList(selectedNodes);
+				TArray<int32> noderefs = queue->NodeListToNodeReferences(selectedNodes, nodeMap);
+				queue->AddNodeRemoveOrder(noderefs);
+				GetNoxelNetworkingAgent()->SendCommandQueue(queue, true);
 				selectedNodes.Empty();
 			}
 			else if (traceNodes(location, end, node))
 			{
-				//UE_LOG(NoxelMacro, Warning, TEXT("Asking to remove node, macro %s"), *node.Location.ToString());
+				UE_LOG(NoxelMacro, Warning, TEXT("Asking to remove node, macro %s"), *node.Location.ToString());
+				FEditorQueue* queue = GetNoxelNetworkingAgent()->CreateEditorQueue();
+				queue->AddNodeReferenceOrder({node.Location}, node.Object);
+				queue->AddNodeRemoveOrder({0});
+				GetNoxelNetworkingAgent()->SendCommandQueue(queue, true);
 				//networkingAgent->RemoveNode(node);
 			}
 			else if (tracePanels(location, end, panel))

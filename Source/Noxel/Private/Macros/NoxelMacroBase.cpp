@@ -26,6 +26,8 @@ ANoxelMacroBase::ANoxelMacroBase()
 	// Set this component to be initialized when the game starts, and to be ticked every frame.  You can turn these features
 	// off to improve performance if you don't need them.
 	PrimaryActorTick.bCanEverTick = true;
+	
+	RootComponent = CreateDefaultSubobject<USceneComponent>(TEXT("I am root"));
 
 	static ConstructorHelpers::FObjectFinder<UStaticMesh> NodeMeshConstructor(TEXT("StaticMesh'/Game/Meshes/Nodes/Octahedron.Octahedron'"));
 	//if (NodeMeshConstructor.Succeeded()) { NodeMeshStatic = NodeMeshConstructor.Object; }
@@ -105,6 +107,15 @@ void ANoxelMacroBase::EndPlay(const EEndPlayReason::Type EndPlayReason){
 void ANoxelMacroBase::Tick(float DeltaTime)
 {
 	ClearDraws();
+	if (IsValid(FollowComponent))
+	{
+		RootComponent->SetWorldTransform(FollowComponent->GetComponentTransform());
+		//UE_LOG(NoxelMacro, Log, TEXT("[ANoxelMacroBase::Tick] Macro is at transform %s, follow component is at %s"), *GetTransform().ToString(), *(FollowComponent->GetComponentTransform().ToString()));
+	}
+	else
+	{
+		//UE_LOG(NoxelMacro, Warning, TEXT("[ANoxelMacroBase::Tick] Follow component is invalid"))
+	}
 	Super::Tick(DeltaTime);
 }
 

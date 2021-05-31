@@ -440,25 +440,16 @@ TArray<FPanelData> UNoxelContainer::GetPanels()
 	return Panels;
 }
 
-bool UNoxelContainer::getPanelHit(FHitResult hit, FPanelID & PanelHit)
-{
-	if (hit.Component == this)
-	{
-		PanelHit.Object = this;
-		if (NoxelProvider->GetPanelIndexHit(hit.FaceIndex, PanelHit.PanelIndex))
-		{
-			return true;
-		}
-	}
-	return false;
-}
-
 bool UNoxelContainer::GetPanelHit(FHitResult hit, FPanelID& PanelHit)
 {
 	if (hit.GetComponent()->IsA<UNoxelContainer>())
 	{
 		UNoxelContainer* HitComp = Cast<UNoxelContainer>(hit.GetComponent());
-		return HitComp->GetPanelHit(hit, PanelHit);
+		PanelHit.Object = HitComp;
+		if (HitComp->NoxelProvider->GetPanelIndexHit(hit.FaceIndex, PanelHit.PanelIndex))
+		{
+			return true;
+		}
 	}
 	return false;
 }
@@ -529,7 +520,7 @@ void UNoxelContainer::UpdateProviderData()
 
 bool UNoxelContainer::CheckDataValidity()
 {
-	for (int32 PanelIdx : ModifiedPanels)
+	for (int32 PanelIdx : DifferedPanels)
 	{
 		if (!FinishAddPanel(PanelIdx))
 		{

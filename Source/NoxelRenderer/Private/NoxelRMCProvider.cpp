@@ -41,6 +41,8 @@ void UNoxelRMCProvider::SetNodes(UPARAM(ref) const TArray<FVector>& InNodes)
 	MarkCacheDirty();
 	FScopeLock Lock(&PropertySyncRoot);
 	Nodes = InNodes;
+	MarkAllLODsDirty();
+	MarkCollisionDirty();
 }
 
 TArray<FNoxelRendererPanelData> UNoxelRMCProvider::GetPanels() const
@@ -54,6 +56,8 @@ void UNoxelRMCProvider::SetPanels(UPARAM(ref) const TArray<FNoxelRendererPanelDa
 	MarkCacheDirty();
 	FScopeLock Lock(&PropertySyncRoot);
 	Panels = InPanels;
+	MarkAllLODsDirty();
+	MarkCollisionDirty();
 }
 
 UMaterialInterface* UNoxelRMCProvider::GetNoxelMaterial() const

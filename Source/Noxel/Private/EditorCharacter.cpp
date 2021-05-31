@@ -205,6 +205,7 @@ void AEditorCharacter::SetMacro(TSubclassOf<class ANoxelMacroBase> Macro)
 			return;
 		}
 		CurrentMacro->SetOwningActor(this);
+		CurrentMacro->FollowComponent = Camera;
 		UGameplayStatics::FinishSpawningActor(CurrentMacro, GetHangar()->GetActorTransform());
 		CurrentMacro->AddTickPrerequisiteActor(this);
 	}
