@@ -7,7 +7,7 @@
 
 #include "Noxel/CraftDataHandler.h"
 #include "NoxelHangarBase.h"
-#include "Kismet/KismetSystemLibrary.h"
+#include "NObjects/NoxelPart.h"
 
 // Sets default values for this component's properties
 UNoxelNetworkingAgent::UNoxelNetworkingAgent()
@@ -15,6 +15,7 @@ UNoxelNetworkingAgent::UNoxelNetworkingAgent()
 	// Set this component to be initialized when the game starts, and to be ticked every frame.  You can turn these features
 	// off to improve performance if you don't need them.
 	PrimaryComponentTick.bCanEverTick = true;
+	PrimaryComponentTick.TickInterval = 1;
 	static ConstructorHelpers::FObjectFinder<UDataTable> DataConstructor(OBJECTLIBRARY_PATH);
 	if (DataConstructor.Succeeded()) {
 		DataTable = DataConstructor.Object;
@@ -34,16 +35,16 @@ void UNoxelNetworkingAgent::BeginPlay()
 		if (hangar)
 		{
 			Craft = hangar->GetCraftDataHandler();
-			UE_LOG(NoxelDataNetwork, Log, TEXT("Craft found"));
+			UE_LOG(NoxelDataNetwork, Log, TEXT("[UNoxelNetworkingAgent::BeginPlay] Craft found"));
 			Craft->OnComponentsReplicatedEvent.AddDynamic(this, &UNoxelNetworkingAgent::OnCraftComponentsReplicated);
 		}
 		else {
-			UE_LOG(NoxelDataNetwork, Error, TEXT("Hangar pointer broken, please fix in Game State"));
+			UE_LOG(NoxelDataNetwork, Error, TEXT("[UNoxelNetworkingAgent::BeginPlay] Hangar pointer broken, please fix in Game State"));
 		}
 	}
 	else
 	{
-		UE_LOG(NoxelDataNetwork, Error, TEXT("Game State is bad, should be a AEditorGameState, plz fix :)"));
+		UE_LOG(NoxelDataNetwork, Error, TEXT("[UNoxelNetworkingAgent::BeginPlay] Game State is bad, should be a AEditorGameState, plz fix :)"));
 	}
 }
 
@@ -53,81 +54,196 @@ void UNoxelNetworkingAgent::TickComponent(float DeltaTime, ELevelTick TickType, 
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 
+	for (ANoxelPart* Part : Craft->GetParts()) //Refill reserved panels
+	{
+		if (!Part)
+		{
+			continue;
+		}
+		UNoxelContainer* Container = Part->GetNoxelContainer();
+		if (!Container)
+		{
+			continue;
+		}
+		if (ReservedWaiting.Contains(Container))
+		{
+			continue;
+		}
+		TArray<int32> Reserved = GetReservedPanels(Container);
+		if (Reserved.Num() < 256)
+		{
+			ReservedWaiting.Add(Container);
+			ReservePanels(256 + 128 - Reserved.Num(), Container);
+		}
+	}
 	// ...
 }
 
-FEditorQueue* UNoxelNetworkingAgent::CreateEditorQueue()
+void UNoxelNetworkingAgent::AddQueueToBuffer(FEditorQueue* Queue)
 {
-	//TODO : Register in GC
-	FEditorQueue* Queue = new FEditorQueue();
 	if (QueuesBuffer.Num() == NOXELEDITORQUEUEBUFFERLENGTH)
 	{
 		delete QueuesBuffer[0];
 		QueuesBuffer.RemoveAt(0);
 	}
 	QueuesBuffer.Add(Queue);
+}
+
+void UNoxelNetworkingAgent::RemoveQueueFromBuffer(int32 OrderIndex)
+{
+	for (int i = 0; i < QueuesBuffer.Num(); ++i)
+	{
+		if (QueuesBuffer[i]->OrderNumber == OrderIndex)
+		{
+			delete QueuesBuffer[i];
+			QueuesBuffer.RemoveAt(i);
+			return;
+		}
+	}
+}
+
+bool UNoxelNetworkingAgent::GetQueueFromBuffer(int32 OrderIndex, FEditorQueue** Queue)
+{
+	for (int i = 0; i < QueuesBuffer.Num(); ++i)
+	{
+		if (QueuesBuffer[i]->OrderNumber == OrderIndex)
+		{
+			*Queue = QueuesBuffer[i];
+			return true;
+		}
+	}
+	return false;
+}
+
+TArray<int32> UNoxelNetworkingAgent::GetReservedPanels(UNoxelContainer* Container)
+{
+	TArray<int32>* Reserved = ReservedPanels.Find(Container);
+	if (Reserved != nullptr)
+	{
+		return *Reserved;
+	}
+	return {};
+}
+
+void UNoxelNetworkingAgent::UseReservedPanels(TArray<FPanelID> Used)
+{
+	for (FPanelID Panel : Used)
+	{
+		TArray<int32>* Reserved = ReservedPanels.Find(Panel.Object);
+		if (Reserved != nullptr)
+		{
+			Reserved->RemoveSwap(Panel.PanelIndex);
+		}
+	}
+}
+
+void UNoxelNetworkingAgent::AddReservedPanels(TArray<FPanelID> Add)
+{
+	for (FPanelID Panel : Add)
+	{
+		TArray<int32>* Reserved = ReservedPanels.Find(Panel.Object);
+		if (Reserved != nullptr)
+		{
+			Reserved->Add(Panel.PanelIndex);
+		}
+	}
+}
+
+void UNoxelNetworkingAgent::ReservePanels(int32 NumToReserve, UNoxelContainer* Container)
+{
+	if (IsValid(Container))
+	{
+		ReservePanelsServer(NumToReserve, Container);
+	}
+}
+
+void UNoxelNetworkingAgent::ReservePanelsServer_Implementation(int32 NumToReserve, UNoxelContainer* Container)
+{
+	if (IsValid(Container))
+	{
+		TArray<int32> Reserved = Container->ReservePanelIndices(NumToReserve);
+		ReservePanelsClient(Container, Reserved);
+	}
+}
+
+bool UNoxelNetworkingAgent::ReservePanelsServer_Validate(int32 NumToReserve, UNoxelContainer* Container)
+{
+	return NumToReserve <= 512; //Limit the maximum amount of panels that can be reserved at once
+}
+
+void UNoxelNetworkingAgent::ReservePanelsClient_Implementation(UNoxelContainer* Container, const TArray<int32> &Reserved)
+{
+	TArray<int32> Already = GetReservedPanels(Container);
+	Already.Append(Reserved);
+	ReservedPanels.Add(Container, Already);
+	ReservedWaiting.Remove(Container);
+}
+
+FEditorQueue* UNoxelNetworkingAgent::CreateEditorQueue()
+{
+	FEditorQueue* Queue = new FEditorQueue();
+	Queue->OrderNumber = NextQueueIndex++;
+	AddQueueToBuffer(Queue);
 	return Queue;
 }
 
-void UNoxelNetworkingAgent::SendCommandQueue(FEditorQueue* Queue, bool ShouldExecute = true)
+void UNoxelNetworkingAgent::SendCommandQueue(FEditorQueue* Queue)
 {
-	bool valid = false;
-	if (ShouldExecute)
+	UE_LOG(NoxelDataNetwork, Log, TEXT("[UNoxelNetworkingAgent::SendCommandQueue] Running queue locally"));
+	bool bValid = Queue->ExecuteQueue();
+	if (bValid)
 	{
-		valid = Queue->ExecuteQueue();
-	}
-	else
-	{
-		valid = Queue->UndoQueue();
-	}
-	if (valid)
-	{
-		Queue->OrderNumber = NextQueueIndex++;
+		UseReservedPanels(Queue->GetReservedPanelsUsed());
 		QueuesWaiting.Add(Queue->OrderNumber);
 		FEditorQueueNetworkable Networkable;
 		if (Queue->ToNetworkable(Networkable))
 		{
 			if (GetWorld()->IsServer()) //skip verification
             {
-            	ClientsReceiveCommandQueue(Networkable, ShouldExecute);
+            	ClientsReceiveCommandQueue(Networkable);
             }
             else
             {
-                ServerReceiveCommandQueue(Networkable, ShouldExecute);
+                ServerReceiveCommandQueue(Networkable);
             }
 		}
 	}
 }
 
-void UNoxelNetworkingAgent::ServerReceiveCommandQueue_Implementation(FEditorQueueNetworkable Networkable, bool ShouldExecute)
+void UNoxelNetworkingAgent::ServerReceiveCommandQueue_Implementation(FEditorQueueNetworkable Networkable)
 {
-	bool valid = false;
 	FEditorQueue* Queue;
-	valid = Networkable.DecodeQueue(&Queue);
-	if (valid)
+	bool bValid = Networkable.DecodeQueue(&Queue);
+	bool bDecoded = false;
+	if (bValid)
 	{
-		valid = Queue->RunQueue(ShouldExecute);
+		UE_LOG(NoxelDataNetwork, Log, TEXT("[UNoxelNetworkingAgent::ServerReceiveCommandQueue_Implementation] Running queue from client"));
+		bDecoded = true;
+		bValid = Queue->ExecuteQueue();
 	}
 	
-	if (valid)
+	if (bValid)
 	{
 		QueuesWaiting.Add(Queue->OrderNumber);
-		ClientsReceiveCommandQueue(Networkable, ShouldExecute);
+		ClientsReceiveCommandQueue(Networkable);
+		AddQueueToBuffer(Queue);
 	}
 	else
 	{
-		ClientRectifyCommandQueue(Networkable, ShouldExecute);
+		ClientRectifyCommandQueue(Networkable.OrderNumber, false);
+		if (bDecoded)
+		{
+			delete Queue;
+		}
 	}
-	//TODO : Add queue to buffer
-	delete Queue;
 }
 
-bool UNoxelNetworkingAgent::ServerReceiveCommandQueue_Validate(FEditorQueueNetworkable Networkable, bool ShouldExecute)
+bool UNoxelNetworkingAgent::ServerReceiveCommandQueue_Validate(FEditorQueueNetworkable Networkable)
 {
 	return true;
 }
 
-void UNoxelNetworkingAgent::ClientsReceiveCommandQueue_Implementation(FEditorQueueNetworkable Networkable, bool ShouldExecute)
+void UNoxelNetworkingAgent::ClientsReceiveCommandQueue_Implementation(FEditorQueueNetworkable Networkable)
 {
 	if (QueuesWaiting.Contains(Networkable.OrderNumber))
 	{
@@ -135,36 +251,31 @@ void UNoxelNetworkingAgent::ClientsReceiveCommandQueue_Implementation(FEditorQue
 	}
 	else
 	{
+		UE_LOG(NoxelDataNetwork, Log, TEXT("[UNoxelNetworkingAgent::ClientsReceiveCommandQueue_Implementation] Running queue from other player. IsServer = %s"), GetWorld()->IsServer() ? TEXT("true") : TEXT("false"));
 		FEditorQueue* Queue;
 		if(Networkable.DecodeQueue(&Queue))
 		{
-			if (ShouldExecute)
-			{
-				Queue->ExecuteQueue();
-			}
-			else
-			{
-				Queue->UndoQueue();
-			}
+			AddQueueToBuffer(Queue);
+			Queue->ExecuteQueue();
 		}
 	}
 }
 
-void UNoxelNetworkingAgent::ClientRectifyCommandQueue_Implementation(FEditorQueueNetworkable Networkable, bool ShouldExecute)
+void UNoxelNetworkingAgent::ClientRectifyCommandQueue_Implementation(int32 IndexToRectify, bool ShouldExecute)
 {
-	//TODO : Instead of sending the queue, refer to it in the buffer
+	QueuesWaiting.Remove(IndexToRectify);
 	FEditorQueue* Queue;
-	QueuesWaiting.Remove(Networkable.OrderNumber);
-	if(Networkable.DecodeQueue(&Queue))
+	if(GetQueueFromBuffer(IndexToRectify, &Queue))
 	{
-		
+		if (!ShouldExecute)
+		{
+			AddReservedPanels(Queue->GetReservedPanelsUsed()); //Can get reserved panels before undoing
+		}
+		UE_LOG(NoxelDataNetwork, Log, TEXT("[UNoxelNetworkingAgent::ClientRectifyCommandQueue_Implementation] Running queue as rectification"));
+		Queue->RunQueue(ShouldExecute);
 		if (ShouldExecute)
 		{
-			Queue->UndoQueue();
-		}
-		else
-		{
-			Queue->ExecuteQueue();
+			UseReservedPanels(Queue->GetReservedPanelsUsed()); //Can get reserved panels after doing
 		}
 	}
 }

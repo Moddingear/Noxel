@@ -109,6 +109,16 @@ struct NOXEL_API FEditorQueueOrderNetworkable
 		ObjectPtrIdx = Args.Pop();
 		Location = PopVector();
 	}
+
+	FString ToString()
+	{
+		FString ArgsString;
+		for (int32 Arg : ArgsString)
+		{
+			ArgsString += FString::Printf(TEXT("%d; "), Arg);
+		}
+		return FString::Printf(TEXT("OrderType = %d; Args.Num() = %d; Args : {%s}"), OrderType, Args.Num(), *ArgsString);
+	}
 };
 
 USTRUCT()
@@ -116,6 +126,7 @@ struct NOXEL_API FEditorQueueNetworkable
 {
 	GENERATED_BODY()
 
+	UPROPERTY()
 	int32 OrderNumber;
 
 	UPROPERTY()
@@ -153,9 +164,9 @@ struct NOXEL_API FEditorQueue
 	~FEditorQueue();
 
 	bool RunQueue(bool bShouldExecute);
-	//Decodes then executes queue. If fail at some points, undoes
+	//Executes queue. If fail at some points, undoes
 	bool ExecuteQueue();
-	//Decodes then calls undo on queue. If fail at some point, redoes
+	//Undo on queue. If fail at some point, redoes. Should not be called before Execute
 	bool UndoQueue();
 
 	void AddNodeReferenceOrder(TArray<FVector> Locations, UNodesContainer* Container);
@@ -167,12 +178,19 @@ struct NOXEL_API FEditorQueue
 	void AddNodeAddOrder(TArray<int32> NodeToAdd);
 	void AddNodeRemoveOrder(TArray<int32> NodeToRemove);
 
-	void AddPanelAddOrder(UNoxelContainer* InObject,
-		const float InThicknessNormal, const float InThicknessAntiNormal, const bool InVirtual);
+	void AddPanelReferenceOrder(TArray<int32> PanelIndices, UNoxelContainer* Container);
+
+	void AddPanelAddOrder(TArray<int32> PanelIndexRef);
+	void AddPanelRemoveOrder(TArray<int32> PanelIndexRef);
+	void AddPanelPropertiesOrder(TArray<int32> PanelIndexRef, float ThicknessNormal, float ThicknessAntiNormal, bool Virtual);
 
 	void AddNodeConnectOrder(TArray<int32> Nodes, TArray<int32> Panels);
+	void AddNodeDisconnectOrder(TArray<int32> Nodes, TArray<int32> Panels);
 
 	bool ToNetworkable(FEditorQueueNetworkable& Networkable);
+
+	//Returns the reserved panels that were used in the Execute direction
+	TArray<FPanelID> GetReservedPanelsUsed();
 };
 
 
@@ -189,6 +207,8 @@ struct NOXEL_API FEditorQueueOrderTemplate
 		: OrderType(InOrderType)
 	{}
 
+	virtual ~FEditorQueueOrderTemplate() {}
+	
 	virtual bool ExecuteOrder(FEditorQueue* Parent) //66
 	{
 		return false;
@@ -219,6 +239,11 @@ struct NOXEL_API FEditorQueueOrderTemplate
 	{
 		return FString::Printf(TEXT("QueueOrderType = %i"), OrderType);
 	}
+
+	virtual TArray<FPanelID> GetReservedPanelsUsed(FEditorQueue* Parent)
+	{
+		return {};
+	}
 };
 
 //Creates the references to node belonging to one nodes container
@@ -228,15 +253,16 @@ struct NOXEL_API FEditorQueueOrderNodeReference : public FEditorQueueOrderTempla
 	TArray<FVector> Locations;
 
 	FEditorQueueOrderNodeReference()
-		:FEditorQueueOrderTemplate(EEditorQueueOrderType::NodeReference)
-	{}
+		: FEditorQueueOrderTemplate(EEditorQueueOrderType::NodeReference), Container(nullptr)
+	{
+	}
 
 	FEditorQueueOrderNodeReference(TArray<FVector> InLocations, UNodesContainer* InContainer)
 		:FEditorQueueOrderTemplate(EEditorQueueOrderType::NodeReference),
 		Container(InContainer), Locations(InLocations)
 	{}
 
-	virtual ~FEditorQueueOrderNodeReference(){};
+	virtual ~FEditorQueueOrderNodeReference() override {}
 
 	virtual bool ExecuteOrder(FEditorQueue* Parent) override;
 
@@ -268,7 +294,7 @@ struct NOXEL_API FEditorQueueOrderNodeAddRemove : public FEditorQueueOrderTempla
 		Add(InAdd)
 	{}
 
-	virtual ~FEditorQueueOrderNodeAddRemove() {}
+	virtual ~FEditorQueueOrderNodeAddRemove() override {}
 
 	virtual bool ExecuteOrder(FEditorQueue* Parent) override;
 
@@ -304,7 +330,7 @@ struct NOXEL_API FEditorQueueOrderNodeDisConnect : public FEditorQueueOrderTempl
 		Connect(InConnect)
 	{}
 
-	virtual ~FEditorQueueOrderNodeDisConnect() {}
+	virtual ~FEditorQueueOrderNodeDisConnect() override {}
 
 	virtual bool ExecuteOrder(FEditorQueue* Parent) override;
 
@@ -324,38 +350,56 @@ struct NOXEL_API FEditorQueueOrderNodeDisConnect : public FEditorQueueOrderTempl
 
 };
 
+//Creates the references to panels belonging to one NoxelContainer
+struct NOXEL_API FEditorQueueOrderPanelReference : public FEditorQueueOrderTemplate
+{
+	UNoxelContainer* Container;
+	TArray<int32> PanelIndices;
+
+	FEditorQueueOrderPanelReference()
+		: FEditorQueueOrderTemplate(EEditorQueueOrderType::PanelReference), Container(nullptr)
+	{
+	}
+
+	FEditorQueueOrderPanelReference(TArray<int32> InPanelIndices, UNoxelContainer* InContainer)
+		:FEditorQueueOrderTemplate(EEditorQueueOrderType::PanelReference),
+		Container(InContainer), PanelIndices(InPanelIndices)
+	{}
+
+	virtual ~FEditorQueueOrderPanelReference() override {}
+
+	virtual bool ExecuteOrder(FEditorQueue* Parent) override;
+
+	virtual bool UndoOrder(FEditorQueue* Parent) override;
+
+	virtual FEditorQueueOrderNetworkable ToNetworkable(FEditorQueueNetworkable* Parent) override;
+
+	virtual bool FromNetworkable(FEditorQueueNetworkable* Parent, int32 OrderIndex) override;
+
+	virtual TArray<UNoxelDataComponent*> GetAffectedDataComponents(FEditorQueue* Parent) override;
+
+	virtual FString ToString() override;
+};
+
 
 struct NOXEL_API FEditorQueueOrderPanelAddRemove : public FEditorQueueOrderTemplate
 {
-	UNoxelContainer* Object;
-	float ThicknessNormal;
-	float ThicknessAntiNormal;
-	bool Virtual;
-
-	int32 PanelIndex;
-
+	TArray<int32> PanelIndexRef;
 	bool Add;
 
+	//Default constructor
 	FEditorQueueOrderPanelAddRemove()
-		:FEditorQueueOrderTemplate(EEditorQueueOrderType::PanelAdd),
-		Object(),
-		ThicknessNormal(0.5f),
-		ThicknessAntiNormal(0.5f),
-		Virtual(false),
-		Add(true)
-	{};
+		: FEditorQueueOrderTemplate(EEditorQueueOrderType::PanelAdd), Add(true)
+	{
+	}
 
-	FEditorQueueOrderPanelAddRemove(UNoxelContainer* InObject, 
-		const float InThicknessNormal, const float InThicknessAntiNormal, const bool InVirtual, bool InAdd)
-		:FEditorQueueOrderTemplate(EEditorQueueOrderType::PanelAdd),
-		Object(InObject),
-		ThicknessNormal(InThicknessNormal),
-		ThicknessAntiNormal(InThicknessAntiNormal),
-		Virtual(InVirtual),
-		Add(InAdd)
-	{};
+	FEditorQueueOrderPanelAddRemove(TArray<int32> InPanelIndexRef, bool InAdd)
+		: FEditorQueueOrderTemplate(InAdd ? EEditorQueueOrderType::PanelAdd : EEditorQueueOrderType::PanelRemove),
+		PanelIndexRef(InPanelIndexRef), Add(InAdd)
+	{
+	}
 
-	virtual ~FEditorQueueOrderPanelAddRemove() {}
+	virtual ~FEditorQueueOrderPanelAddRemove() override {}
 
 	bool DoAdd(FEditorQueue* Parent);
 
@@ -369,6 +413,47 @@ struct NOXEL_API FEditorQueueOrderPanelAddRemove : public FEditorQueueOrderTempl
 
 	virtual bool FromNetworkable(FEditorQueueNetworkable* Parent, int32 OrderIndex) override;
 	
+	virtual TArray<UNoxelDataComponent*> GetAffectedDataComponents(FEditorQueue* Parent) override;
+
+	virtual FString ToString() override;
+
+	virtual TArray<FPanelID> GetReservedPanelsUsed(FEditorQueue* Parent) override;
+};
+
+struct NOXEL_API FEditorQueueOrderPanelProperties : public FEditorQueueOrderTemplate
+{
+	TArray<int32> PanelIndexRef;
+	
+	TArray<float> ThicknessNormalBefore;
+	TArray<float> ThicknessAntiNormalBefore;
+	TArray<bool> VirtualBefore;
+	
+	float ThicknessNormalAfter;
+	float ThicknessAntiNormalAfter;
+	bool VirtualAfter;
+
+	FEditorQueueOrderPanelProperties()
+		: FEditorQueueOrderTemplate(EEditorQueueOrderType::PanelProperties)
+	{
+	}
+
+	FEditorQueueOrderPanelProperties(TArray<int32> InPanelIndexRef, float InThicknessNormalAfter, float InThicknessAntiNormalAfter, bool InVirtualAfter)
+		:FEditorQueueOrderTemplate(EEditorQueueOrderType::PanelProperties),
+	PanelIndexRef(InPanelIndexRef),
+	ThicknessNormalAfter(InThicknessNormalAfter), ThicknessAntiNormalAfter(InThicknessAntiNormalAfter),
+	VirtualAfter(InVirtualAfter)
+	{}
+
+	virtual ~FEditorQueueOrderPanelProperties() override {}
+
+	virtual bool ExecuteOrder(FEditorQueue* Parent) override;
+
+	virtual bool UndoOrder(FEditorQueue* Parent) override;
+
+	virtual FEditorQueueOrderNetworkable ToNetworkable(FEditorQueueNetworkable* Parent) override;
+
+	virtual bool FromNetworkable(FEditorQueueNetworkable* Parent, int32 OrderIndex) override;
+
 	virtual TArray<UNoxelDataComponent*> GetAffectedDataComponents(FEditorQueue* Parent) override;
 
 	virtual FString ToString() override;

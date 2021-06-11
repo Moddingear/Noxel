@@ -5,7 +5,6 @@
 
 #include "NoxelPlayerController.h"
 #include "Noxel/NoxelNetworkingAgent.h"
-#include "EditorGameState.h"
 
 #include "NoxelHangarBase.h"
 
@@ -145,12 +144,12 @@ void AEditorCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCom
 
 void AEditorCharacter::ReceivePossessed_Implementation(AController * NewController)
 {
+	UE_LOG(Noxel, Log,TEXT("[(%s)AEditorCharacter::ReceivePossessed_Implementation]"), *GetName());
 	Possessed(); //Pass possession onto the client
 }
 
 void AEditorCharacter::Possessed_Implementation()
 {
-	UE_LOG(Noxel, Log, TEXT("Possessed"));
 	if (wUserUI)
 	{
 		UserUI = CreateWidget<UUserWidget>((APlayerController*)GetController(), wUserUI);
@@ -161,23 +160,33 @@ void AEditorCharacter::Possessed_Implementation()
 	{
 		Hangar = (ANoxelHangarBase*)NetworkingAgent->Craft->GetOwner();
 		TArray<ANoxelPart*> Parts = GetCraft()->GetParts();
-		GetCraft()->OnCraftLoadedEvent.AddDynamic(this, &AEditorCharacter::CraftLoaded);
-		UE_LOG(Noxel, Log, TEXT("[AEditorCharacter::BeginPlay] OnCraftLoaded bound"));
-		if (Parts.Num() > 0)
+		if (GetCraft()->AreAllComponentsValid() && Parts.Num() >0)
 		{
-			CurrentPart = Parts[0];
-			SetMacro(AM_Nodes::StaticClass());
+			CraftLoaded();
 		}
 		else
 		{
-			UE_LOG(Noxel, Warning, TEXT("[AEditorCharacter::BeginPlay] No part found in craft"));
+			GetCraft()->OnComponentsReplicatedEvent.AddDynamic(this, &AEditorCharacter::ComponentsReplicated);
+			UE_LOG(Noxel, Warning, TEXT("[(%s)AEditorCharacter::Possessed_Implementation] Craft hasn't finished loading, delaying part spawn"), *GetName());
 		}
+		GetCraft()->OnCraftLoadedEvent.AddDynamic(this, &AEditorCharacter::CraftLoaded);
+		UE_LOG(Noxel, Log, TEXT("[(%s)AEditorCharacter::Possessed_Implementation] OnCraftLoaded bound"), *GetName());
+	}
+}
+
+void AEditorCharacter::ComponentsReplicated()
+{
+	if (GetCraft()->AreAllComponentsValid())
+	{
+		UE_LOG(Noxel, Log, TEXT("[(%s)AEditorCharacter::ComponentsReplicated] Components are now all valid"), *GetName());
+		GetCraft()->OnComponentsReplicatedEvent.RemoveDynamic(this, &AEditorCharacter::ComponentsReplicated);
+		CraftLoaded();
 	}
 }
 
 void AEditorCharacter::CraftLoaded()
 {
-	UE_LOG(Noxel, Log, TEXT("[AEditorCharacter::CraftLoaded]"));
+	UE_LOG(Noxel, Log, TEXT("[(%s)AEditorCharacter::CraftLoaded]"), *GetName());
 	TArray<ANoxelPart*> Parts = GetCraft()->GetParts();
 	if (Parts.Num() > 0)
 	{
@@ -186,7 +195,7 @@ void AEditorCharacter::CraftLoaded()
 	}
 	else
 	{
-		UE_LOG(Noxel, Log, TEXT("[AEditorCharacter::CraftLoaded] No part found"));
+		UE_LOG(Noxel, Log, TEXT("[(%s)AEditorCharacter::CraftLoaded] No part found"), *GetName());
 	}
 }
 
@@ -201,13 +210,17 @@ void AEditorCharacter::SetMacro(TSubclassOf<class ANoxelMacroBase> Macro)
 		CurrentMacro = GetWorld()->SpawnActorDeferred<ANoxelMacroBase>(Macro.Get(), GetHangar()->GetActorTransform(), this, this);
 		if (!CurrentMacro)
 		{
-			UE_LOG(Noxel, Warning, TEXT("[AEditorCharacter::SetMacro] New macro is invalid, aborting")); 
+			UE_LOG(Noxel, Warning, TEXT("[(%s)AEditorCharacter::SetMacro] New macro is invalid, aborting"), *GetName()); 
 			return;
 		}
 		CurrentMacro->SetOwningActor(this);
 		CurrentMacro->FollowComponent = Camera;
 		UGameplayStatics::FinishSpawningActor(CurrentMacro, GetHangar()->GetActorTransform());
 		CurrentMacro->AddTickPrerequisiteActor(this);
+	}
+	else
+	{
+		UE_LOG(Noxel, Warning, TEXT("[(%s)AEditorCharacter::SetMacro] Calling on non-local, aborting"), *GetName()); 
 	}
 }
 
@@ -255,6 +268,10 @@ void AEditorCharacter::LeftClickPressed()
 	{
 		CurrentMacro->leftClickPressed();
 	}
+	else
+	{
+		UE_LOG(Noxel, Warning, TEXT("[AEditorCharacter] Current macro is invalid"));
+	}
 }
 
 void AEditorCharacter::LeftClickReleased()
@@ -269,6 +286,10 @@ void AEditorCharacter::LeftClickReleased()
 	{
 		CurrentMacro->leftClickReleased();
 	}
+	else
+	{
+		UE_LOG(Noxel, Warning, TEXT("[AEditorCharacter] Current macro is invalid"));
+	}
 }
 
 void AEditorCharacter::MiddleClickPressed()
@@ -276,6 +297,10 @@ void AEditorCharacter::MiddleClickPressed()
 	if (CurrentMacro)
 	{
 		CurrentMacro->middleClickPressed();
+	}
+	else
+	{
+		UE_LOG(Noxel, Warning, TEXT("[AEditorCharacter] Current macro is invalid"));
 	}
 }
 
@@ -285,6 +310,10 @@ void AEditorCharacter::MiddleClickReleased()
 	{
 		CurrentMacro->middleClickReleased();
 	}
+	else
+	{
+		UE_LOG(Noxel, Warning, TEXT("[AEditorCharacter] Current macro is invalid"));
+	}
 }
 
 void AEditorCharacter::RightClickPressed()
@@ -292,6 +321,10 @@ void AEditorCharacter::RightClickPressed()
 	if (CurrentMacro)
 	{
 		CurrentMacro->rightClickPressed();
+	}
+	else
+	{
+		UE_LOG(Noxel, Warning, TEXT("[AEditorCharacter] Current macro is invalid"));
 	}
 }
 
@@ -301,6 +334,10 @@ void AEditorCharacter::RightClickReleased()
 	{
 		CurrentMacro->rightClickReleased();
 	}
+	else
+	{
+		UE_LOG(Noxel, Warning, TEXT("[AEditorCharacter] Current macro is invalid"));
+	}
 }
 
 void AEditorCharacter::AlternateModePressed()
@@ -309,6 +346,10 @@ void AEditorCharacter::AlternateModePressed()
 	{
 		CurrentMacro->alternateModePressed();
 	}
+	else
+	{
+		UE_LOG(Noxel, Warning, TEXT("[AEditorCharacter] Current macro is invalid"));
+	}
 }
 
 void AEditorCharacter::AlternateModeReleased()
@@ -316,5 +357,9 @@ void AEditorCharacter::AlternateModeReleased()
 	if (CurrentMacro)
 	{
 		CurrentMacro->alternateModeReleased();
+	}
+	else
+	{
+		UE_LOG(Noxel, Warning, TEXT("[AEditorCharacter] Current macro is invalid"));
 	}
 }

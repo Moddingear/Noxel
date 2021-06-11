@@ -86,6 +86,9 @@ public:
 	virtual void Possessed_Implementation();
 
 	UFUNCTION()
+	void ComponentsReplicated();
+	
+	UFUNCTION()
 	void CraftLoaded();
 
 	UFUNCTION(BlueprintCallable)

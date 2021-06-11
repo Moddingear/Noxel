@@ -37,6 +37,7 @@ private:
 	UNoxelRMCProvider* NoxelProvider;
 
 	TArray<int32> UnusedIndices; //Reuse PanelIndex indices when they got deleted
+	TArray<int32> ReservedIndices;
 	int32 MaxIndex; //Maximum given index, to use when UnusedIndices is empty
 
 	TArray<int32> ModifiedPanels;
@@ -68,8 +69,10 @@ private:
 	int32 GetNewPanelIndex();
 
 public:
+	TArray<int32> ReservePanelIndices(int32 Num);
+	bool ReservePanelIndices(TArray<int32> IndicesToReserve);
 	//Allocates a panel for use with differing functions
-	bool AddPanelDiffered(FPanelData data, int32& Index);
+	bool AddPanelDiffered(int32 Index);
 	//Checks the panel for validity
 	bool FinishAddPanel(int32 Index);
 
@@ -78,6 +81,9 @@ public:
 
 	//disconnects a node from a panel
 	bool DisconnectNodeDiffered(int32 Index, FNodeID Node);
+
+	bool SetPanelPropertiesDiffered(int32 Index, float ThicknessNormal, float ThicknessAntiNormal, bool Virtual);
+	
 
 	//Removes a panel, only works if the panel is already disconnected
 	bool RemovePanelDiffered(int32 Index);

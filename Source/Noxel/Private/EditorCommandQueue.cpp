@@ -3,6 +3,7 @@
 
 #include "EditorCommandQueue.h"
 
+#include "Noxel.h"
 #include "Noxel/NoxelDataStructs.h"
 #include "Noxel/NodesContainer.h"
 #include "Noxel/NoxelContainer.h"
@@ -43,9 +44,15 @@ bool FEditorQueueNetworkable::OrderFromNetworkable(int32 OrderIndex, FEditorQueu
  	case EEditorQueueOrderType::NodeDisconnect:
  		order = new FEditorQueueOrderNodeDisConnect();
  		break;
+ 	case EEditorQueueOrderType::PanelReference:
+ 		order = new FEditorQueueOrderPanelReference();
+ 		break;
  	case EEditorQueueOrderType::PanelAdd:
  	case EEditorQueueOrderType::PanelRemove:
  		order = new FEditorQueueOrderPanelAddRemove();
+ 		break;
+ 	case EEditorQueueOrderType::PanelProperties:
+ 		order = new FEditorQueueOrderPanelProperties();
  		break;
  	default:
  		break;
@@ -63,6 +70,7 @@ bool FEditorQueueNetworkable::DecodeQueue(FEditorQueue** Decoded)
 	FEditorQueue* queue = new FEditorQueue();
 	queue->Orders.Empty();
 	queue->Orders.SetNum(Orders.Num());
+	queue->OrderNumber = OrderNumber;
 	for (int i = 0; i < Orders.Num(); ++i)
 	{
 		FEditorQueueOrderTemplate* Order;
@@ -73,6 +81,8 @@ bool FEditorQueueNetworkable::DecodeQueue(FEditorQueue** Decoded)
 		}
 		else
 		{
+			UE_LOG(LogEditorCommandQueue, Warning, TEXT("[FEditorQueue::DecodeQueue@%p] Failed at %d on instruction %s"),
+				this, i, *Orders[i].ToString());
 			for (int j = 0; j < i; ++j)
 			{
 				delete queue->Orders[j];
@@ -87,9 +97,9 @@ bool FEditorQueueNetworkable::DecodeQueue(FEditorQueue** Decoded)
 
 FEditorQueue::~FEditorQueue()
 {
-	for (int i = 0; i < Orders.Num(); ++i)
+	for (int j = Orders.Num() - 1; j >= 0; --j)
 	{
-		delete Orders[i];
+		delete Orders[j];
 	}
 }
 
@@ -101,16 +111,17 @@ bool FEditorQueue::RunQueue(bool bShouldExecute = true)
 	//Run orders
 	for (OrderIdx = 0; OrderIdx < Orders.Num(); ++OrderIdx)
 	{
+		FEditorQueueOrderTemplate* Order = Orders[bShouldExecute ? OrderIdx : Orders.Num() - 1 - OrderIdx];
 		bool success;
 		if (bShouldExecute)
 		{
-			success = Orders[OrderIdx]->ExecuteOrder(this);
+			success = Order->ExecuteOrder(this);
 		}
 		else
 		{
-			success = Orders[OrderIdx]->UndoOrder(this);
+			success = Order->UndoOrder(this);
 		}
-		TArray<UNoxelDataComponent*> Affected = Orders[OrderIdx]->GetAffectedDataComponents(this);
+		TArray<UNoxelDataComponent*> Affected = Order->GetAffectedDataComponents(this);
 		for (UNoxelDataComponent* NoxelDataComponent : Affected)
 		{
 			AffArr.AddUnique(NoxelDataComponent);
@@ -118,7 +129,7 @@ bool FEditorQueue::RunQueue(bool bShouldExecute = true)
 		if (!success)
 		{
 			UE_LOG(LogEditorCommandQueue, Warning, TEXT("[FEditorQueue::RunQueue(%d)@%p] Failed at %d on instruction %s"),
-				bShouldExecute, this, OrderIdx, *Orders[OrderIdx]->ToString());
+				bShouldExecute, this, OrderIdx, *Order->ToString());
 			bStillValid = false;
 			break;
 		}
@@ -165,13 +176,14 @@ bool FEditorQueue::RunQueue(bool bShouldExecute = true)
 	{
 		for (int j = OrderIdx - 1; j >= 0; --j)
 		{
+			FEditorQueueOrderTemplate* Order = Orders[bShouldExecute ? j : Orders.Num() - 1 - j];
 			if (bShouldExecute)
 			{
-				Orders[OrderIdx]->UndoOrder(this);
+				Order->UndoOrder(this);
 			}
 			else
 			{
-				Orders[OrderIdx]->ExecuteOrder(this);
+				Order->ExecuteOrder(this);
 			}
 		}
 	}
@@ -208,7 +220,7 @@ TMap<FNodeID, int32> FEditorQueue::CreateNodeReferenceOrdersFromNodeList(TArray<
 		}
 		else
 		{
-			ContainerIdx = Containers.Add(Node.Object);
+			Containers.Add(Node.Object);
 			SortedNodes.Add({Node});
 		}
 	}
@@ -248,16 +260,40 @@ void FEditorQueue::AddNodeRemoveOrder(TArray<int32> NodeToRemove)
 	Orders.Add(order);
 }
 
-void FEditorQueue::AddPanelAddOrder(UNoxelContainer* InObject,
-	const float InThicknessNormal, const float InThicknessAntiNormal, const bool InVirtual)
+void FEditorQueue::AddPanelReferenceOrder(TArray<int32> PanelIndices, UNoxelContainer* Container)
 {
-	FEditorQueueOrderPanelAddRemove* order = new FEditorQueueOrderPanelAddRemove(InObject, InThicknessNormal, InThicknessAntiNormal, InVirtual, true);
+	FEditorQueueOrderPanelReference* order = new FEditorQueueOrderPanelReference(PanelIndices, Container);
+	Orders.Add(order);
+}
+
+void FEditorQueue::AddPanelAddOrder(TArray<int32> PanelIndexRef)
+{
+	FEditorQueueOrderPanelAddRemove* order = new FEditorQueueOrderPanelAddRemove(PanelIndexRef, true);
+	Orders.Add(order);
+}
+
+void FEditorQueue::AddPanelRemoveOrder(TArray<int32> PanelIndexRef)
+{
+	FEditorQueueOrderPanelAddRemove* order = new FEditorQueueOrderPanelAddRemove(PanelIndexRef, false);
+	Orders.Add(order);
+}
+
+void FEditorQueue::AddPanelPropertiesOrder(TArray<int32> PanelIndexRef, float ThicknessNormal,
+	float ThicknessAntiNormal, bool Virtual)
+{
+	FEditorQueueOrderPanelProperties* order = new FEditorQueueOrderPanelProperties(PanelIndexRef, ThicknessNormal, ThicknessAntiNormal, Virtual);
 	Orders.Add(order);
 }
 
 void FEditorQueue::AddNodeConnectOrder(TArray<int32> Nodes, TArray<int32> Panels)
 {
 	FEditorQueueOrderNodeDisConnect* order = new FEditorQueueOrderNodeDisConnect(Nodes, Panels, true);
+	Orders.Add(order);
+}
+
+void FEditorQueue::AddNodeDisconnectOrder(TArray<int32> Nodes, TArray<int32> Panels)
+{
+	FEditorQueueOrderNodeDisConnect* order = new FEditorQueueOrderNodeDisConnect(Nodes, Panels, false);
 	Orders.Add(order);
 }
 
@@ -270,6 +306,16 @@ bool FEditorQueue::ToNetworkable(FEditorQueueNetworkable &Networkable)
 		Networkable.Orders.Add(Orders[OrderIdx]->ToNetworkable(&Networkable));
 	}
 	return true;
+}
+
+TArray<FPanelID> FEditorQueue::GetReservedPanelsUsed()
+{
+	TArray<FPanelID> Used;
+	for (int32 OrderIdx = 0; OrderIdx < Orders.Num(); ++OrderIdx)
+	{
+		Used.Append(Orders[OrderIdx]->GetReservedPanelsUsed(this));
+	}
+	return Used;
 }
 
 bool FEditorQueueOrderNodeReference::ExecuteOrder(FEditorQueue* Parent)
@@ -290,7 +336,6 @@ bool FEditorQueueOrderNodeReference::UndoOrder(FEditorQueue* Parent)
 FEditorQueueOrderNetworkable FEditorQueueOrderNodeReference::ToNetworkable(FEditorQueueNetworkable* Parent)
 {
 	FEditorQueueOrderNetworkable Net = FEditorQueueOrderTemplate::ToNetworkable(Parent);
-	Net.Args.Add(Locations.Num());
 	Net.Args.Add(Parent->AddPointer(Container));
 	for (int i = 0; i < Locations.Num(); ++i)
 	{
@@ -302,17 +347,17 @@ FEditorQueueOrderNetworkable FEditorQueueOrderNodeReference::ToNetworkable(FEdit
 bool FEditorQueueOrderNodeReference::FromNetworkable(FEditorQueueNetworkable* Parent, int32 OrderIndex)
 {
 	FEditorQueueOrderTemplate::FromNetworkable(Parent, OrderIndex);
-	FEditorQueueOrderNetworkable& InData = Parent->Orders[OrderIndex];
-	if (InData.Args.Num()<2)
+	FEditorQueueOrderNetworkable InData = Parent->Orders[OrderIndex];
+	if (InData.Args.Num()<1)
 	{
 		return false;
 	}
-	int32 NumLocations = InData.Args[0];
-	if (InData.Args.Num() != NumLocations * 3 + 2)
+	int32 NumLocations = (InData.Args.Num()-1)/3;
+	if (InData.Args.Num() % 3 != 1)
 	{
 		return false;
 	}
-	Container = Cast<UNodesContainer>(Parent->GetPointer(InData.Args[1]));
+	Container = Cast<UNodesContainer>(Parent->GetPointer(InData.Args[0]));
 	if (!IsValid(Container))
 	{
 		return false;
@@ -561,7 +606,7 @@ bool FEditorQueueOrderNodeDisConnect::FromNetworkable(FEditorQueueNetworkable* P
 {
 	FEditorQueueOrderTemplate::FromNetworkable(Parent, OrderIndex);
 	Connect = OrderType == EEditorQueueOrderType::NodeConnect;
-	FEditorQueueOrderNetworkable& InData = Parent->Orders[OrderIndex];
+	FEditorQueueOrderNetworkable InData = Parent->Orders[OrderIndex];
 	if (InData.Args.Num() % 2 ==1) //must have a pair of elements
 	{
 		return false;
@@ -598,46 +643,112 @@ TArray<UNoxelDataComponent*> FEditorQueueOrderNodeDisConnect::GetAffectedDataCom
 
 FString FEditorQueueOrderNodeDisConnect::ToString()
 {
-	return FEditorQueueOrderTemplate::ToString(); //TODO
+	FString Connections;
+	for (int i = 0; i < FMath::Min( Nodes.Num(), Panels.Num()); ++i)
+	{
+		Connections += FString::Printf(TEXT("%d->%d; "), Nodes[i], Panels[i]);
+	}
+	return FEditorQueueOrderTemplate::ToString() + FString::Printf(TEXT("; Connections : %s"), *Connections);
+}
+
+bool FEditorQueueOrderPanelReference::ExecuteOrder(FEditorQueue* Parent)
+{
+	for (int i = 0; i < PanelIndices.Num(); ++i)
+	{
+		Parent->PanelReferences.Emplace(Container, PanelIndices[i]);
+	}
+	return true;
+}
+
+bool FEditorQueueOrderPanelReference::UndoOrder(FEditorQueue* Parent)
+{
+	Parent->PanelReferences.SetNum(Parent->PanelReferences.Num()-PanelIndices.Num());
+	return true;
+}
+
+FEditorQueueOrderNetworkable FEditorQueueOrderPanelReference::ToNetworkable(FEditorQueueNetworkable* Parent)
+{
+	FEditorQueueOrderNetworkable Net(EEditorQueueOrderType::PanelReference);
+	Net.Args.Add(Parent->AddPointer(Container));
+	Net.Args.Append(PanelIndices);
+	return Net;
+}
+
+bool FEditorQueueOrderPanelReference::FromNetworkable(FEditorQueueNetworkable* Parent, int32 OrderIndex)
+{
+	if (!FEditorQueueOrderTemplate::FromNetworkable(Parent, OrderIndex)) { return false; }
+	FEditorQueueOrderNetworkable& InData = Parent->Orders[OrderIndex];
+	if (InData.Args.Num() <1)
+	{
+		return false;
+	}
+	Container = Cast<UNoxelContainer>(Parent->GetPointer(InData.Args[0]));
+	if (!IsValid(Container))
+	{
+		return false;
+	}
+	for (int i = 1; i < InData.Args.Num(); ++i)
+	{
+		PanelIndices.Add(InData.Args[i]);
+	}
+	return true;
+}
+
+TArray<UNoxelDataComponent*> FEditorQueueOrderPanelReference::GetAffectedDataComponents(FEditorQueue* Parent)
+{
+	return {};
+}
+
+FString FEditorQueueOrderPanelReference::ToString()
+{
+	FString PanelIndicesString;
+	for (int i = 0; i < PanelIndices.Num(); ++i)
+	{
+		PanelIndicesString += FString::Printf(TEXT("%d; "), PanelIndices[i]);
+	}
+	return FEditorQueueOrderTemplate::ToString() + FString::Printf(TEXT("; Container = %s; PanelIndices.Num() = %d; PanelIndices : %s"), *Container->GetName(), PanelIndices.Num(), *PanelIndicesString);
 }
 
 bool FEditorQueueOrderPanelAddRemove::DoAdd(FEditorQueue* Parent)
 {
-	if (Object)
+	bool valid = true; int i;
+	for (i = 0; i < PanelIndexRef.Num(); ++i)
 	{
-		int32 Index;
-		if(Object->AddPanelDiffered(FPanelData(TArray<FNodeID>(), ThicknessNormal, ThicknessAntiNormal, Virtual), Index))
+		if(!Parent->PanelReferences[PanelIndexRef[i]].Object->AddPanelDiffered(Parent->PanelReferences[PanelIndexRef[i]].PanelIndex))
 		{
-			if (Add) //Execute, store data for undo
-			{
-				PanelIndex = Parent->PanelReferences.Add(FPanelID(Object, Index));
-			}
-			return true;
+			valid = false;
+			break;
 		}
 	}
-	return false;
+	if (!valid)
+	{
+		for (int j = i - 1; j >= 0; --j)
+		{
+			Parent->PanelReferences[PanelIndexRef[j]].Object->RemovePanelDiffered(Parent->PanelReferences[PanelIndexRef[j]].PanelIndex);
+		}
+	}
+	return valid;
 }
 
 bool FEditorQueueOrderPanelAddRemove::DoRemove(FEditorQueue* Parent)
 {
-	if (Object)
+	bool valid = true; int i;
+	for (i = 0; i < PanelIndexRef.Num(); ++i)
 	{
-		FPanelData data;
-		if(Object->GetPanelByPanelIndex(Parent->PanelReferences[PanelIndex], data))
+		if(!Parent->PanelReferences[PanelIndexRef[i]].Object->RemovePanelDiffered(Parent->PanelReferences[PanelIndexRef[i]].PanelIndex))
 		{
-			if (Object->RemovePanelDiffered(Parent->PanelReferences[PanelIndex]))
-			{
-				if (!Add) //Execute, store data for undo
-				{
-					ThicknessNormal = data.ThicknessNormal;
-					ThicknessAntiNormal = data.ThicknessAntiNormal;
-					Virtual = data.Virtual;
-				}
-			}
+			valid = false;
+			break;
 		}
-		
 	}
-	return false;
+	if (!valid)
+	{
+		for (int j = i - 1; j >= 0; --j)
+		{
+			Parent->PanelReferences[PanelIndexRef[j]].Object->AddPanelDiffered(Parent->PanelReferences[PanelIndexRef[j]].PanelIndex);
+		}
+	}
+	return valid;
 }
 
 bool FEditorQueueOrderPanelAddRemove::ExecuteOrder(FEditorQueue* Parent)
@@ -667,29 +778,15 @@ bool FEditorQueueOrderPanelAddRemove::UndoOrder(FEditorQueue* Parent)
 FEditorQueueOrderNetworkable FEditorQueueOrderPanelAddRemove::ToNetworkable(FEditorQueueNetworkable* Parent)
 {
 	FEditorQueueOrderNetworkable Net(Add ? EEditorQueueOrderType::PanelAdd : EEditorQueueOrderType::PanelRemove);
-	Net.Args.Add(Parent->AddPointer(Object));
-	Net.AddFloat(ThicknessNormal); Net.AddFloat(ThicknessAntiNormal);
-	Net.Args.Append({ Virtual, PanelIndex });
+	Net.Args.Append(PanelIndexRef);
 	return Net;
 }
 
 bool FEditorQueueOrderPanelAddRemove::FromNetworkable(FEditorQueueNetworkable* Parent, int32 OrderIndex)
 {
 	if (!FEditorQueueOrderTemplate::FromNetworkable(Parent, OrderIndex)) { return false; }
-	FEditorQueueOrderNetworkable& InData = Parent->Orders[OrderIndex];
-	int32 arglen = InData.Args.Num();
-	if (arglen<5) {
-		return false;
-	}
-	Object = Cast<UNoxelContainer>(Parent->GetPointer( InData.Args[0]));
-	if (!IsValid(Object))
-	{
-		return false;
-	}
-	ThicknessNormal = InData.GetFloat(1);
-	ThicknessAntiNormal = InData.GetFloat(2);
-	Virtual = InData.Args[3];
-	PanelIndex = InData.Args[4];
+	FEditorQueueOrderNetworkable InData = Parent->Orders[OrderIndex];
+	PanelIndexRef = InData.Args;
 	Add = OrderType == EEditorQueueOrderType::PanelAdd;
 	return true;
 }
@@ -697,12 +794,142 @@ bool FEditorQueueOrderPanelAddRemove::FromNetworkable(FEditorQueueNetworkable* P
 TArray<UNoxelDataComponent*> FEditorQueueOrderPanelAddRemove::GetAffectedDataComponents(FEditorQueue* Parent)
 {
 	TArray<UNoxelDataComponent*> affected;
-	affected.Add(Cast<UNoxelDataComponent>(Object));
+	for (auto RefIdx : PanelIndexRef)
+	{
+		affected.AddUnique(Cast<UNoxelDataComponent>(Parent->PanelReferences[RefIdx].Object));
+	}
 	return affected;
 }
 
 FString FEditorQueueOrderPanelAddRemove::ToString()
 {
-	return FEditorQueueOrderTemplate::ToString() + FString::Printf(TEXT("; Object Name = %s; ThicknessNormal = %f; ThicknessAntiNormal = %f; Virtual = %d; Add = %d"),
-		*Object->GetName(), ThicknessNormal, ThicknessAntiNormal, Virtual, Add);
+	FString PanelRefString;
+	for (int i = 0; i < PanelIndexRef.Num(); ++i)
+	{
+		PanelRefString += FString::Printf(TEXT("%d; "), PanelIndexRef[i]);
+	}
+	return FEditorQueueOrderTemplate::ToString() + FString::Printf(TEXT("; Add = %s; PanelIndexRef.Num() = %d : {%s}"),
+		Add ? TEXT("True") : TEXT("False"), PanelIndexRef.Num(), *PanelRefString);
+}
+
+TArray<FPanelID> FEditorQueueOrderPanelAddRemove::GetReservedPanelsUsed(FEditorQueue* Parent)
+{
+	TArray<FPanelID> Used;
+	if (Add)
+	{
+		for (int i = 0; i < PanelIndexRef.Num(); ++i)
+        {
+        	Used.Add(Parent->PanelReferences[PanelIndexRef[i]]);
+        }
+	}
+	return Used;
+}
+
+bool FEditorQueueOrderPanelProperties::ExecuteOrder(FEditorQueue* Parent)
+{
+	const int32 NumPanels = PanelIndexRef.Num();
+	ThicknessNormalBefore.SetNum(NumPanels);
+	ThicknessAntiNormalBefore.SetNum(NumPanels);
+	VirtualBefore.SetNum(NumPanels);
+	bool bValid = true; int i;
+	for (i = 0; i < NumPanels; ++i)
+	{
+		FPanelData Data;
+        FPanelID PanelID = Parent->PanelReferences[PanelIndexRef[i]];
+        if (!PanelID.Object->GetPanelByPanelIndex(PanelID.PanelIndex, Data))
+        {
+        	bValid = false;
+			break;
+        }
+		ThicknessNormalBefore[i] = Data.ThicknessNormal;
+        ThicknessAntiNormalBefore[i] = Data.ThicknessAntiNormal;
+        VirtualBefore[i] = Data.Virtual;
+        PanelID.Object->SetPanelPropertiesDiffered(PanelID.PanelIndex, ThicknessNormalAfter, ThicknessAntiNormalAfter, VirtualAfter);
+	}
+	if (!bValid)
+	{
+		for (int j = i - 1; j >= 0; --j)
+		{
+			FPanelID PanelID = Parent->PanelReferences[PanelIndexRef[j]];
+			PanelID.Object->SetPanelPropertiesDiffered(PanelID.PanelIndex, ThicknessNormalBefore[j], ThicknessAntiNormalBefore[j], VirtualBefore[j]);
+		}
+	}
+	return bValid;
+}
+
+bool FEditorQueueOrderPanelProperties::UndoOrder(FEditorQueue* Parent)
+{
+	bool bValid = true; int j;
+	for (j = PanelIndexRef.Num() - 1; j >= 0; --j)
+	{
+		FPanelID PanelID = Parent->PanelReferences[PanelIndexRef[j]];
+		if (!PanelID.Object->SetPanelPropertiesDiffered(PanelID.PanelIndex, ThicknessNormalBefore[j], ThicknessAntiNormalBefore[j], VirtualBefore[j]))
+		{
+			bValid = false;
+			break;
+		}
+	}
+	if (!bValid)
+	{
+		for (int i = j; i < PanelIndexRef.Num(); ++i)
+		{
+			FPanelID PanelID = Parent->PanelReferences[PanelIndexRef[i]];
+			PanelID.Object->SetPanelPropertiesDiffered(PanelID.PanelIndex, ThicknessNormalAfter, ThicknessAntiNormalAfter, VirtualAfter);
+		}
+	}
+	return bValid;
+}
+
+FEditorQueueOrderNetworkable FEditorQueueOrderPanelProperties::ToNetworkable(FEditorQueueNetworkable* Parent)
+{
+	FEditorQueueOrderNetworkable Net(EEditorQueueOrderType::PanelProperties);
+	Net.AddFloat(ThicknessNormalAfter);
+	Net.AddFloat(ThicknessAntiNormalAfter);
+	Net.Args.Add(VirtualAfter);
+	Net.Args.Append(PanelIndexRef);
+	return Net;
+}
+
+bool FEditorQueueOrderPanelProperties::FromNetworkable(FEditorQueueNetworkable* Parent, int32 OrderIndex)
+{
+	if (!FEditorQueueOrderTemplate::FromNetworkable(Parent, OrderIndex))
+	{
+		return false;
+	}
+	FEditorQueueOrderNetworkable InData = Parent->Orders[OrderIndex];
+	if (InData.Args.Num()<3)
+	{
+		return false;
+	}
+	ThicknessNormalAfter = InData.GetFloat(0);
+	ThicknessAntiNormalAfter = InData.GetFloat(1);
+	VirtualAfter = InData.Args[2];
+	PanelIndexRef.SetNum(InData.Args.Num()-3);
+	for (int i = 0; i < PanelIndexRef.Num(); ++i)
+	{
+		PanelIndexRef[i] = InData.Args[i+3];
+	}
+	return true;
+}
+
+TArray<UNoxelDataComponent*> FEditorQueueOrderPanelProperties::GetAffectedDataComponents(FEditorQueue* Parent)
+{
+	TArray<UNoxelDataComponent*> affected;
+	for (auto RefIdx : PanelIndexRef)
+	{
+		affected.AddUnique(Cast<UNoxelDataComponent>(Parent->PanelReferences[RefIdx].Object));
+	}
+	return affected;
+}
+
+FString FEditorQueueOrderPanelProperties::ToString()
+{
+	FString PanelRefString;
+	for (int i = 0; i < PanelIndexRef.Num(); ++i)
+	{
+		PanelRefString += FString::Printf(TEXT("%d; "), PanelIndexRef[i]);
+	}
+	return FEditorQueueOrderTemplate::ToString() + FString::Printf(TEXT("; ThicknessNormal = %f; ThicknessAntiNormal = %f; Virtual = %s; PanelIndexRef.Num() = %d : {%s}"),
+		ThicknessNormalAfter, ThicknessAntiNormalAfter, VirtualAfter ? TEXT("True") : TEXT("False"), PanelIndexRef.Num(), *PanelRefString);
+	
 }

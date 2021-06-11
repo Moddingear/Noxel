@@ -11,7 +11,7 @@
 ANoxelPart::ANoxelPart()
 {
  	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
-	SetReplicates(true);
+	bReplicates = true;
 	SetReplicatingMovement(true);
 	PrimaryActorTick.bCanEverTick = true;
 	noxelContainer = CreateDefaultSubobject<UNoxelContainer>(TEXT("Noxel Container"));
@@ -27,7 +27,7 @@ ANoxelPart::ANoxelPart()
 void ANoxelPart::BeginPlay()
 {
 	Super::BeginPlay();
-	UE_LOG(Noxel, Log, TEXT("Server : %s; Part location : %s"), GetWorld()->IsServer() ? TEXT("True") : TEXT("False"), *GetActorLocation().ToString());
+	UE_LOG(Noxel, Log, TEXT("[(%s)ANoxelPart::BeginPlay] Server : %s; Part location : %s"), *GetName(), GetWorld()->IsServer() ? TEXT("True") : TEXT("False"), *GetActorLocation().ToString());
 }
 
 UNoxelContainer * ANoxelPart::GetNoxelContainer()

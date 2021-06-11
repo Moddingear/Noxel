@@ -229,7 +229,7 @@ bool UNodesRMCProvider::GetCollisionMesh(FRuntimeMeshCollisionData& CollisionDat
 
 bool UNodesRMCProvider::IsThreadSafe()
 {
-	return false;
+	return true;
 }
 
 void UNodesRMCProvider::PrepareStaticMesh()

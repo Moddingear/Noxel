@@ -35,20 +35,24 @@ ANoxelHangarBase::ANoxelHangarBase()
 void ANoxelHangarBase::BeginPlay()
 {
 	Super::BeginPlay();
-	UE_LOG(Noxel, Log, TEXT("[ANoxelHangarBase::BeginPlay] Loading default craft"));
-	Craft->SpawnContext = ECraftSpawnContext::Editor;
-	Craft->loadCraft(Craft->GetDefaultCraftSave(), FTransform(FVector(0,0,100)));
-	UE_LOG(Noxel, Log, TEXT("[ANoxelHangarBase::BeginPlay] %s : %d components"), *Craft->GetFullName(), Craft->Components.Num());
-
-	AGameStateBase* gs = GetWorld()->GetGameState();
-	if (gs)
+	if (GetWorld()->IsServer())
 	{
-		AEditorGameState* egs = (AEditorGameState*)gs;
-		if (egs)
-		{
-			egs->Hangar = this;
-		}
+		UE_LOG(Noxel, Log, TEXT("[ANoxelHangarBase::BeginPlay] Loading default craft"));
+        Craft->SpawnContext = ECraftSpawnContext::Editor;
+        Craft->loadCraft(Craft->GetDefaultCraftSave(), FTransform(FVector(0,0,100)));
+        UE_LOG(Noxel, Log, TEXT("[ANoxelHangarBase::BeginPlay] %s : %d components"), *Craft->GetFullName(), Craft->Components.Num());
+    
+        AGameStateBase* gs = GetWorld()->GetGameState();
+        if (gs)
+        {
+        	AEditorGameState* egs = (AEditorGameState*)gs;
+        	if (egs)
+        	{
+        		egs->Hangar = this;
+        	}
+        }
 	}
+	
 }
 
 // Called every frame

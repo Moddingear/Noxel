@@ -162,16 +162,18 @@ void AM_Nodes::leftClickPressed_Implementation()
 				FEditorQueue* queue = GetNoxelNetworkingAgent()->CreateEditorQueue();
 				queue->AddNodeReferenceOrder({id.Location}, id.Object);
 				queue->AddNodeAddOrder({0});
-				GetNoxelNetworkingAgent()->SendCommandQueue(queue, true);
+				GetNoxelNetworkingAgent()->SendCommandQueue(queue);
 			}
 			else { //Connect a panel
 				FEditorQueue* queue = GetNoxelNetworkingAgent()->CreateEditorQueue();
 				auto nodeMap = queue->CreateNodeReferenceOrdersFromNodeList(selectedNodes);
-				queue->AddPanelAddOrder(getSelectedNoxelContainer(), 10, 10, false);
+				queue->AddPanelReferenceOrder({GetNoxelNetworkingAgent()->GetReservedPanels(getSelectedNoxelContainer())[0]}, getSelectedNoxelContainer());
+				queue->AddPanelAddOrder({0});
+				queue->AddPanelPropertiesOrder({0}, 5, 5, false);
 				TArray<int32> noderefs = queue->NodeListToNodeReferences(selectedNodes, nodeMap);
 				TArray<int32> panelrefs; panelrefs.Init(0, selectedNodes.Num());
 				queue->AddNodeConnectOrder(noderefs, panelrefs);
-				GetNoxelNetworkingAgent()->SendCommandQueue(queue, true);
+				GetNoxelNetworkingAgent()->SendCommandQueue(queue);
 			}
 			resetNodesColor(); //Clear all selected node
 			selectedNodes.Empty();
@@ -182,7 +184,7 @@ void AM_Nodes::leftClickPressed_Implementation()
 			end = location + direction * ray_length;
 			FNodeID id;
 			if (traceNodes(location, end, id)) {
-				UE_LOG(NoxelMacro, Warning, TEXT("[AM_Nodes::leftClickPressed_Implementation]Trace sucessful"));
+				//UE_LOG(NoxelMacro, Warning, TEXT("[AM_Nodes::leftClickPressed_Implementation]Trace sucessful"));
 				if (!selectedNodes.Contains(id)) { //If the node wasn't already selected
 					setNodeColor(id, ENoxelColor::NodeSelected1); //Set the color of the node
 					selectedNodes.Add(id);
@@ -247,7 +249,7 @@ void AM_Nodes::rightClickPressed_Implementation()
 				auto nodeMap = queue->CreateNodeReferenceOrdersFromNodeList(selectedNodes);
 				TArray<int32> noderefs = queue->NodeListToNodeReferences(selectedNodes, nodeMap);
 				queue->AddNodeRemoveOrder(noderefs);
-				GetNoxelNetworkingAgent()->SendCommandQueue(queue, true);
+				GetNoxelNetworkingAgent()->SendCommandQueue(queue);
 				selectedNodes.Empty();
 			}
 			else if (traceNodes(location, end, node))
@@ -256,12 +258,23 @@ void AM_Nodes::rightClickPressed_Implementation()
 				FEditorQueue* queue = GetNoxelNetworkingAgent()->CreateEditorQueue();
 				queue->AddNodeReferenceOrder({node.Location}, node.Object);
 				queue->AddNodeRemoveOrder({0});
-				GetNoxelNetworkingAgent()->SendCommandQueue(queue, true);
-				//networkingAgent->RemoveNode(node);
+				GetNoxelNetworkingAgent()->SendCommandQueue(queue);
 			}
 			else if (tracePanels(location, end, panel))
 			{
-				//networkingAgent->RemovePanel(panel);
+				FPanelData pdata;
+				if(panel.Object->GetPanelByPanelIndex(panel.PanelIndex, pdata))
+				{
+					FEditorQueue* queue = GetNoxelNetworkingAgent()->CreateEditorQueue();
+					auto nodemap = queue->CreateNodeReferenceOrdersFromNodeList(pdata.Nodes);
+					auto nodes = queue->NodeListToNodeReferences(pdata.Nodes, nodemap);
+					TArray<int32> panels;
+					panels.Init(0, pdata.Nodes.Num());
+					queue->AddPanelReferenceOrder({0}, panel.Object);
+					queue->AddNodeDisconnectOrder(nodes, panels);
+					queue->AddPanelRemoveOrder({0});
+					GetNoxelNetworkingAgent()->SendCommandQueue(queue);
+				}
 			}
 		}
 		else { //Move nodes

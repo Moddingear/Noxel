@@ -224,24 +224,62 @@ int32 UNoxelContainer::GetNewPanelIndex()
 {
 	if (UnusedIndices.Num() != 0)
 	{
-		UE_LOG(NoxelData, Log, TEXT("[UNoxelContainer::AddPanel] Index given is recycled"));
+		//UE_LOG(NoxelData, Log, TEXT("[UNoxelContainer::AddPanel] Index given is recycled"));
 		return UnusedIndices.Pop();
 	}
 	else
 	{
-		UE_LOG(NoxelData, Log, TEXT("[UNoxelContainer::AddPanel] Index given is new"));
+		//UE_LOG(NoxelData, Log, TEXT("[UNoxelContainer::AddPanel] Index given is new"));
 		return ++MaxIndex;
 	}
 }
 
-
-
-bool UNoxelContainer::AddPanelDiffered(FPanelData data, int32 &Index)
+TArray<int32> UNoxelContainer::ReservePanelIndices(int32 Num)
 {
-	data.PanelIndex = GetNewPanelIndex();
-	Index = data.PanelIndex;
-	Panels.Add(data);
+	TArray<int32> NewReserved;
+	for (int i = 0; i < Num; ++i)
+	{
+		NewReserved.Add(GetNewPanelIndex());
+	}
+	ReservedIndices.Append(NewReserved);
+	return NewReserved;
+}
+
+bool UNoxelContainer::ReservePanelIndices(TArray<int32> IndicesToReserve)
+{
+	for (int32 Index : IndicesToReserve)
+	{
+		int32 IndexInArray;
+		if (GetIndexOfPanelByPanelIndex(Index, IndexInArray))
+		{
+			return false;
+		}
+		if (ReservedIndices.Contains(Index))
+		{
+			return false;
+		}
+	}
+	for (int32 Index : IndicesToReserve)
+	{
+		UnusedIndices.RemoveSwap(Index);
+		ReservedIndices.Add(Index);
+	}
+	return true;
+}
+
+
+bool UNoxelContainer::AddPanelDiffered(int32 Index)
+{
+	FPanelData found;
+	if (GetPanelByPanelIndex(Index, found))
+	{
+		return false;
+	}
+	FPanelData Data;
+	Data.PanelIndex = Index;
+	Panels.Add(Data);
 	DifferedPanels.AddUnique(Index);
+	ReservedIndices.RemoveSwap(Index);
 	return true;
 }
 
@@ -314,6 +352,21 @@ bool UNoxelContainer::DisconnectNodeDiffered(int32 Index, FNodeID Node)
 		return false;
 	}
 	return false;
+}
+
+bool UNoxelContainer::SetPanelPropertiesDiffered(int32 Index, float ThicknessNormal, float ThicknessAntiNormal,
+	bool Virtual)
+{
+	int32 IndexInArray;
+	bool found = GetIndexOfPanelByPanelIndex(Index, IndexInArray);
+	if (found)
+	{
+		FPanelData &data = Panels[IndexInArray];
+		data.ThicknessNormal = ThicknessNormal;
+		data.ThicknessAntiNormal = ThicknessAntiNormal;
+		data.Virtual = Virtual;
+	}
+	return found;
 }
 
 bool UNoxelContainer::RemovePanelDiffered(int32 Index)

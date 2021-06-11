@@ -51,23 +51,26 @@ public:
 
 	UPROPERTY(BlueprintAssignable)
 	FCraftLoadedEvent OnCraftLoadedEvent;
-
+	
 	UPROPERTY(BlueprintAssignable)
 	FComponentReplicatedEvent OnComponentsReplicatedEvent;
 
 	////////////////////////////////////////////////////////////////
 
 	UFUNCTION(BlueprintPure)
-		TArray<AActor*> GetComponents();
+	bool AreAllComponentsValid();
 
 	UFUNCTION(BlueprintPure)
-		TArray<class ANoxelPart*> GetParts();
+	TArray<AActor*> GetComponents();
+
+	UFUNCTION(BlueprintPure)
+	TArray<class ANoxelPart*> GetParts();
 
 	//UFUNCTION(BlueprintCallable)
-		AActor* AddComponent(TSubclassOf<AActor> Class, FTransform Location, FActorSpawnParameters SpawnParameters, bool bSetSpawnContext = true, bool bFinishSpawning = true);
+	AActor* AddComponent(TSubclassOf<AActor> Class, FTransform Location, FActorSpawnParameters SpawnParameters, bool bSetSpawnContext = true, bool bFinishSpawning = true);
 
 	UFUNCTION(BlueprintCallable)
-		bool RemoveComponent(AActor* Component);
+	bool RemoveComponent(AActor* Component);
 
 	////////////////////////////////////////////////////////////////
 

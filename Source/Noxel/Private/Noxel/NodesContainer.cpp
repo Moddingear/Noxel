@@ -15,6 +15,7 @@
 UNodesContainer::UNodesContainer(const FObjectInitializer& ObjectInitializer)
 	: Super(ObjectInitializer)
 {
+	PrimaryComponentTick.bCanEverTick = true;
 	SetIsReplicatedByDefault(true);
 	NodeSize = 10.0f;
 	bPlayerEditable = false;
@@ -76,6 +77,7 @@ void UNodesContainer::TickComponent(float DeltaTime, ELevelTick TickType, FActor
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 	if (bIsMeshDirty)
 	{
+		UE_LOG(NoxelData, Log, TEXT("[UNodesContainer::TickComponent] Updating mesh from tick because it's dirty"));
 		UpdateMesh();
 	}
 }

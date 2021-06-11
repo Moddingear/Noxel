@@ -61,6 +61,9 @@ protected:
 
 	TArray<int32> QueuesWaiting;
 
+	TMap<UNoxelContainer*, TArray<int32>> ReservedPanels;
+	TArray<UNoxelContainer*> ReservedWaiting;
+
 	TArray<FEditorQueue*, TInlineAllocator<NOXELEDITORQUEUEBUFFERLENGTH>> QueuesBuffer;
 	
 	int32 NextQueueIndex = 0;
@@ -70,22 +73,42 @@ public:
 	// Called every frame
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
 
+private:
+	void AddQueueToBuffer(FEditorQueue* Queue);
+	void RemoveQueueFromBuffer(int32 OrderIndex);
+	bool GetQueueFromBuffer(int32 OrderIndex, FEditorQueue** Queue);
+
+public:
+	TArray<int32> GetReservedPanels(UNoxelContainer* Container);
+	void UseReservedPanels(TArray<FPanelID> Used);
+	void AddReservedPanels(TArray<FPanelID> Add);
+
+private:
+	UFUNCTION()
+	void ReservePanels(int32 NumToReserve, UNoxelContainer* Container);
+	UFUNCTION(Server, WithValidation, Reliable)
+	void ReservePanelsServer(int32 NumToReserve, UNoxelContainer* Container);
+	UFUNCTION(Client, Reliable)
+	void ReservePanelsClient(UNoxelContainer* Container, const TArray<int32> &Reserved);
+
+public:
+	//Create a queue with a unique ID
 	FEditorQueue* CreateEditorQueue();
-	//client executes the queue, if valid sends gives it an ID and sends it 
-	void SendCommandQueue(FEditorQueue* Queue, bool ShouldExecute);
+	//client executes the queue, if valid sends it 
+	void SendCommandQueue(FEditorQueue* Queue);
 
 private:
 	//Send to server to check
 	UFUNCTION(Server, Reliable, WithValidation)
-	void ServerReceiveCommandQueue(FEditorQueueNetworkable Networkable, bool ShouldExecute);
+	void ServerReceiveCommandQueue(FEditorQueueNetworkable Networkable);
 
 	//Replicate to other players
 	UFUNCTION(NetMulticast, Reliable)
-	void ClientsReceiveCommandQueue(FEditorQueueNetworkable Networkable, bool ShouldExecute);
+	void ClientsReceiveCommandQueue(FEditorQueueNetworkable Networkable);
 
 	//Client was wrong, should undo
 	UFUNCTION(Client, Reliable)
-	void ClientRectifyCommandQueue(FEditorQueueNetworkable Networkable, bool ShouldExecute);
+	void ClientRectifyCommandQueue(int32 IndexToRectify, bool ShouldExecute);
 	
 public:
 	UFUNCTION(BlueprintCallable)

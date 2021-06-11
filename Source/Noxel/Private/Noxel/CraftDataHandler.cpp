@@ -12,10 +12,11 @@
 
 #include "NObjects/NoxelPart.h"
 #include "NObjects/NObjectInterface.h"
-#include "FunctionLibrary.h"
 #include "NoxelDataAsset.h"
 
 #include "JsonObjectConverter.h"
+#include "Kismet/KismetMathLibrary.h"
+#include "Noxel/NoxelLibrary.h"
 
 //Initialization --------------------------------------------------------------------------------------------------------------------------------
 UCraftDataHandler::UCraftDataHandler()
@@ -49,6 +50,18 @@ void UCraftDataHandler::EndPlay(const EEndPlayReason::Type EndPlayReason) {
 	Super::EndPlay(EndPlayReason);
 }
 
+bool UCraftDataHandler::AreAllComponentsValid()
+{
+	for (AActor* Actor : Components)
+	{
+		if (!IsValid(Actor))
+		{
+			return false;
+		}
+	}
+	return true;
+}
+
 TArray<AActor*> UCraftDataHandler::GetComponents()
 {
 	return Components;
@@ -59,9 +72,9 @@ TArray<ANoxelPart*> UCraftDataHandler::GetParts()
 	TArray<ANoxelPart*> Parts;
 	for (AActor* Component : Components)
 	{
-		if ((ANoxelPart*)Component)
+		if (IsValid(Component) && Component->IsA<ANoxelPart>())
 		{
-			Parts.Add((ANoxelPart*)Component);
+			Parts.Add(Cast<ANoxelPart>(Component));
 		}
 	}
 	return Parts;
@@ -79,7 +92,7 @@ AActor* UCraftDataHandler::AddComponent(TSubclassOf<AActor> Class, FTransform Lo
 #ifdef WITH_EDITOR
 	if (!Spawned->GetIsReplicated() || !Spawned->IsReplicatingMovement())
 	{
-		UE_LOG(Noxel, Error, TEXT("Class %s is not set to replicate correctly"), *Class->GetName());
+		UE_LOG(Noxel, Error, TEXT("[UCraftDataHandler::AddComponent] Class %s is not set to replicate correctly"), *Class->GetName());
 	}
 #endif // WITH_EDITOR
 
@@ -212,7 +225,7 @@ void UCraftDataHandler::loadCraft(FCraftSave Craft, FTransform transform)
 {
 	//UE_LOG(NoxelData, Warning, TEXT("[CraftDataHandler] Loading craft, spawn context : %s"), *UFunctionLibrary::GetEnumValueAsString<ECraftSpawnContext>(FString("ECraftSpawnContext"), SpawnContext));
 	if(!GetWorld()->IsServer()){
-		UE_LOG(NoxelData, Warning, TEXT("[CraftDataHandler] Loading aborted, client isn't server"));
+		UE_LOG(NoxelData, Warning, TEXT("[UCraftDataHandler::loadCraft] Loading aborted, client isn't server"));
 		return;
 	}
 	destroyCraft();
@@ -230,7 +243,7 @@ void UCraftDataHandler::loadCraft(FCraftSave Craft, FTransform transform)
 		FComponentSave comp = Craft.Components[i];
 		TSubclassOf<AActor> compclass = UNoxelDataAsset::getClassFromComponentID(DataTable, comp.ComponentID);
 		if (!compclass) {
-			UE_LOG(NoxelData, Error, TEXT("[CraftDataHandler] Invalid class from component ID %s"), *comp.ComponentID);
+			UE_LOG(NoxelData, Error, TEXT("[UCraftDataHandler::loadCraft] Invalid class from component ID %s"), *comp.ComponentID);
 			continue;
 		}
 		FTransform savedTransform = comp.ComponentLocation;

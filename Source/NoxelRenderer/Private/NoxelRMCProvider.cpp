@@ -257,7 +257,7 @@ void UNoxelRMCProvider::MakeCacheIfDirty()
 		return;
 	}
 
-	UE_LOG(NoxelRendererLog, Log, TEXT("[UNoxelRMCProvider::MakeCacheIfDirty] Rebuilding cache"));
+	//UE_LOG(NoxelRendererLog, Log, TEXT("[UNoxelRMCProvider::MakeCacheIfDirty] Rebuilding cache"));
 	//Past this point, cache is dirty
 
 	TArray<FVector> TempNodes;
@@ -290,7 +290,7 @@ void UNoxelRMCProvider::MakeCacheIfDirty()
 			FVector Ydir = Zdir ^ Xdir;
 			if ((Ydir | Panel.Normal) < 0.f)
 			{
-				UE_LOG(NoxelRendererLog, Log, TEXT("[UNoxelRMCProvider::MakeCacheIfDirty] Flipping Y coord for side %i of panel number %i"), NodeIdx, PanelIdx);
+				//UE_LOG(NoxelRendererLog, Log, TEXT("[UNoxelRMCProvider::MakeCacheIfDirty] Flipping Y coord for side %i of panel number %i"), NodeIdx, PanelIdx);
 				Ydir = -Ydir;
 			}
 			TArray<AngleIndexPair> PanelCandidates; //Index is panel index the TempPanels
@@ -322,13 +322,13 @@ void UNoxelRMCProvider::MakeCacheIfDirty()
 						float Y = relativecenter | Ydir;
 						float angle = FMath::Atan2(Y, -X);
 						PanelCandidates.Emplace(angle, OtherPanelIdx);
-						UE_LOG(NoxelRendererLog, Log, TEXT("[UNoxelRMCProvider::MakeCacheIfDirty] Other panel at index %i is usable for side %i of panel number %i; angle = %f"), OtherPanelIdx, NodeIdx, PanelIdx, angle);
+						//UE_LOG(NoxelRendererLog, Log, TEXT("[UNoxelRMCProvider::MakeCacheIfDirty] Other panel at index %i is usable for side %i of panel number %i; angle = %f"), OtherPanelIdx, NodeIdx, PanelIdx, angle);
 					}
 				}
 			}
 			if (PanelCandidates.Num() == 0)
 			{
-				UE_LOG(NoxelRendererLog, Log, TEXT("[UNoxelRMCProvider::MakeCacheIfDirty] Found no adjacent panels for side %i of panel number %i"), NodeIdx, PanelIdx);
+				//UE_LOG(NoxelRendererLog, Log, TEXT("[UNoxelRMCProvider::MakeCacheIfDirty] Found no adjacent panels for side %i of panel number %i"), NodeIdx, PanelIdx);
 				ThisPanelAdjacency.Emplace(Xdir, NodePos);
 				ThisPanelAdjacency.Emplace(Xdir, NodePos);
 			}
@@ -340,8 +340,8 @@ void UNoxelRMCProvider::MakeCacheIfDirty()
 				//TArray<int32> PanelIndices = { PanelCandidates[0].Index, PanelCandidates.Last().Index };
 				TArray<int32> PanelIndices = { PanelCandidates.Last().Index, PanelCandidates[0].Index };
 
-				UE_LOG(NoxelRendererLog, Log, TEXT("[UNoxelRMCProvider::MakeCacheIfDirty] Found %i adjacent panels for side %i of panel number %i, selecting panels %i for top and %i for bottom"), 
-					PanelCandidates.Num(), NodeIdx, PanelIdx, PanelIndices[0], PanelIndices[1]);
+				//UE_LOG(NoxelRendererLog, Log, TEXT("[UNoxelRMCProvider::MakeCacheIfDirty] Found %i adjacent panels for side %i of panel number %i, selecting panels %i for top and %i for bottom"), 
+				//	PanelCandidates.Num(), NodeIdx, PanelIdx, PanelIndices[0], PanelIndices[1]);
 				for (int32 PanelIndex : PanelIndices)
 				{
 					FNoxelRendererPanelData OtherPanel = TempPanels[PanelIndex];
@@ -351,8 +351,8 @@ void UNoxelRMCProvider::MakeCacheIfDirty()
 						Bisector = Normal;
 					}
 					FVector IntersectionNormal = (Bisector ^ SideDirection).GetSafeNormal();
-					UE_LOG(NoxelRendererLog, Log, TEXT("[UNoxelRMCProvider::MakeCacheIfDirty] Intersection between panels %i and other panel %i; Bisector = %s; SideDirection = %s; IntersectionNormal = %s"), 
-						PanelIdx, PanelIndex, *Bisector.GetSafeNormal().ToString(), *SideDirection.GetSafeNormal().ToString(), *IntersectionNormal.ToString());
+					//UE_LOG(NoxelRendererLog, Log, TEXT("[UNoxelRMCProvider::MakeCacheIfDirty] Intersection between panels %i and other panel %i; Bisector = %s; SideDirection = %s; IntersectionNormal = %s"), 
+					//	PanelIdx, PanelIndex, *Bisector.GetSafeNormal().ToString(), *SideDirection.GetSafeNormal().ToString(), *IntersectionNormal.ToString());
 					ThisPanelAdjacency.Emplace(IntersectionNormal, NodePos);
 				}
 			}
@@ -514,9 +514,9 @@ void UNoxelRMCProvider::MakeMeshForLOD(int32 LODIndex, int32 SectionId, TArray<F
 void UNoxelRMCProvider::Initialize()
 {
 	FRuntimeMeshLODProperties LOD0Properties, LOD1Properties, LOD2Properties;
-	LOD0Properties.ScreenSize = 0.1f;
-	LOD1Properties.ScreenSize = 0.01f;
-	LOD2Properties.ScreenSize = 0.0f;
+	LOD0Properties.ScreenSize = 1.f;
+	LOD1Properties.ScreenSize = 0.4f;
+	LOD2Properties.ScreenSize = 0.1f;
 
 	ConfigureLODs({ LOD0Properties, LOD1Properties, LOD2Properties });
 
@@ -557,7 +557,7 @@ FBoxSphereBounds UNoxelRMCProvider::GetBounds()
 }
 
 bool UNoxelRMCProvider::GetSectionMeshForLOD(int32 LODIndex, int32 SectionId, FRuntimeMeshRenderableMeshData& MeshData)
-{	// We should only ever be queried for section 0 and lod 0
+{	// We should only ever be queried for section 0
 	check(SectionId == 0 && LODIndex <= 2);
 	TArray<FVector> TempNodes;
 	TArray<FNoxelRendererPanelData> TempPanels;
@@ -634,7 +634,7 @@ FRuntimeMeshCollisionSettings UNoxelRMCProvider::GetCollisionSettings()
 {
 	FRuntimeMeshCollisionSettings Settings;
 	Settings.bUseAsyncCooking = true;
-	Settings.bUseComplexAsSimple = false;
+	Settings.bUseComplexAsSimple = true;
 	//TODO : Simple collision for the panels (box fit)
 	return Settings;
 }
@@ -712,7 +712,7 @@ void UNoxelRMCProvider::CollisionUpdateCompleted()
 
 bool UNoxelRMCProvider::IsThreadSafe()
 {
-	return false;
+	return true;
 }
 
 
