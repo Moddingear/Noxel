@@ -4,10 +4,13 @@
 
 #include "CoreMinimal.h"
 
+#include "Noxel.h"
 #include "Noxel/NoxelDataStructs.h"
 
 #include "EditorCommandQueue.generated.h"
 
+class UCraftDataHandler;
+class UConnectorBase;
 DECLARE_LOG_CATEGORY_EXTERN(LogEditorCommandQueue, Log, All);
 
 UENUM()
@@ -232,7 +235,7 @@ struct NOXEL_API FEditorQueueOrderTemplate
 
 	virtual TArray<UNoxelDataComponent*> GetAffectedDataComponents(FEditorQueue* Parent)
 	{
-		return TArray<UNoxelDataComponent*>();
+		return {};
 	}
 
 	virtual FString ToString()
@@ -244,6 +247,46 @@ struct NOXEL_API FEditorQueueOrderTemplate
 	{
 		return {};
 	}
+};
+
+struct NOXEL_API FEditorQueueOrderArrayTemplate : public FEditorQueueOrderTemplate
+{
+	FEditorQueueOrderArrayTemplate()
+		: FEditorQueueOrderTemplate()
+	{}
+	
+	FEditorQueueOrderArrayTemplate(const EEditorQueueOrderType InOrderType)
+		: FEditorQueueOrderTemplate(InOrderType)
+	{}
+
+	virtual bool PreArray(FEditorQueue* Parent)
+	{
+		UE_LOG(LogEditorCommandQueue, Warning, TEXT("[FEditorQueueOrderArrayTemplate::PreArray] Not overload by order %d, will result in a fail"), OrderType);
+		return false;
+	}
+	
+	virtual int GetArrayLength(FEditorQueue* Parent)
+	{
+		UE_LOG(LogEditorCommandQueue, Warning, TEXT("[FEditorQueueOrderArrayTemplate::GetArrayLength] Not overload by order %d, will result in a fail"), OrderType);
+		return 0;
+	}
+	
+	virtual bool ExecuteInArray(FEditorQueue* Parent, int i)
+	{
+		UE_LOG(LogEditorCommandQueue, Warning, TEXT("[FEditorQueueOrderArrayTemplate::ExecuteInArray] Not overload by order %d, will result in a fail"), OrderType);
+		return false;
+	}
+
+	virtual bool UndoInArray(FEditorQueue* Parent, int i)
+	{
+		UE_LOG(LogEditorCommandQueue, Warning, TEXT("[FEditorQueueOrderArrayTemplate::UndoInArray] Not overload by order %d, will result in a fail"), OrderType);
+		return false;
+	}
+
+	virtual bool ExecuteOrder(FEditorQueue* Parent) override;
+
+	virtual bool UndoOrder(FEditorQueue* Parent) override;
+
 };
 
 //Creates the references to node belonging to one nodes container
@@ -277,31 +320,34 @@ struct NOXEL_API FEditorQueueOrderNodeReference : public FEditorQueueOrderTempla
 	virtual FString ToString() override;
 };
 
-struct NOXEL_API FEditorQueueOrderNodeAddRemove : public FEditorQueueOrderTemplate
+//Adds or removes a number of nodes already referenced
+struct NOXEL_API FEditorQueueOrderNodeAddRemove : public FEditorQueueOrderArrayTemplate
 {
 	TArray<int32> NodesToAddRemove;
 	bool Add;
 
 	FEditorQueueOrderNodeAddRemove()
-		:FEditorQueueOrderTemplate(EEditorQueueOrderType::NodeAdd),
+		:FEditorQueueOrderArrayTemplate(EEditorQueueOrderType::NodeAdd),
 		NodesToAddRemove(),
 		Add(true)
 	{}
 
 	FEditorQueueOrderNodeAddRemove(TArray<int32> InNodesToAddRemove, bool InAdd)
-		:FEditorQueueOrderTemplate(InAdd ? EEditorQueueOrderType::NodeAdd : EEditorQueueOrderType::NodeRemove),
+		:FEditorQueueOrderArrayTemplate(InAdd ? EEditorQueueOrderType::NodeAdd : EEditorQueueOrderType::NodeRemove),
 		NodesToAddRemove(InNodesToAddRemove),
 		Add(InAdd)
 	{}
 
 	virtual ~FEditorQueueOrderNodeAddRemove() override {}
 
-	virtual bool ExecuteOrder(FEditorQueue* Parent) override;
+	virtual bool PreArray(FEditorQueue* Parent) override;
 
-	virtual bool UndoOrder(FEditorQueue* Parent) override;
+	virtual int GetArrayLength(FEditorQueue* Parent) override;
 
-	bool DoAdd(FEditorQueue* Parent);
-	bool DoRemove(FEditorQueue* Parent);
+	virtual bool ExecuteInArray(FEditorQueue* Parent, int i) override;
+
+	virtual bool UndoInArray(FEditorQueue* Parent, int i) override;
+	
 	virtual FEditorQueueOrderNetworkable ToNetworkable(FEditorQueueNetworkable* Parent) override;
 
 	virtual bool FromNetworkable(FEditorQueueNetworkable* Parent, int32 OrderIndex) override;
@@ -312,33 +358,34 @@ struct NOXEL_API FEditorQueueOrderNodeAddRemove : public FEditorQueueOrderTempla
 
 };
 
-struct NOXEL_API FEditorQueueOrderNodeDisConnect : public FEditorQueueOrderTemplate
+//Connects or disconnects a number of nodes to panels
+struct NOXEL_API FEditorQueueOrderNodeDisConnect : public FEditorQueueOrderArrayTemplate
 {
 	TArray<int32> Nodes;
 	TArray<int32> Panels;
 	bool Connect;
 
 	FEditorQueueOrderNodeDisConnect()
-		:FEditorQueueOrderTemplate(EEditorQueueOrderType::NodeConnect),
+		:FEditorQueueOrderArrayTemplate(EEditorQueueOrderType::NodeConnect),
 		Nodes(), Panels(),
 		Connect(true)
 	{}
 
 	FEditorQueueOrderNodeDisConnect(TArray<int32> InNodes, TArray<int32> InPanels, bool InConnect)
-		:FEditorQueueOrderTemplate(InConnect ? EEditorQueueOrderType::NodeConnect : EEditorQueueOrderType::NodeDisconnect),
+		:FEditorQueueOrderArrayTemplate(InConnect ? EEditorQueueOrderType::NodeConnect : EEditorQueueOrderType::NodeDisconnect),
 		Nodes(InNodes), Panels(InPanels),
 		Connect(InConnect)
 	{}
 
 	virtual ~FEditorQueueOrderNodeDisConnect() override {}
 
-	virtual bool ExecuteOrder(FEditorQueue* Parent) override;
+	virtual bool PreArray(FEditorQueue* Parent) override;
 
-	virtual bool UndoOrder(FEditorQueue* Parent) override;
+	virtual int GetArrayLength(FEditorQueue* Parent) override;
 
-	bool DoConnect(FEditorQueue* Parent);
-	
-	bool DoDisconnect(FEditorQueue* Parent);
+	virtual bool ExecuteInArray(FEditorQueue* Parent, int i) override;
+
+	virtual bool UndoInArray(FEditorQueue* Parent, int i) override;
 	
 	virtual FEditorQueueOrderNetworkable ToNetworkable(FEditorQueueNetworkable* Parent) override;
 
@@ -381,33 +428,33 @@ struct NOXEL_API FEditorQueueOrderPanelReference : public FEditorQueueOrderTempl
 	virtual FString ToString() override;
 };
 
-
-struct NOXEL_API FEditorQueueOrderPanelAddRemove : public FEditorQueueOrderTemplate
+//Adds or removes a number of panels already referenced
+struct NOXEL_API FEditorQueueOrderPanelAddRemove : public FEditorQueueOrderArrayTemplate
 {
 	TArray<int32> PanelIndexRef;
 	bool Add;
 
 	//Default constructor
 	FEditorQueueOrderPanelAddRemove()
-		: FEditorQueueOrderTemplate(EEditorQueueOrderType::PanelAdd), Add(true)
+		: FEditorQueueOrderArrayTemplate(EEditorQueueOrderType::PanelAdd), Add(true)
 	{
 	}
 
 	FEditorQueueOrderPanelAddRemove(TArray<int32> InPanelIndexRef, bool InAdd)
-		: FEditorQueueOrderTemplate(InAdd ? EEditorQueueOrderType::PanelAdd : EEditorQueueOrderType::PanelRemove),
+		: FEditorQueueOrderArrayTemplate(InAdd ? EEditorQueueOrderType::PanelAdd : EEditorQueueOrderType::PanelRemove),
 		PanelIndexRef(InPanelIndexRef), Add(InAdd)
 	{
 	}
 
 	virtual ~FEditorQueueOrderPanelAddRemove() override {}
-
-	bool DoAdd(FEditorQueue* Parent);
-
-	bool DoRemove(FEditorQueue* Parent);
 	
-	virtual bool ExecuteOrder(FEditorQueue* Parent) override;
+	virtual bool PreArray(FEditorQueue* Parent) override;
 
-	virtual bool UndoOrder(FEditorQueue* Parent) override;
+	virtual int GetArrayLength(FEditorQueue* Parent) override;
+
+	virtual bool ExecuteInArray(FEditorQueue* Parent, int i) override;
+
+	virtual bool UndoInArray(FEditorQueue* Parent, int i) override;
 
 	virtual FEditorQueueOrderNetworkable ToNetworkable(FEditorQueueNetworkable* Parent) override;
 
@@ -420,7 +467,8 @@ struct NOXEL_API FEditorQueueOrderPanelAddRemove : public FEditorQueueOrderTempl
 	virtual TArray<FPanelID> GetReservedPanelsUsed(FEditorQueue* Parent) override;
 };
 
-struct NOXEL_API FEditorQueueOrderPanelProperties : public FEditorQueueOrderTemplate
+//Sets new data to a number of panels
+struct NOXEL_API FEditorQueueOrderPanelProperties : public FEditorQueueOrderArrayTemplate
 {
 	TArray<int32> PanelIndexRef;
 	
@@ -433,12 +481,13 @@ struct NOXEL_API FEditorQueueOrderPanelProperties : public FEditorQueueOrderTemp
 	bool VirtualAfter;
 
 	FEditorQueueOrderPanelProperties()
-		: FEditorQueueOrderTemplate(EEditorQueueOrderType::PanelProperties)
+		: FEditorQueueOrderArrayTemplate(EEditorQueueOrderType::PanelProperties),
+		ThicknessNormalAfter(0), ThicknessAntiNormalAfter(0), VirtualAfter(false)
 	{
 	}
 
 	FEditorQueueOrderPanelProperties(TArray<int32> InPanelIndexRef, float InThicknessNormalAfter, float InThicknessAntiNormalAfter, bool InVirtualAfter)
-		:FEditorQueueOrderTemplate(EEditorQueueOrderType::PanelProperties),
+		:FEditorQueueOrderArrayTemplate(EEditorQueueOrderType::PanelProperties),
 	PanelIndexRef(InPanelIndexRef),
 	ThicknessNormalAfter(InThicknessNormalAfter), ThicknessAntiNormalAfter(InThicknessAntiNormalAfter),
 	VirtualAfter(InVirtualAfter)
@@ -446,9 +495,13 @@ struct NOXEL_API FEditorQueueOrderPanelProperties : public FEditorQueueOrderTemp
 
 	virtual ~FEditorQueueOrderPanelProperties() override {}
 
-	virtual bool ExecuteOrder(FEditorQueue* Parent) override;
+	virtual bool PreArray(FEditorQueue* Parent) override;
 
-	virtual bool UndoOrder(FEditorQueue* Parent) override;
+	virtual int GetArrayLength(FEditorQueue* Parent) override;
+
+	virtual bool ExecuteInArray(FEditorQueue* Parent, int i) override;
+
+	virtual bool UndoInArray(FEditorQueue* Parent, int i) override;
 
 	virtual FEditorQueueOrderNetworkable ToNetworkable(FEditorQueueNetworkable* Parent) override;
 
@@ -458,3 +511,68 @@ struct NOXEL_API FEditorQueueOrderPanelProperties : public FEditorQueueOrderTemp
 
 	virtual FString ToString() override;
 };
+
+//Connects or disconnects a number of connectors
+struct NOXEL_API FEditorQueueOrderConnectorDisConnect : public FEditorQueueOrderArrayTemplate
+{
+	TArray<UConnectorBase*> A;
+	TArray<UConnectorBase*> B;
+	bool Connect;
+
+	FEditorQueueOrderConnectorDisConnect()
+		: FEditorQueueOrderArrayTemplate(EEditorQueueOrderType::ConnectorConnect), Connect(true)
+	{
+	}
+
+	FEditorQueueOrderConnectorDisConnect(TArray<UConnectorBase*> InA, TArray<UConnectorBase*> InB, bool InConnect)
+		:FEditorQueueOrderArrayTemplate(InConnect ? EEditorQueueOrderType::ConnectorConnect : EEditorQueueOrderType::ConnectorDisconnect),
+	A(InA), B(InB), Connect(InConnect)
+	{}
+
+	virtual ~FEditorQueueOrderConnectorDisConnect() override {}
+
+	virtual bool PreArray(FEditorQueue* Parent) override;
+	
+	virtual int GetArrayLength(FEditorQueue* Parent) override;
+
+	virtual bool ExecuteInArray(FEditorQueue* Parent, int i) override;
+
+	virtual bool UndoInArray(FEditorQueue* Parent, int i) override;
+
+	virtual FEditorQueueOrderNetworkable ToNetworkable(FEditorQueueNetworkable* Parent) override;
+
+	virtual bool FromNetworkable(FEditorQueueNetworkable* Parent, int32 OrderIndex) override;
+
+	virtual FString ToString() override;
+};
+
+struct NOXEL_API FEditorQueueOrderAddObject : public FEditorQueueOrderTemplate
+{
+	UCraftDataHandler* Craft; //TODO : Supply the craft elsewhere
+	FString ObjectClass;
+	FTransform ObjectTransform;
+	AActor* SpawnedObject;
+
+	FEditorQueueOrderAddObject()
+		: FEditorQueueOrderTemplate(EEditorQueueOrderType::ObjectAdd), Craft(nullptr), SpawnedObject(nullptr)
+	{
+	}
+
+	FEditorQueueOrderAddObject(FString InObjectClass, FTransform InObjectTransform)
+		: FEditorQueueOrderTemplate(EEditorQueueOrderType::ObjectAdd), Craft(nullptr),
+		  ObjectClass(InObjectClass), ObjectTransform(InObjectTransform), SpawnedObject(nullptr)
+	{
+	}
+
+	virtual bool ExecuteOrder(FEditorQueue* Parent) override;
+
+	virtual bool UndoOrder(FEditorQueue* Parent) override;
+
+	virtual FEditorQueueOrderNetworkable ToNetworkable(FEditorQueueNetworkable* Parent) override;
+
+	virtual bool FromNetworkable(FEditorQueueNetworkable* Parent, int32 OrderIndex) override;
+
+	
+};
+
+

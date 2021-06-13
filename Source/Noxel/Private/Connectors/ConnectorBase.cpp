@@ -87,6 +87,10 @@ bool UConnectorBase::Connect(UConnectorBase * other)
 		{
 			other->GetOwner()->AddTickPrerequisiteActor(GetOwner());
 		}
+		if (other->bIsMale)
+		{
+			GetOwner()->AddTickPrerequisiteActor(other->GetOwner());
+		}
 		return true;
 	}
 	return false;

@@ -66,11 +66,15 @@ public:
 	UFUNCTION(BlueprintPure)
 	TArray<class ANoxelPart*> GetParts();
 
-	//UFUNCTION(BlueprintCallable)
+	//Add a component and registers it in the craft
 	AActor* AddComponent(TSubclassOf<AActor> Class, FTransform Location, FActorSpawnParameters SpawnParameters, bool bSetSpawnContext = true, bool bFinishSpawning = true);
 
-	UFUNCTION(BlueprintCallable)
+	//Removes a component from the craft
 	bool RemoveComponent(AActor* Component);
+
+	AActor* AddComponentFromComponentID(FString ComponentID, FTransform Location);
+
+	bool RemoveComponentIfUnconnected(AActor* Component);
 
 	////////////////////////////////////////////////////////////////
 

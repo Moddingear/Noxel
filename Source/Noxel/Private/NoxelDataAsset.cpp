@@ -75,7 +75,7 @@ TSubclassOf<AActor> UNoxelDataAsset::getClassFromComponentID(UDataTable * Object
 	{
 		if (Row->ComponentID.ToLower() == CompID.ToLower())
 		{
-			return Row->Class.LoadSynchronous();
+			return Row->Class.LoadSynchronous(); //TODO : Load elsewhere
 		}
 	}
 	return NULL;

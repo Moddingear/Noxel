@@ -140,6 +140,12 @@ bool UCraftDataHandler::RemoveComponent(AActor * Component)
 	return false;
 }
 
+AActor* UCraftDataHandler::AddComponentFromComponentID(FString ComponentID, FTransform Location)
+{
+	TSubclassOf<AActor> compclass = UNoxelDataAsset::getClassFromComponentID(DataTable, ComponentID);
+	return AddComponent(compclass, Location, FActorSpawnParameters());
+}
+
 //Saving and loading --------------------------------------------------------------------------------------------------------------------------------
 void UCraftDataHandler::destroyCraft()
 {
