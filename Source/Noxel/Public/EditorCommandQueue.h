@@ -26,9 +26,9 @@ enum class EEditorQueueOrderType : uint8
 	PanelAdd			UMETA(DisplayName = "Add Panel"),
 	PanelRemove 		UMETA(DisplayName = "Remove Panel"),
 	PanelProperties 	UMETA(DisplayName = "Change Panel Properties"),
-	ObjectAdd			UMETA(DisplayName = "Add Object"), //TODO
-	ObjectRemove		UMETA(DisplayName = "Remove Object"),
-	ConnectorConnect	UMETA(DisplayName = "Connect Connector"), //TODO
+	ObjectAdd			UMETA(DisplayName = "Add Object"),
+	ObjectRemove		UMETA(DisplayName = "Remove Object"), //TODO
+	ConnectorConnect	UMETA(DisplayName = "Connect Connector"),
 	ConnectorDisconnect	UMETA(DisplayName = "Disconnect Connector")
 };
 
@@ -67,6 +67,11 @@ struct NOXEL_API FEditorQueueOrderNetworkable
 		Args(InArgs)
 	{}
 
+	static int32 GetFloatSize()
+	{
+		return 1;
+	}
+
 	void AddFloat(float InFloat)
 	{
 		int32 i = *reinterpret_cast<int32*>(&InFloat);
@@ -85,11 +90,25 @@ struct NOXEL_API FEditorQueueOrderNetworkable
 		return *reinterpret_cast<float*>(&i);
 	}
 
+	static int32 GetVectorSize()
+	{
+		return 3*GetFloatSize();
+	}
+
 	void AddVector(FVector InVector)
 	{
 		AddFloat(InVector.X);
 		AddFloat(InVector.Y);
 		AddFloat(InVector.Z);
+	}
+
+	FVector GetVector(int32 index)
+	{
+		FVector vec;
+		vec.X = GetFloat(index);
+		vec.Y = GetFloat(index+1*GetFloatSize());
+		vec.Z = GetFloat(index+2*GetFloatSize());
+		return vec;
 	}
 
 	FVector PopVector()
@@ -99,6 +118,50 @@ struct NOXEL_API FEditorQueueOrderNetworkable
 		vec.Y = PopFloat();
 		vec.X = PopFloat();
 		return vec;
+	}
+
+	static int32 GetQuatSize()
+	{
+		return 4*GetFloatSize();
+	}
+
+	void AddQuat(FQuat InQuat)
+	{
+		AddFloat(InQuat.W);
+		AddFloat(InQuat.X);
+		AddFloat(InQuat.Y);
+		AddFloat(InQuat.Z);
+	}
+
+	FQuat GetQuat(int32 index)
+	{
+		FQuat OutQuat;
+		OutQuat.W = GetFloat(index);
+		OutQuat.X = GetFloat(index+GetFloatSize());
+		OutQuat.Y = GetFloat(index+2*GetFloatSize());
+		OutQuat.Z = GetFloat(index+3*GetFloatSize());
+		return OutQuat;
+	}
+
+	static int32 GetTransformSize()
+	{
+		return 2*GetVectorSize()+GetQuatSize();
+	}
+
+	void AddTransform(FTransform InTransform)
+	{
+		AddQuat(InTransform.GetRotation());
+		AddVector(InTransform.GetTranslation());
+		AddVector(InTransform.GetScale3D());
+	}
+
+	FTransform GetTransform(int32 index)
+	{
+		FTransform OutTransform;
+		OutTransform.SetRotation(GetQuat(index));
+		OutTransform.SetTranslation(GetVector(index + GetQuatSize()));
+		OutTransform.SetScale3D(GetVector(index + GetVectorSize() + GetQuatSize()));
+		return  OutTransform;
 	}
 
 	void AddNode(FVector Location, int32 ObjectPtrIdx)
@@ -189,6 +252,8 @@ struct NOXEL_API FEditorQueue
 
 	void AddNodeConnectOrder(TArray<int32> Nodes, TArray<int32> Panels);
 	void AddNodeDisconnectOrder(TArray<int32> Nodes, TArray<int32> Panels);
+
+	void AddObjectAddOrder(UCraftDataHandler* Craft, FString ObjectClass, FTransform Location);
 
 	bool ToNetworkable(FEditorQueueNetworkable& Networkable);
 
@@ -558,8 +623,8 @@ struct NOXEL_API FEditorQueueOrderAddObject : public FEditorQueueOrderTemplate
 	{
 	}
 
-	FEditorQueueOrderAddObject(FString InObjectClass, FTransform InObjectTransform)
-		: FEditorQueueOrderTemplate(EEditorQueueOrderType::ObjectAdd), Craft(nullptr),
+	FEditorQueueOrderAddObject(UCraftDataHandler* InCraft, FString InObjectClass, FTransform InObjectTransform)
+		: FEditorQueueOrderTemplate(EEditorQueueOrderType::ObjectAdd), Craft(InCraft),
 		  ObjectClass(InObjectClass), ObjectTransform(InObjectTransform), SpawnedObject(nullptr)
 	{
 	}
@@ -572,7 +637,7 @@ struct NOXEL_API FEditorQueueOrderAddObject : public FEditorQueueOrderTemplate
 
 	virtual bool FromNetworkable(FEditorQueueNetworkable* Parent, int32 OrderIndex) override;
 
-	
+	virtual FString ToString() override;
 };
 
 

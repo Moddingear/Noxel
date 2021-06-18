@@ -9,7 +9,6 @@
 #include "Noxel/NoxelContainer.h"
 #include "Connectors/ConnectorBase.h"
 #include "Noxel/CraftDataHandler.h"
-#include "NoxelDataAsset.h"
 
 DEFINE_LOG_CATEGORY(LogEditorCommandQueue);
 
@@ -62,6 +61,8 @@ bool FEditorQueueNetworkable::OrderFromNetworkable(int32 OrderIndex, FEditorQueu
  		order = new FEditorQueueOrderConnectorDisConnect();
  		break;
  	case EEditorQueueOrderType::ObjectAdd:
+ 		order = new FEditorQueueOrderAddObject();
+ 		break;
  	case EEditorQueueOrderType::ObjectRemove:
  		return false;
  	default:
@@ -85,7 +86,7 @@ bool FEditorQueueNetworkable::DecodeQueue(FEditorQueue** Decoded)
 	for (int i = 0; i < Orders.Num(); ++i)
 	{
 		FEditorQueueOrderTemplate* Order;
-		bool success = OrderFromNetworkable(i, &Order);
+		const bool success = OrderFromNetworkable(i, &Order);
 		if (success)
 		{
 			queue->Orders[i]=Order;
@@ -221,10 +222,10 @@ TMap<FNodeID, int32> FEditorQueue::CreateNodeReferenceOrdersFromNodeList(TArray<
 {
 	TArray<UNodesContainer*> Containers;
 	TArray<TArray<FNodeID>> SortedNodes;
-	TMap<FNodeID, int32> Nodemap;
+	TMap<FNodeID, int32> NodeMap;
 	for (FNodeID Node : Nodes)
 	{
-		int32 ContainerIdx = Containers.Find(Node.Object);
+		const int32 ContainerIdx = Containers.Find(Node.Object);
 		if (ContainerIdx != INDEX_NONE)
 		{
 			SortedNodes[ContainerIdx].Add(Node);
@@ -242,11 +243,11 @@ TMap<FNodeID, int32> FEditorQueue::CreateNodeReferenceOrdersFromNodeList(TArray<
 		for (FNodeID Node : SortedNodes[ContainerIdx])
 		{
 			Locations.Add(Node.Location);
-			Nodemap.Add(Node, NodeRefIdx++);
+			NodeMap.Add(Node, NodeRefIdx++);
 		}
 		AddNodeReferenceOrder(Locations, Containers[ContainerIdx]);
 	}
-	return Nodemap;
+	return NodeMap;
 }
 
 TArray<int32> FEditorQueue::NodeListToNodeReferences(TArray<FNodeID> Nodes, TMap<FNodeID, int32> NodeMap)
@@ -308,6 +309,12 @@ void FEditorQueue::AddNodeDisconnectOrder(TArray<int32> Nodes, TArray<int32> Pan
 	Orders.Add(order);
 }
 
+void FEditorQueue::AddObjectAddOrder(UCraftDataHandler* Craft, FString ObjectClass, FTransform Location)
+{
+	FEditorQueueOrderAddObject* order = new FEditorQueueOrderAddObject(Craft, ObjectClass, Location);
+	Orders.Add(order);
+}
+
 bool FEditorQueue::ToNetworkable(FEditorQueueNetworkable &Networkable)
 {
 	Networkable = FEditorQueueNetworkable();
@@ -333,7 +340,7 @@ bool FEditorQueueOrderArrayTemplate::ExecuteOrder(FEditorQueue* Parent)
 {
 	if (PreArray(Parent))
 	{
-		const int RunToNum = GetArrayLength(Parent); bool bValid = true; int i = 0;
+		const int RunToNum = GetArrayLength(Parent); bool bValid = true; int i;
 		for (i = 0; i < RunToNum; ++i)
 		{
 			if (!ExecuteInArray(Parent, i))
@@ -358,7 +365,7 @@ bool FEditorQueueOrderArrayTemplate::UndoOrder(FEditorQueue* Parent)
 {
 	if (PreArray(Parent))
 	{
-		const int RunToNum = GetArrayLength(Parent); bool bValid = true; int i = 0;
+		const int RunToNum = GetArrayLength(Parent); bool bValid = true; int i;
 		for (i = RunToNum - 1; i >= 0; --i)
 		{
 			if (!UndoInArray(Parent, i))
@@ -413,7 +420,7 @@ bool FEditorQueueOrderNodeReference::FromNetworkable(FEditorQueueNetworkable* Pa
 	{
 		return false;
 	}
-	int32 NumLocations = (InData.Args.Num()-1)/3;
+	const int32 NumLocations = (InData.Args.Num()-1)/3;
 	if (InData.Args.Num() % 3 != 1)
 	{
 		return false;
@@ -458,7 +465,7 @@ int FEditorQueueOrderNodeAddRemove::GetArrayLength(FEditorQueue* Parent)
 
 bool FEditorQueueOrderNodeAddRemove::ExecuteInArray(FEditorQueue* Parent, int i)
 {
-	int32 NodeToAddRemove = NodesToAddRemove[i];
+	const int32 NodeToAddRemove = NodesToAddRemove[i];
 	if(Parent->NodeReferences.IsValidIndex(NodeToAddRemove))
 	{
 		if (Add)
@@ -475,7 +482,7 @@ bool FEditorQueueOrderNodeAddRemove::ExecuteInArray(FEditorQueue* Parent, int i)
 
 bool FEditorQueueOrderNodeAddRemove::UndoInArray(FEditorQueue* Parent, int i)
 {
-	int32 NodeToAddRemove = NodesToAddRemove[i];
+	const int32 NodeToAddRemove = NodesToAddRemove[i];
 	if(Parent->NodeReferences.IsValidIndex(NodeToAddRemove))
 	{
 		if (Add)
@@ -934,7 +941,7 @@ bool FEditorQueueOrderConnectorDisConnect::FromNetworkable(FEditorQueueNetworkab
 		return false;
 	}
 	FEditorQueueOrderNetworkable InData = Parent->Orders[OrderIndex];
-	if (InData.Args.Num() & 1 != 0) //check parity
+	if (InData.Args.Num() % 2 != 0) //check parity
 	{
 		return false;
 	}
@@ -970,7 +977,7 @@ FString FEditorQueueOrderConnectorDisConnect::ToString()
 
 bool FEditorQueueOrderAddObject::ExecuteOrder(FEditorQueue* Parent)
 {
-	if (Craft)
+	if (IsValid(Craft))
 	{
 		if (Craft->GetWorld()->IsServer())
 		{
@@ -979,12 +986,13 @@ bool FEditorQueueOrderAddObject::ExecuteOrder(FEditorQueue* Parent)
 		}
 		return true;
 	}
+	UE_LOG(LogEditorCommandQueue, Warning, TEXT("[FEditorQueueOrderAddObject::ExecuteOrder] Craft is invalid"));
 	return false;
 }
 
 bool FEditorQueueOrderAddObject::UndoOrder(FEditorQueue* Parent)
 {
-	if (Craft)
+	if (IsValid(Craft))
 	{
 		if (Craft->GetWorld()->IsServer())
 		{
@@ -992,10 +1000,58 @@ bool FEditorQueueOrderAddObject::UndoOrder(FEditorQueue* Parent)
 		}
 		return true;
 	}
+	UE_LOG(LogEditorCommandQueue, Warning, TEXT("[FEditorQueueOrderAddObject::UndoOrder] Craft is invalid"));
 	return false;
 }
 
 FEditorQueueOrderNetworkable FEditorQueueOrderAddObject::ToNetworkable(FEditorQueueNetworkable* Parent)
 {
-	//FString::ToBlob
+	FEditorQueueOrderNetworkable Net(EEditorQueueOrderType::ObjectAdd);
+	const uint32 buffer32len = ObjectClass.Len()/2/4 + 1;
+	const uint32 bufferlen = buffer32len*4;
+	int32* buffer32 = new int32(buffer32len);
+	uint8* buffer = reinterpret_cast<uint8*>(buffer32);
+	FString BlobStr = ObjectClass;
+	if (BlobStr.Len() %2 != 0)
+	{
+		BlobStr += FString(" ");
+	}
+	FString::ToHexBlob(ObjectClass, buffer, bufferlen);
+	Net.Args.Add(Parent->AddPointer(Craft));
+	Net.AddTransform(ObjectTransform);
+	Net.Args.Append(buffer32, buffer32len);
+	delete buffer32;
+	return Net;
+}
+
+bool FEditorQueueOrderAddObject::FromNetworkable(FEditorQueueNetworkable* Parent, int32 OrderIndex)
+{
+	if (!FEditorQueueOrderTemplate::FromNetworkable(Parent, OrderIndex))
+	{
+		return false;
+	}
+	FEditorQueueOrderNetworkable InData = Parent->Orders[OrderIndex];
+	if (InData.Args.Num() < FEditorQueueOrderNetworkable::GetTransformSize()+1)
+	{
+		return false;
+	}
+	Craft = Cast<UCraftDataHandler>(Parent->GetPointer(InData.Args[0]));
+	ObjectTransform = InData.GetTransform(1);
+	int32* buffer32 = InData.Args.GetData() + FEditorQueueOrderNetworkable::GetTransformSize()+1;
+	const uint32 buffer32len = InData.Args.Num() - FEditorQueueOrderNetworkable::GetTransformSize()-1;
+	uint8* buffer = reinterpret_cast<uint8*>(buffer32);
+	const uint32 bufferlen = buffer32len*4;
+	FString BlobStr = FString::FromHexBlob(buffer, bufferlen);
+	if (BlobStr.EndsWith(" "))
+	{
+		BlobStr.LeftChopInline(1);
+	}
+	ObjectClass = BlobStr;
+	return true;
+}
+
+FString FEditorQueueOrderAddObject::ToString()
+{
+	return FEditorQueueOrderTemplate::ToString() + FString::Printf(
+		TEXT("; Craft@%p; ObjectClass = %s; ObjectTransform = %s"), Craft, *ObjectClass, *ObjectTransform.ToHumanReadableString());
 }

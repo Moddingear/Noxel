@@ -105,7 +105,7 @@ AActor* UCraftDataHandler::AddComponent(TSubclassOf<AActor> Class, FTransform Lo
 			container->SetSpawnContext(SpawnContext);
 			if (container->IsA<UNodesContainer>())
 			{
-				UNodesContainer* nc = ((UNodesContainer*)container);
+				//UNodesContainer* NodeContainer = Cast<UNodesContainer>(container);
 				/*if (!nc->NodeSizeAbsolute)
 				{
 					nc->SetNodeSize(Scale);
@@ -142,8 +142,35 @@ bool UCraftDataHandler::RemoveComponent(AActor * Component)
 
 AActor* UCraftDataHandler::AddComponentFromComponentID(FString ComponentID, FTransform Location)
 {
-	TSubclassOf<AActor> compclass = UNoxelDataAsset::getClassFromComponentID(DataTable, ComponentID);
-	return AddComponent(compclass, Location, FActorSpawnParameters());
+	TSubclassOf<AActor> CompClass = UNoxelDataAsset::getClassFromComponentID(DataTable, ComponentID);
+	return AddComponent(CompClass, Location, FActorSpawnParameters());
+}
+
+bool UCraftDataHandler::RemoveComponentIfUnconnected(AActor* Component)
+{
+	if (!IsValid(Component))
+	{
+		return false;
+	}
+	TArray<UNoxelDataComponent*> DataComps;
+	Component->GetComponents<UNoxelDataComponent>(DataComps);
+	for (UNoxelDataComponent* DataComp : DataComps)
+	{
+		if (DataComp->IsConnected())
+		{
+			return false;
+		}
+	}
+	TArray<UConnectorBase*> connectors;
+	Component->GetComponents<UConnectorBase>(connectors);
+	for (UConnectorBase* Connector : connectors)
+	{
+		if (Connector->Connected.Num() >0) //TODO : Add function for this
+		{
+			return false;
+		}
+	}
+	return RemoveComponent(Component);
 }
 
 //Saving and loading --------------------------------------------------------------------------------------------------------------------------------
@@ -165,7 +192,7 @@ FCraftSave UCraftDataHandler::saveCraft()
 	//UE_LOG(Noxel, Log, TEXT("[UCraftDataHandler::saveCraft] Starting save"));
 	//UE_LOG(Noxel, Log, TEXT("[UCraftDataHandler::saveCraft] %s : %d components"), *GetFullName(), Components.Num());
 	TArray<FComponentSave> SavedComponents;
-	TMap <FNodeID, FNodeSavedRedirector> redirmap;
+	TMap <FNodeID, FNodeSavedRedirector> RedirectorMap;
 	for (int i = 0; i < Components.Num(); i++) //Save all the nodes first to first construct the redirector map
 	{
 		if(!Components[i]){
@@ -179,7 +206,7 @@ FCraftSave UCraftDataHandler::saveCraft()
 		for (int j = 0; j < containers.Num(); j++)
 		{
 			FNodesContainerSave cn;
-			saveNodesContainer(containers[j], i, j, cn, redirmap);
+			saveNodesContainer(containers[j], i, j, cn, RedirectorMap);
 			cn.ComponentName = containers[j]->GetName();
 			SavedComponents[i].SavedNodes.Add(cn);
 		}
@@ -197,7 +224,7 @@ FCraftSave UCraftDataHandler::saveCraft()
 		for (int j = 0; j < containers.Num(); j++)
 		{
 			FNoxelContainerSave cn;
-			saveNoxelContainer(containers[j], redirmap, cn);
+			saveNoxelContainer(containers[j], RedirectorMap, cn);
 			cn.ComponentName = containers[j]->GetName();
 			SavedComponents[i].SavedNoxels.Add(cn);
 		}
@@ -217,7 +244,7 @@ FCraftSave UCraftDataHandler::saveCraft()
 
 		if (Components[i]->IsA<UNObjectInterface>())
 		{
-			INObjectInterface* ComponentInterface = (INObjectInterface*)Components[i];
+			INObjectInterface* ComponentInterface = Cast<INObjectInterface>(Components[i]);
 			SavedComponents[i].SavedMetadata = ComponentInterface->Execute_OnReadMetadata(Components[i]);
 		}
 	}
@@ -239,39 +266,39 @@ void UCraftDataHandler::loadCraft(FCraftSave Craft, FTransform transform)
 	Name = Craft.CraftName;
 	Scale = Craft.CraftScale;
 
-	TMap<FNodeSavedRedirector, FNodeID> redirmap;
+	TMap<FNodeSavedRedirector, FNodeID> RedirectorMap;
 
-	TArray<AActor*> tempcomp;
+	TArray<AActor*> TempComp;
 	TArray<ANoxelPart*> Parts;
 	//Spawning components and setting nodes
 	for(int i = 0; i < Craft.Components.Num(); i++)
 	{
-		FComponentSave comp = Craft.Components[i];
-		TSubclassOf<AActor> compclass = UNoxelDataAsset::getClassFromComponentID(DataTable, comp.ComponentID);
-		if (!compclass) {
-			UE_LOG(NoxelData, Error, TEXT("[UCraftDataHandler::loadCraft] Invalid class from component ID %s"), *comp.ComponentID);
+		FComponentSave Comp = Craft.Components[i];
+		TSubclassOf<AActor> CompClass = UNoxelDataAsset::getClassFromComponentID(DataTable, Comp.ComponentID);
+		if (!CompClass) {
+			UE_LOG(NoxelData, Error, TEXT("[UCraftDataHandler::loadCraft] Invalid class from component ID %s"), *Comp.ComponentID);
 			continue;
 		}
-		FTransform savedTransform = comp.ComponentLocation;
+		FTransform savedTransform = Comp.ComponentLocation;
 		savedTransform.SetScale3D(FVector::OneVector);
 		FTransform finalTransform = UKismetMathLibrary::ComposeTransforms(transform, savedTransform);
 
-		AActor* spawnactor = AddComponent(compclass, finalTransform, FActorSpawnParameters(), true, true); //Spawn part
-		tempcomp.Add(spawnactor);
-		if (spawnactor->IsA<ANoxelPart>())
+		AActor* SpawnActor = AddComponent(CompClass, finalTransform, FActorSpawnParameters(), true, true); //Spawn part
+		TempComp.Add(SpawnActor);
+		if (SpawnActor->IsA<ANoxelPart>())
 		{
-			Parts.Add((ANoxelPart*)spawnactor);
+			Parts.Add(Cast<ANoxelPart>(SpawnActor));
 		}
 		TArray<UNodesContainer*> containers;
-		spawnactor->GetComponents<UNodesContainer>(containers); 	//Get all nodes container
+		SpawnActor->GetComponents<UNodesContainer>(containers); 	//Get all nodes container
 
 		for(int j = 0; j < containers.Num(); j++)
 		{
-			for(int k = 0; k < comp.SavedNodes.Num(); k++)
+			for(int k = 0; k < Comp.SavedNodes.Num(); k++)
 			{
-				if (comp.SavedNodes[k].ComponentName == containers[j]->GetName()) {				//Load if name matches the saved
-					FNodesContainerSave load = comp.SavedNodes[k];
-					loadNodesContainer(containers[j], i, k, load, redirmap);	
+				if (Comp.SavedNodes[k].ComponentName == containers[j]->GetName()) {				//Load if name matches the saved
+					FNodesContainerSave load = Comp.SavedNodes[k];
+					loadNodesContainer(containers[j], i, k, load, RedirectorMap);	
 					break;
 				}
 			}
@@ -282,23 +309,23 @@ void UCraftDataHandler::loadCraft(FCraftSave Craft, FTransform transform)
 	for (int i = 0; i < Craft.Components.Num(); i++)
 	{
 		FComponentSave comp = Craft.Components[i];
-		if (!tempcomp.IsValidIndex(i)) {
+		if (!TempComp.IsValidIndex(i)) {
 			continue;
 		}
-		if (!tempcomp[i]) {
+		if (!TempComp[i]) {
 			continue;
 		}
 
 		//Setting noxels
 		TArray<UNoxelContainer*> containers;
-		tempcomp[i]->GetComponents<UNoxelContainer>(containers); 								//Get all noxel container
+		TempComp[i]->GetComponents<UNoxelContainer>(containers); 								//Get all noxel container
 		for (int j = 0; j < containers.Num(); j++)
 		{
 			containers[j]->SetSpawnContext(SpawnContext);
 			for (int k = 0; k < comp.SavedNoxels.Num(); k++)
 			{
 				if (comp.SavedNoxels[k].ComponentName == containers[j]->GetName()) {			//Load if name matches the saved
-					loadNoxelContainer(containers[j], redirmap, comp.SavedNoxels[k]);
+					loadNoxelContainer(containers[j], RedirectorMap, comp.SavedNoxels[k]);
 					break;
 				}
 			}
@@ -306,22 +333,22 @@ void UCraftDataHandler::loadCraft(FCraftSave Craft, FTransform transform)
 
 		//Setting connectors
 		TArray<UConnectorBase*> connectors;
-		tempcomp[i]->GetComponents<UConnectorBase>(connectors);
+		TempComp[i]->GetComponents<UConnectorBase>(connectors);
 		for (FConnectorSavedRedirector save : comp.SavedConnectors)
 		{
 			for (UConnectorBase* connector : connectors)
 			{
 				if (save.ConnectorName == connector->GetName())
 				{
-					loadConnector(connector, tempcomp, save);
+					loadConnector(connector, TempComp, save);
 					break;
 				}
 			}
 		}
 
-		if (tempcomp[i]->IsA<UNObjectInterface>())
+		if (TempComp[i]->IsA<UNObjectInterface>())
 		{
-			INObjectInterface* ComponentInterface = (INObjectInterface*)tempcomp[i];
+			INObjectInterface* ComponentInterface = Cast<INObjectInterface>(TempComp[i]);
 			ComponentInterface->OnWriteMetadata(comp.SavedMetadata);
 		}
 	}
@@ -364,7 +391,7 @@ void UCraftDataHandler::enableCraft()
 		}
 		if (NObject->IsA<ANoxelPart>())
 		{
-			Parts.Add((ANoxelPart*)NObject);
+			Parts.Add(Cast<ANoxelPart>(NObject));
 		}
 	}
 
@@ -394,12 +421,12 @@ void UCraftDataHandler::enableCraft()
 	{
 		if (NObject->GetAttachParentActor() == nullptr)
 		{
-			if (UPrimitiveComponent* rootPrimitive = (UPrimitiveComponent*)NObject->GetRootComponent())
+			if (UPrimitiveComponent* rootPrimitive = Cast<UPrimitiveComponent>(NObject->GetRootComponent()))
 			{
-				if (URuntimeMeshComponent* rootRuntime = (URuntimeMeshComponent*)rootPrimitive)
+				/*if (URuntimeMeshComponent* RootRuntime = Cast<URuntimeMeshComponent>(rootPrimitive))
 				{
-					//rootRuntime->CookCollisionNow();
-				}
+					//Force update collision if needed
+				}*/
 				rootPrimitive->SetSimulatePhysics(true);
 			}
 			/*else
@@ -481,7 +508,6 @@ TArray<FString> UCraftDataHandler::getSavedCrafts()
 
 bool UCraftDataHandler::getCraftSave(FString path, FCraftSave & Save)
 {
-	IPlatformFile& PlatformFile = FPlatformFileManager::Get().GetPlatformFile();
 	FString text;
 	if (FFileHelper::LoadFileToString(text, *path)) {
 		return FJsonObjectConverter::JsonObjectStringToUStruct<FCraftSave>(text, &Save, 0, 0);
@@ -491,7 +517,6 @@ bool UCraftDataHandler::getCraftSave(FString path, FCraftSave & Save)
 
 void UCraftDataHandler::setCraftSave(FString path, FCraftSave Save)
 {
-	IPlatformFile& PlatformFile = FPlatformFileManager::Get().GetPlatformFile();
 	FString text;
 	FJsonObjectConverter::UStructToJsonObjectString<FCraftSave>(Save, text);
 	FFileHelper::SaveStringToFile(text, *path);
@@ -554,8 +579,8 @@ void UCraftDataHandler::saveNodesContainer(UNodesContainer * NodesContainer, int
 	for (int i = 0; i < Nodes.Num(); i++)
 	{
 		SavedData.Nodes.Add(Nodes[i].Location);
-		FNodeSavedRedirector redir = FNodeSavedRedirector(parentIndex, nodesContainerIndex, i);
-		RedirectorMap.Add(Nodes[i], redir);
+		FNodeSavedRedirector Redir = FNodeSavedRedirector(parentIndex, nodesContainerIndex, i);
+		RedirectorMap.Add(Nodes[i], Redir);
 	}
 }
 
@@ -567,28 +592,28 @@ bool UCraftDataHandler::loadNodesContainer(UNodesContainer * NodesContainer, int
 	}
 	if (NodesContainer->IsPlayerEditable()) {
 		//Remove all present nodes
-		TArray<FNodeID> oldnodes = NodesContainer->GenerateNodesKeyArray();
-		for (int i = 0; i > oldnodes.Num(); i++)
+		TArray<FNodeID> OldNodes = NodesContainer->GenerateNodesKeyArray();
+		for (int i = 0; i > OldNodes.Num(); i++)
 		{
-			NodesContainer->RemoveNode(oldnodes[i]);
+			NodesContainer->RemoveNode(OldNodes[i]);
 		}
 		//UE_LOG(NoxelData, Log, TEXT("Loading with node size %f"), SavedData.NodeSize);
 		NodesContainer->SetNodeSize(SavedData.NodeSize);
 		//Add nodes from save and build redirector map
 		for (int i = 0; i < SavedData.Nodes.Num(); i++)
 		{
-			FNodeID newnode = FNodeID(NodesContainer, SavedData.Nodes[i]);
-			NodesContainer->AddNode(newnode);
-			RedirectorMap.Add(FNodeSavedRedirector(parentIndex, nodesContainerIndex, i), newnode);
+			FNodeID NewNode = FNodeID(NodesContainer, SavedData.Nodes[i]);
+			NodesContainer->AddNode(NewNode);
+			RedirectorMap.Add(FNodeSavedRedirector(parentIndex, nodesContainerIndex, i), NewNode);
 		}
 	}
 	else {
 		//Build redirector map by finding the nodes
 		for (int i = 0; i < SavedData.Nodes.Num(); i++)
 		{
-			FNodeID newnode;
-			if (NodesContainer->FindNode(SavedData.Nodes[i], newnode)) {
-				RedirectorMap.Add(FNodeSavedRedirector(parentIndex, nodesContainerIndex, i), newnode);
+			FNodeID NewNode;
+			if (NodesContainer->FindNode(SavedData.Nodes[i], NewNode)) {
+				RedirectorMap.Add(FNodeSavedRedirector(parentIndex, nodesContainerIndex, i), NewNode);
 			}
 		}
 	}
@@ -625,24 +650,24 @@ bool UCraftDataHandler::loadNoxelContainer(UNoxelContainer * NoxelContainer, TMa
 		return false;
 	}
 	//Delete all old panels
-	TArray<FPanelData> oldpanels = NoxelContainer->GetPanels();
-	for (int i = 0; i < oldpanels.Num(); i++)
+	TArray<FPanelData> OldPanels = NoxelContainer->GetPanels();
+	for (int i = 0; i < OldPanels.Num(); i++)
 	{
-		NoxelContainer->RemovePanel(oldpanels[i].PanelIndex);
+		NoxelContainer->RemovePanel(OldPanels[i].PanelIndex);
 	}
 
 	for (int i = 0; i < SavedData.Panels.Num(); i++)
 	{
 		//Rebuild the panel data
-		FPanelSavedData sdata = SavedData.Panels[i];
+		FPanelSavedData SData = SavedData.Panels[i];
 		TArray<FNodeID> nodes;
-		for (int j = 0; j < sdata.Nodes.Num(); j++)
+		for (int j = 0; j < SData.Nodes.Num(); j++)
 		{
-			if (RedirectorMap.Contains(sdata.Nodes[j])) {
-				nodes.Add(*RedirectorMap.Find(sdata.Nodes[j]));
+			if (RedirectorMap.Contains(SData.Nodes[j])) {
+				nodes.Add(*RedirectorMap.Find(SData.Nodes[j]));
 			}
 		}
-		FPanelData data = FPanelData(nodes, sdata.ThicknessNormal, sdata.ThicknessAntiNormal, sdata.Virtual);
+		const FPanelData data = FPanelData(nodes, SData.ThicknessNormal, SData.ThicknessAntiNormal, SData.Virtual);
 
 		NoxelContainer->AddPanel(data);
 	}

@@ -2,13 +2,11 @@
 
 #include "Macros/M_Connector.h"
 
-#include "EditorCharacter.h"
 #include "Noxel/NoxelCombatLibrary.h"
 #include "Noxel/CraftDataHandler.h"
 #include "Noxel/NoxelNetworkingAgent.h"
 
 #include "Components/WidgetInteractionComponent.h"
-#include "Components/PrimitiveComponent.h"
 #include "Materials/MaterialInstanceDynamic.h"
 
 #include "Connectors/ConnectorBase.h"
@@ -39,7 +37,7 @@ UConnectorBase * AM_Connector::GetConnectorClicked()
 	getTrace(TraceStart, TraceEnd);
 	FCollisionQueryParams Params;
 	Params.bTraceComplex = true;
-	//if (LineTraceComponent(Hit, TraceStart, TraceEnd, Params)) //trace againt just this components
+	//if (LineTraceComponent(Hit, TraceStart, TraceEnd, Params)) //trace against just this component
 	{
 		//int32 SectionIndex, FaceIndex;
 		//GetSectionIdAndFaceIdFromCollisionFaceIndex(Hit.FaceIndex, SectionIndex, FaceIndex);

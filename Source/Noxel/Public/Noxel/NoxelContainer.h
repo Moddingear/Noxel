@@ -16,7 +16,7 @@ class NOXEL_API UNoxelContainer : public UNoxelDataComponent
 
 public:	
 
-	UNoxelContainer(const FObjectInitializer & ObjectInitializer = FObjectInitializer::Get());
+	UNoxelContainer();
 
 protected:
 
@@ -62,7 +62,7 @@ private:
 	//Fits a plane, reorder nodes and computes area
 	void ComputePanelGeometricData(FPanelData &data);
 
-	//Fills the adjacent panels information from given adjacency computations
+	//Fills the adjacent panels information from given adjacency computations 
 	void GetAdjacentPanelsFromNodes(FPanelData &data, const TArray<int32> &AdjacentPanels, const TArray<int32> &Occurrences, const TArray<TArray<FNodeID>> &NodesAttachedBy);
 
 	//Pops an unused index or gives a new one
@@ -88,9 +88,12 @@ public:
 	//Removes a panel, only works if the panel is already disconnected
 	bool RemovePanelDiffered(int32 Index);
 
+	//Only use for saving or loading
+	//Automatically allocates an index for it
 	UFUNCTION(BlueprintCallable)
 	bool AddPanel(FPanelData data);
-	
+
+	//Only use for saving or loading
 	UFUNCTION(BlueprintCallable)
 	bool RemovePanel(int32 index);
 
@@ -118,6 +121,7 @@ private:
 	void UpdateProviderData();
 
 public:
+	virtual bool IsConnected() override;
 
 	virtual bool CheckDataValidity() override;
 

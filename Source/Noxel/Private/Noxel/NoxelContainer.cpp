@@ -11,8 +11,8 @@
 
 
 
-UNoxelContainer::UNoxelContainer(const FObjectInitializer& ObjectInitializer)
-	: Super(ObjectInitializer)
+UNoxelContainer::UNoxelContainer()
+	: Super()
 {
 	SetIsReplicatedByDefault(true);
 	SetCollisionProfileName(TEXT("Noxel"));
@@ -176,7 +176,7 @@ void UNoxelContainer::ComputePanelGeometricData(FPanelData& data)
 }
 
 void UNoxelContainer::GetAdjacentPanelsFromNodes(FPanelData& data, const TArray<int32>& AdjacentPanels,
-	const TArray<int32>& Occurrences, const TArray<TArray<FNodeID>>& NodesAttachedBy)
+                                                 const TArray<int32>& Occurrences, const TArray<TArray<FNodeID>>& NodesAttachedBy)
 {
 	
 	const int32 NumNodes = data.Nodes.Num();
@@ -287,19 +287,22 @@ bool UNoxelContainer::FinishAddPanel(int32 Index)
 {
 	int32 IndexInArray;
 	bool found = GetIndexOfPanelByPanelIndex(Index, IndexInArray);
-	FPanelData &data = Panels[IndexInArray];
-	const int32 NumNodes = data.Nodes.Num();
-	TArray<int32> AdjacentPanels, Occurrences;
-	TArray<TArray<FNodeID>> NodesAttachedBy;
-	if(!IsPanelValid(data, AdjacentPanels, Occurrences, NodesAttachedBy))
+	if (found)
 	{
-		return false;
-	}
+		FPanelData &data = Panels[IndexInArray];
+		TArray<int32> AdjacentPanels, Occurrences;
+		TArray<TArray<FNodeID>> NodesAttachedBy;
+		if(!IsPanelValid(data, AdjacentPanels, Occurrences, NodesAttachedBy))
+		{
+			return false;
+		}
 
-	ComputePanelGeometricData(data);
-	GetAdjacentPanelsFromNodes(data, AdjacentPanels, Occurrences, NodesAttachedBy);
-	DifferedPanels.Remove(Index);
-	return true;
+		ComputePanelGeometricData(data);
+		GetAdjacentPanelsFromNodes(data, AdjacentPanels, Occurrences, NodesAttachedBy);
+		DifferedPanels.Remove(Index);
+		return true;
+	}
+	return false;
 }
 
 bool UNoxelContainer::ConnectNodeDiffered(int32 Index, FNodeID Node)
@@ -390,57 +393,55 @@ bool UNoxelContainer::RemovePanelDiffered(int32 Index)
 bool UNoxelContainer::AddPanel(FPanelData data)
 {
 	UE_LOG(NoxelData, Log, TEXT("[UNoxelContainer::AddPanel] Adding panel"));
-	const int32 NumNodes = data.Nodes.Num();
-	TArray<int32> AdjacentPanels, Occurrences;
-	TArray<TArray<FNodeID>> NodesAttachedBy;
-	if(!IsPanelValid(data, AdjacentPanels, Occurrences, NodesAttachedBy))
-	{
-		return false;
-	}
-
-	//At this point, the starting arguments are valid
-	ComputePanelGeometricData(data);
-
-	//At this point, all the needed geometry data has been computed
-	//Let's give it an index :
 	data.PanelIndex = GetNewPanelIndex();
-	//Do connections : If the panel shares two consecutive nodes with a neighbour, they are connected
-	//Also connect nodes
-	for (int32 NodeIdx = 0; NodeIdx < NumNodes; NodeIdx++)
+	if(AddPanelDiffered(data.PanelIndex))
 	{
-		FNodeID Node = data.Nodes[NodeIdx];
-		Node.Object->AttachNode(Node, FPanelID(this, data.PanelIndex));
+		if(SetPanelPropertiesDiffered(data.PanelIndex, data.ThicknessNormal, data.ThicknessAntiNormal, data.Virtual))
+		{
+			bool valid = true; int i;
+			const int32 NumNodes = data.Nodes.Num();
+			for (i = 0; i < NumNodes; ++i)
+			{
+				if(!ConnectNodeDiffered(data.PanelIndex, data.Nodes[i]))
+				{
+					valid = false;
+					break;
+				}
+			}
+			if (valid)
+			{
+				return FinishAddPanel(data.PanelIndex);
+			}
+			else
+			{
+				for (int j = i - 1; j >= 0; --j)
+				{
+					DisconnectNodeDiffered(data.PanelIndex, data.Nodes[j]);
+				}
+			}
+		}
 	}
-	GetAdjacentPanelsFromNodes(data, AdjacentPanels, Occurrences, NodesAttachedBy);
-	Panels.Add(data);
-	UpdateProviderData();
-	return true;
+	return false;
 }
 
 bool UNoxelContainer::RemovePanel(int32 index)
 {
-	//Find the panel
-	for (int32 PanelIdx = 0; PanelIdx < Panels.Num(); PanelIdx++)
+	int32 IndexInArray;
+	if(GetIndexOfPanelByPanelIndex(index, IndexInArray))
 	{
-		FPanelData Panel = Panels[PanelIdx];
-		if (Panel.PanelIndex == index) //Panel matches indices
+		//Find the panel
+		FPanelData Panel = Panels[IndexInArray];
+		for (FNodeID NodeID : Panel.Nodes)
 		{
-			for (int32 OtherPanelIdx = 0; OtherPanelIdx < Panels.Num(); OtherPanelIdx++)
-			{
-				Panels[OtherPanelIdx].ConnectedPanels.Remove(index); //Remove all traces of the panel from other panels
-			}
-			for (FNodeID Node : Panel.Nodes)
-			{
-				if (Node.Object)
-				{
-					Node.Object->DetachNode(Node, FPanelID(this, index)); //Detach nodes
-				}
-			}
-			Panels.RemoveAt(PanelIdx);
-			UnusedIndices.Add(PanelIdx); //Free the index for use later
-			UpdateProviderData();
-			return true;
+			DisconnectNodeDiffered(index, NodeID);
 		}
+		Panel = Panels[IndexInArray];
+		TArray<int32> AdjacentPanels, Occurrences;
+		TArray<TArray<FNodeID>> NodesAttachedBy;
+		GetAdjacentPanelsFromNodes(Panel, AdjacentPanels, Occurrences, NodesAttachedBy); //clear connected
+		RemovePanelDiffered(index);
+		return true;
+		
 	}
 	return false;
 }
@@ -569,6 +570,11 @@ void UNoxelContainer::UpdateProviderData()
 	}
 	NoxelProvider->SetNodes(NodeData);
 	NoxelProvider->SetPanels(PanelsData);
+}
+
+bool UNoxelContainer::IsConnected()
+{
+	return ConnectedNodesContainers.Num() >0;
 }
 
 bool UNoxelContainer::CheckDataValidity()

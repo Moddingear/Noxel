@@ -56,9 +56,9 @@ void AM_Voxel::middleClickPressed_Implementation()
 
 void AM_Voxel::rightClickPressed_Implementation()
 {
-	FVector location, direction, end;
+	FVector location, direction;
 	getRay(location, direction);
-	end = location + direction * ray_length;
+	const FVector end = location + direction * ray_length;
 	UVoxelComponent* voxel = GetVoxel();
 	if (!voxel) {
 		UE_LOG(NoxelMacro, Warning, TEXT("[MACRO] Voxel not found, aborting..."));

@@ -18,7 +18,7 @@ class NOXEL_API UNodesContainer : public UNoxelDataComponent
 
 public:	
 
-	UNodesContainer(const FObjectInitializer & ObjectInitializer = FObjectInitializer::Get());
+	UNodesContainer();
 
 protected:
 
@@ -86,9 +86,9 @@ public:
 	//Set the default configuration of nodes, use in constructor only
 	bool SetNodesDefault(TArray<FVector> InNodes, bool bInPlayerEditable);
 
-	bool AttachNode(FVector Location, FPanelID Panel);
+	bool AttachNode(const FVector Location, const FPanelID Panel);
 
-	bool DetachNode(FVector Location, FPanelID Panel);
+	bool DetachNode(const FVector Location, const FPanelID Panel);
 
 	//Does not allow removing a node that is connected to panels
 	bool RemoveNode(FVector Location);
@@ -113,6 +113,9 @@ private:
 public:
 	
 	virtual void SetSpawnContext(ECraftSpawnContext Context) override;
+
+	virtual bool IsConnected() override;
+	
 	//Always returns true : the Nodes container blocks directly on modification
 	virtual bool CheckDataValidity() override;
 

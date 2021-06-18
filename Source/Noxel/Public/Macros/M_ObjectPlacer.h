@@ -3,9 +3,8 @@
 
 #include "CoreMinimal.h"
 #include "Macros/NoxelMacroBase.h"
-
-#include "NoxelDataAsset.h"
 #include "Noxel/NoxelNetworkingAgent.h"
+
 
 #include "M_ObjectPlacer.generated.h"
 

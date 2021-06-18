@@ -19,7 +19,7 @@ class NOXEL_API UNoxelDataComponent : public URuntimeMeshComponent
 	
 public:
 
-	UNoxelDataComponent(const FObjectInitializer& ObjectInitializer);
+	UNoxelDataComponent();
 
 protected:
 
@@ -31,6 +31,8 @@ public:
 	Sets the spawn context for the components to react accordingly (for example, the nodes won't create a mesh in battle)
 	*/
 	virtual void SetSpawnContext(ECraftSpawnContext Context);
+
+	virtual bool IsConnected();
 
 	virtual bool CheckDataValidity();
 

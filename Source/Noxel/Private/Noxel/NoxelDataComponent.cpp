@@ -4,7 +4,8 @@
 #include "Net/UnrealNetwork.h"
 #include "Noxel/CraftDataHandler.h"
 
-UNoxelDataComponent::UNoxelDataComponent(const FObjectInitializer& ObjectInitializer)
+UNoxelDataComponent::UNoxelDataComponent()
+	:Super()
 {
 	SpawnContext = ECraftSpawnContext::None;
 	SetIsReplicatedByDefault(true);
@@ -24,6 +25,11 @@ void UNoxelDataComponent::SetSpawnContext(ECraftSpawnContext Context)
 			SpawnContext = Context;
 		}
 	}
+}
+
+bool UNoxelDataComponent::IsConnected()
+{
+	return false;
 }
 
 bool UNoxelDataComponent::CheckDataValidity()

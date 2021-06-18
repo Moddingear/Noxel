@@ -12,8 +12,8 @@
 
 #include "NoxelPlayerController.h"
 
-UNodesContainer::UNodesContainer(const FObjectInitializer& ObjectInitializer)
-	: Super(ObjectInitializer)
+UNodesContainer::UNodesContainer()
+	: Super()
 {
 	PrimaryComponentTick.bCanEverTick = true;
 	SetIsReplicatedByDefault(true);
@@ -98,7 +98,7 @@ bool UNodesContainer::AddNode(FVector Location)
 	//TODO : Handle overlap
 	if (!Nodes.Contains(Location))
 	{
-		int32 NodeIdx = Nodes.Emplace(Location, DefaultNodeColor);
+		Nodes.Emplace(Location, DefaultNodeColor);
 		MarkMeshDirty();
 		return true;
 	}
@@ -125,7 +125,7 @@ bool UNodesContainer::SetNodesDefault(TArray<FVector> InNodes, bool bInPlayerEdi
 	return true;
 }
 
-bool UNodesContainer::AttachNode(FVector Location, FPanelID Panel)
+bool UNodesContainer::AttachNode(const FVector Location, const FPanelID Panel)
 {
 	if (AttachedNoxel && Panel.Object != AttachedNoxel)
 	{
@@ -145,7 +145,7 @@ bool UNodesContainer::AttachNode(FVector Location, FPanelID Panel)
 	return false;
 }
 
-bool UNodesContainer::DetachNode(FVector Location, FPanelID Panel)
+bool UNodesContainer::DetachNode(const FVector Location, const FPanelID Panel)
 {
 	int32 NodeIdx = Nodes.Find(Location);
 	if (NodeIdx != INDEX_NONE)
@@ -321,6 +321,11 @@ void UNodesContainer::SetSpawnContext(ECraftSpawnContext Context)
 {
 	Super::SetSpawnContext(Context);
 	//UE_LOG(Noxel, Log, TEXT("[UNodesContainer::SetSpawnContext] Spawn context set"));
+}
+
+bool UNodesContainer::IsConnected()
+{
+	return IsValid(AttachedNoxel);
 }
 
 bool UNodesContainer::CheckDataValidity()
