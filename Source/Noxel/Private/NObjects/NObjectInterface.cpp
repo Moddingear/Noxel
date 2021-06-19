@@ -67,7 +67,7 @@ bool INObjectInterface::ComputeCOMFromComponents(TArray<AActor*> &Actors, FVecto
 		}
 		if (curr->GetRootComponent()->IsA<UPrimitiveComponent>())
 		{
-			UPrimitiveComponent* root = (UPrimitiveComponent*)curr->GetRootComponent();
+			UPrimitiveComponent* root = Cast<UPrimitiveComponent>(curr->GetRootComponent());
 			if (!root->IsSimulatingPhysics())
 			{
 				UE_LOG(Noxel, Warning, TEXT("[INObjectInterface::ComputeCOMFromComponents] Component %s is not simulating physics, skipping"), *root->GetName());

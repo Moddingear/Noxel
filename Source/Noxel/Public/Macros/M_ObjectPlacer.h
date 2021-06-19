@@ -27,6 +27,7 @@ protected:
 
 public:
 	float placementDistance = 100.0f;
+	FVector BoundsCenter;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Widgets")
 		TSubclassOf<class UUserWidget> wInventory;
@@ -34,9 +35,13 @@ public:
 	UUserWidget* Inventory;
 
 	FObjectPermissionDelegate onObjectDelegate;
-
+	
+private:
+	FNoxelObjectData SelectedObject;
+	
 	AActor* ObjectSpawned;
-
+	
+public:
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
 
@@ -53,6 +58,8 @@ public:
 
 	UFUNCTION(BlueprintCallable)
 	void NothingSelected();
+
+	static bool LoadObjectClassSynchronous(TSoftClassPtr<AActor> SoftClass, TSubclassOf<AActor>& ObjectClass);
 
 	UFUNCTION()
 	void onObjectCall(AActor* Actor);

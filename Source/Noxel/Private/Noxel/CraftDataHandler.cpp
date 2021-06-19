@@ -671,7 +671,7 @@ bool UCraftDataHandler::loadNoxelContainer(UNoxelContainer * NoxelContainer, TMa
 
 		NoxelContainer->AddPanel(data);
 	}
-
+	NoxelContainer->UpdateMesh();
 	return true;
 }
 

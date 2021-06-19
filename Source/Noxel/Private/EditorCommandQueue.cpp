@@ -1007,18 +1007,15 @@ bool FEditorQueueOrderAddObject::UndoOrder(FEditorQueue* Parent)
 FEditorQueueOrderNetworkable FEditorQueueOrderAddObject::ToNetworkable(FEditorQueueNetworkable* Parent)
 {
 	FEditorQueueOrderNetworkable Net(EEditorQueueOrderType::ObjectAdd);
-	const uint32 buffer32len = ObjectClass.Len()/2/4 + 1;
+	const uint32 buffer32len = ObjectClass.Len()/4 + 1;
 	const uint32 bufferlen = buffer32len*4;
 	int32* buffer32 = new int32(buffer32len);
 	uint8* buffer = reinterpret_cast<uint8*>(buffer32);
 	FString BlobStr = ObjectClass;
-	if (BlobStr.Len() %2 != 0)
-	{
-		BlobStr += FString(" ");
-	}
-	FString::ToHexBlob(ObjectClass, buffer, bufferlen);
+	StringToBytes(ObjectClass, buffer, bufferlen);
 	Net.Args.Add(Parent->AddPointer(Craft));
 	Net.AddTransform(ObjectTransform);
+	Net.Args.Add(ObjectClass.Len());
 	Net.Args.Append(buffer32, buffer32len);
 	delete buffer32;
 	return Net;
@@ -1037,16 +1034,19 @@ bool FEditorQueueOrderAddObject::FromNetworkable(FEditorQueueNetworkable* Parent
 	}
 	Craft = Cast<UCraftDataHandler>(Parent->GetPointer(InData.Args[0]));
 	ObjectTransform = InData.GetTransform(1);
-	int32* buffer32 = InData.Args.GetData() + FEditorQueueOrderNetworkable::GetTransformSize()+1;
-	const uint32 buffer32len = InData.Args.Num() - FEditorQueueOrderNetworkable::GetTransformSize()-1;
-	uint8* buffer = reinterpret_cast<uint8*>(buffer32);
-	const uint32 bufferlen = buffer32len*4;
-	FString BlobStr = FString::FromHexBlob(buffer, bufferlen);
-	if (BlobStr.EndsWith(" "))
+	int32 ObjectClassLen = InData.Args[1 + FEditorQueueOrderNetworkable::GetTransformSize()];
+	const int32 buffer32offset = FEditorQueueOrderNetworkable::GetTransformSize()+2;
+	const int32 buffer32len = InData.Args.Num() - buffer32offset;
+	int32* buffer32 = new int32(buffer32len);
+	for (int32 i = 0; i < buffer32len; ++i)
 	{
-		BlobStr.LeftChopInline(1);
+		buffer32[i] = InData.Args[i+buffer32offset];
 	}
-	ObjectClass = BlobStr;
+	uint8* buffer = reinterpret_cast<uint8*>(buffer32);
+	const int32 bufferlen = buffer32len*4;
+	ObjectClass = BytesToString(buffer, bufferlen);
+	ObjectClass.LeftInline(ObjectClassLen);
+	delete buffer32;
 	return true;
 }
 

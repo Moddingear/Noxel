@@ -47,7 +47,7 @@ void AM_Voxel::leftClickPressed_Implementation()
 			cube_place = GetVoxel()->worldToVoxel(hit.Location);
 		}
 	}
-	GetNoxelNetworkingAgent()->AddBlock(GetVoxel(), cube_place);
+	//GetNoxelNetworkingAgent()->AddBlock(GetVoxel(), cube_place);
 }
 
 void AM_Voxel::middleClickPressed_Implementation()
@@ -67,7 +67,7 @@ void AM_Voxel::rightClickPressed_Implementation()
 	FIntVector cube_hit, direction_hit;
 	if (voxel->trace(location, end, cube_hit, direction_hit)) { //If hit in the voxel
 		UE_LOG(NoxelMacro, Log, TEXT("Cube hit : %s | Direction : %s"), *cube_hit.ToString(), *direction_hit.ToString());
-		GetNoxelNetworkingAgent()->RemoveBlock(voxel, cube_hit);
+		//GetNoxelNetworkingAgent()->RemoveBlock(voxel, cube_hit);
 	}
-	GetNoxelNetworkingAgent()->RemoveBlock(voxel, voxel->worldToVoxel(GetOwner()->GetTransform().GetLocation())); //Remove the cube where the player is to avoid getting stuck
+	//GetNoxelNetworkingAgent()->RemoveBlock(voxel, voxel->worldToVoxel(GetOwner()->GetTransform().GetLocation())); //Remove the cube where the player is to avoid getting stuck
 }

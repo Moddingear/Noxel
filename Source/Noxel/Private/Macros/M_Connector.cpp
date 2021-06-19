@@ -143,7 +143,7 @@ void AM_Connector::leftClickPressed_Implementation()
 		{
 			if (UConnectorBase::CanBothConnect(SelectedConnector, Connectors[ConnectorIdx]))
 			{
-				GetNoxelNetworkingAgent()->ConnectConnector(SelectedConnector, Connectors[ConnectorIdx]);
+				//GetNoxelNetworkingAgent()->ConnectConnector(SelectedConnector, Connectors[ConnectorIdx]);
 			}
 		}
 		SelectedConnector = nullptr;
@@ -157,14 +157,14 @@ void AM_Connector::leftClickReleased_Implementation()
 		UConnectorBase* SelectedConnector2 = GetConnectorClicked();
 		if (UConnectorBase::AreConnected(SelectedConnector, SelectedConnector2))
 		{
-			GetNoxelNetworkingAgent()->DisconnectConnector(SelectedConnector, SelectedConnector2);
+			//GetNoxelNetworkingAgent()->DisconnectConnector(SelectedConnector, SelectedConnector2);
 			//UE_LOG(Noxel, Log, TEXT("Were connected"));
 		}
 		else if(UConnectorBase::CanBothConnect(SelectedConnector, SelectedConnector2))
 		{
 			//DrawDebugLine(GetWorld(), SelectedConnector->GetComponentLocation(), SelectedConnector2->GetComponentLocation(), FColor::Blue, true);
 			//UE_LOG(Noxel, Log, TEXT("[AM_Connector::leftClickReleased_Implementation] Connection made"));
-			GetNoxelNetworkingAgent()->ConnectConnector(SelectedConnector, SelectedConnector2);
+			//GetNoxelNetworkingAgent()->ConnectConnector(SelectedConnector, SelectedConnector2);
 		}
 		SelectedConnector = nullptr;
 	}
@@ -193,7 +193,7 @@ void AM_Connector::rightClickPressed_Implementation()
 				{
 					if (UConnectorBase::CanBothConnect(A, B))
 					{
-						GetNoxelNetworkingAgent()->ConnectConnector(A, B);
+						//GetNoxelNetworkingAgent()->ConnectConnector(A, B);
 					}
 				}
 			}
@@ -207,7 +207,7 @@ void AM_Connector::rightClickPressed_Implementation()
 			TArray<UConnectorBase*> OldConnections = Selected->Connected;
 			for (UConnectorBase* Connector : OldConnections)
 			{
-				GetNoxelNetworkingAgent()->DisconnectConnector(Selected, Connector);
+				//GetNoxelNetworkingAgent()->DisconnectConnector(Selected, Connector);
 			}
 		}
 	}

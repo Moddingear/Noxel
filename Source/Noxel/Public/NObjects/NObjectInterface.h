@@ -6,6 +6,8 @@
 #include "JsonObjectConverter.h"
 #include "NObjectInterface.generated.h"
 
+class ANoxelPart;
+class UCraftDataHandler;
 /**
  * 
  */

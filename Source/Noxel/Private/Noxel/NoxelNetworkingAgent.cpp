@@ -7,6 +7,7 @@
 
 #include "Noxel/CraftDataHandler.h"
 #include "NoxelHangarBase.h"
+#include "Engine/DemoNetDriver.h"
 #include "NObjects/NoxelPart.h"
 
 // Sets default values for this component's properties
@@ -14,12 +15,14 @@ UNoxelNetworkingAgent::UNoxelNetworkingAgent()
 {
 	// Set this component to be initialized when the game starts, and to be ticked every frame.  You can turn these features
 	// off to improve performance if you don't need them.
+	SetIsReplicatedByDefault(true);
 	PrimaryComponentTick.bCanEverTick = true;
 	PrimaryComponentTick.TickInterval = 1;
 	static ConstructorHelpers::FObjectFinder<UDataTable> DataConstructor(OBJECTLIBRARY_PATH);
 	if (DataConstructor.Succeeded()) {
 		DataTable = DataConstructor.Object;
 	}
+	TempObjects.Init(nullptr, 10);
 	// ...
 }
 
@@ -28,7 +31,7 @@ UNoxelNetworkingAgent::UNoxelNetworkingAgent()
 void UNoxelNetworkingAgent::BeginPlay()
 {
 	Super::BeginPlay();
-	AEditorGameState* gs = (AEditorGameState*)GetWorld()->GetGameState();
+	AEditorGameState* gs = GetWorld()->GetGameState<AEditorGameState>();
 	if (gs)
 	{
 		ANoxelHangarBase* hangar = gs->GetHangar();
@@ -48,6 +51,12 @@ void UNoxelNetworkingAgent::BeginPlay()
 	}
 }
 
+
+void UNoxelNetworkingAgent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+	DOREPLIFETIME_CONDITION(UNoxelNetworkingAgent, TempObjects, COND_None);
+}
 
 // Called every frame
 void UNoxelNetworkingAgent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
@@ -280,104 +289,66 @@ void UNoxelNetworkingAgent::ClientRectifyCommandQueue_Implementation(int32 Index
 	}
 }
 
-void UNoxelNetworkingAgent::AddBlock(UVoxelComponent* Container, FIntVector Location)
+void UNoxelNetworkingAgent::AddTempObject(FObjectPermissionDelegate Callback, TSubclassOf<AActor> Class, FTransform Location)
 {
-	if(!Container)
-	{
-		UE_LOG(NoxelDataNetwork, Log, TEXT("{AddBlock} Container reference is broken, dropping call..."));
-		return;
-	}
-	Container->addCube(Location);
-	Server_Voxel(Container, Location, EVoxelOperation::Add);
-}
-
-void UNoxelNetworkingAgent::RemoveBlock(UVoxelComponent* Container, FIntVector Location)
-{
-	if(!Container)
-	{
-		UE_LOG(NoxelDataNetwork, Log, TEXT("{RemoveBlock} Container reference is broken, dropping call..."));
-		return;
-	}
-	Container->removeCube(Location);
-	Server_Voxel(Container, Location, EVoxelOperation::Remove);
-}
-
-void UNoxelNetworkingAgent::AddObject(FObjectPermissionDelegate Callback, TSubclassOf<AActor> Class, FTransform Location, bool bNeedsOwnership)
-{
-	FDateTime now = FDateTime::UtcNow();
 	if (Callback.IsBound())
 	{
-		ObjectCallbacks.Add(now, Callback);
+		ObjectCallbacks.Add(CurrentCallbackIdx, Callback);
 	}
-	Server_Object(now, EObjectOperation::Add, Class, nullptr, Location, bNeedsOwnership);
-	
+	AddTempObjectServer(Class, Location, CurrentCallbackIdx);
+	CurrentCallbackIdx++;
 }
 
-void UNoxelNetworkingAgent::MoveObject(FObjectPermissionDelegate Callback, FTransform Location, AActor * Object, bool bNeedsOwnership)
+void UNoxelNetworkingAgent::MoveTempObject(AActor * Object, FTransform Location)
 {
-	FDateTime now = FDateTime::UtcNow();
-	if (Callback.IsBound())
+	Object->SetActorTransform(Location);
+	MoveTempObjectServer(Object, Location);
+}
+
+void UNoxelNetworkingAgent::RemoveTempObject(AActor * Object)
+{
+	RemoveTempObjectServer(Object);
+}
+
+void UNoxelNetworkingAgent::MoveTempObjectServer_Implementation(AActor * Object, FTransform Location)
+{
+	if (Object)
 	{
-		ObjectCallbacks.Add(now, Callback);
-	}
-	Server_Object(now, EObjectOperation::Move, nullptr, Object, Location, bNeedsOwnership);
-}
-
-void UNoxelNetworkingAgent::RemoveObject(AActor * Object)
-{
-	FDateTime now = FDateTime::UtcNow();
-	Server_Object(now, EObjectOperation::Remove, nullptr, Object, FTransform::Identity, false);
-}
-
-void UNoxelNetworkingAgent::ResignObject()
-{
-	FDateTime now = FDateTime::UtcNow();
-	Server_Object(now, EObjectOperation::Resign, nullptr, nullptr, FTransform::Identity, false);
-}
-
-void UNoxelNetworkingAgent::MoveObjectUnreliable_Implementation(AActor * Object, FTransform Location)
-{
-	if (OwnedActor)
-	{
-		if (OwnedActor == Object)
+		if (Object->GetOwner() == GetOwner() && TempObjects.Contains(Object))
 		{
 			Object->SetActorTransform(Location);
+			MoveTempObjectClients(Object, Location);
 		}
 		else
 		{
-			UE_LOG(Noxel, Log, TEXT("[UNoxelNetworkingAgent::MoveObjectUnreliable_Implementation] OwnedActor isn't Object"));
+			UE_LOG(Noxel, Log, TEXT("[UNoxelNetworkingAgent::MoveTempObject_Implementation] Object moved isn't owned"));
 		}
 	}
 	else 
 	{
-		UE_LOG(Noxel, Log, TEXT("[UNoxelNetworkingAgent::MoveObjectUnreliable_Implementation] OwnedActor invalid"));
+		UE_LOG(Noxel, Log, TEXT("[UNoxelNetworkingAgent::MoveTempObject_Implementation] OwnedActor invalid"));
 	}
 }
 
-bool UNoxelNetworkingAgent::MoveObjectUnreliable_Validate(AActor * Object, FTransform Location)
+bool UNoxelNetworkingAgent::MoveTempObjectServer_Validate(AActor * Object, FTransform Location)
 {
-	return canEdit(Object);
+	return TempObjects.Contains(Object);
 }
 
-void UNoxelNetworkingAgent::ConnectConnector(UConnectorBase * A, UConnectorBase * B)
+void UNoxelNetworkingAgent::MoveTempObjectClients_Implementation(AActor* Object, FTransform Location)
 {
-	if (A && B && UConnectorBase::CanBothConnect(A, B))
+	if (IsValid(Object))
 	{
-		Server_Connector(A, B, true);
-	}
-}
-
-void UNoxelNetworkingAgent::DisconnectConnector(UConnectorBase * A, UConnectorBase * B)
-{
-	if (A && B && UConnectorBase::AreConnected(A,B))
-	{
-		Server_Connector(A, B, false);
+		if (!TempObjects.Contains(Object)) //TempObjects is owner only, so if it's not in TempObjects, it's not ours
+		{
+			Object->SetActorTransform(Location);
+		}
 	}
 }
 
 void UNoxelNetworkingAgent::SpawnAndPossessCraft_Implementation()
 {
-	ANoxelHangarBase* Hangar = (ANoxelHangarBase*)Craft->GetOwner();
+	ANoxelHangarBase* Hangar = Cast<ANoxelHangarBase>(Craft->GetOwner());
 	if (Hangar)
 	{
 		//CompClass can be a BP
@@ -394,13 +365,13 @@ void UNoxelNetworkingAgent::SpawnAndPossessCraft_Implementation()
 		{
 			if (NObject->IsA<APawn>())
 			{
-				Seat = (APawn*)NObject;
+				Seat = Cast<APawn>(NObject);
 				break;
 			}
 		}
 		if (Seat)
 		{
-			APawn* Owner = ((APawn*)GetOwner());
+			APawn* Owner = Cast<APawn>(GetOwner());
 			for (FConstPlayerControllerIterator Iterator = GetWorld()->GetPlayerControllerIterator(); Iterator; ++Iterator)
 			{
 				if (UGameplayStatics::GetPlayerPawn(this, Iterator.GetIndex()) == Owner)
@@ -419,186 +390,118 @@ bool UNoxelNetworkingAgent::SpawnAndPossessCraft_Validate()
 	return true;
 }
 
-/*
-* Client -> Server ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-*/
-
-//Voxel --------------------------------------------------------------------------------------------------------------------------------
-void UNoxelNetworkingAgent::Server_Voxel_Implementation(UVoxelComponent* Container, FIntVector Location, EVoxelOperation OperationType)
+void UNoxelNetworkingAgent::AddTempObjectServer_Implementation(TSubclassOf<AActor> Class, FTransform Location, int32 CallbackIdx)
 {
-	if(!Container){
-		UE_LOG(NoxelDataNetwork, Warning, TEXT("[UNoxelNetworkingAgent::Server_Voxel_Implementation] Illegal voxel reference, aborting..."));
-		return;
+	if (IsValid(Class))
+	{
+		AActor* SpawnedActor = GetWorld()->SpawnActorDeferred<AActor>(Class, Location, GetOwner(), nullptr, ESpawnActorCollisionHandlingMethod::AlwaysSpawn);
+		int i;
+		for (i = 0; i < TempObjects.Num(); ++i)
+		{
+			if (TempObjects[i] == nullptr)
+			{
+				TempObjects[i] = SpawnedActor;
+				break;
+			}
+		}
+		SpawnedActor->SetActorEnableCollision(false);
+		SpawnedActor->SetReplicateMovement(false);
+		//TODO : enable some sort of hologram effect
+		SpawnedActor->FinishSpawning(Location);
+		NotifyClientCallback(CallbackIdx, i);
 	}
-	Clients_Voxel(Container, Location, OperationType);
+	else
+	{
+		UE_LOG(NoxelDataNetwork, Warning, TEXT("[UNoxelNetworkingAgent::AddTempObjectServer_Implementation] Class is invalid"));
+	}
 }
 
-bool UNoxelNetworkingAgent::Server_Voxel_Validate(UVoxelComponent* Container, FIntVector Location, EVoxelOperation OperationType)
+bool UNoxelNetworkingAgent::AddTempObjectServer_Validate(TSubclassOf<AActor> Class, FTransform Location, int32 CallbackIdx)
 {
-	return true;
+	int NumValid = 0;
+	for (AActor* TempObject : TempObjects)
+	{
+		if (IsValid(TempObject))
+		{
+			NumValid++;
+		}
+	}
+	return NumValid<10;
 }
 
-//Objects --------------------------------------------------------------------------------------------------------------------------------
-void UNoxelNetworkingAgent::Server_Object_Implementation(FDateTime RequestTime, EObjectOperation OperationType, TSubclassOf<AActor> Class, AActor* Object, FTransform Location, bool bNeedsOwnership)
+
+void UNoxelNetworkingAgent::RemoveTempObjectServer_Implementation(AActor* Object)
 {
-	if (OwnedActor)
+	if (Object)
 	{
-		OwnedActor->SetOwner(nullptr);
-		OwnedActor = nullptr;
+		TempObjects[TempObjects.Find(Object)] = nullptr;
+		Object->Destroy();
 	}
-	switch (OperationType)
+}
+
+bool UNoxelNetworkingAgent::RemoveTempObjectServer_Validate(AActor* Object)
+{
+	return TempObjects.Contains(Object);
+}
+
+void UNoxelNetworkingAgent::NotifyClientCallback_Implementation(int32 CallbackIndex, int32 TempObjectsIndex)
+{
+	if (ObjectCallbacks.Contains(CallbackIndex))
 	{
-	case EObjectOperation::Add:
-		if (Class && UNoxelDataAsset::HasClass(DataTable, Class) && Craft) {
-			FActorSpawnParameters SpawnParams = FActorSpawnParameters();
-			if (bNeedsOwnership)
-			{
-				SpawnParams.Owner = GetOwner();
-			}
-			AActor* Spawned = Craft->AddComponent(Class, Location, SpawnParams);
-			if (bNeedsOwnership)
-			{
-				OwnedActor = Spawned;
-			}
-			int32 IndexSpawned;
-			Craft->Components.Find(Spawned, IndexSpawned);
-			Client_Object(RequestTime, EObjectOperation::Add, Spawned, IndexSpawned);
+		
+		if (TempObjects.IsValidIndex(TempObjectsIndex) && IsValid(TempObjects[TempObjectsIndex]))
+		{
+			UE_LOG(NoxelDataNetwork, Log, TEXT(
+                    "[UNoxelNetworkingAgent::NotifyClientCallback_Implementation] Object is valid : TempObjectIndex = %d; CallbackIndex = %d"
+                ), TempObjectsIndex, CallbackIndex);
+			FObjectPermissionDelegate Callback;
+         	if(ObjectCallbacks.RemoveAndCopyValue(CallbackIndex, Callback))
+         	{
+         		if (Callback.IsBound())
+         		{
+         			Callback.Broadcast(TempObjects[TempObjectsIndex]);
+         		}
+         	}
+			
 		}
 		else
 		{
-			if (!Class)
-			{
-				UE_LOG(Noxel, Warning, TEXT("[UNoxelNetworkingAgent::Server_Object_Implementation] Class is invalid"));
-			}
-			if (!UNoxelDataAsset::HasClass(DataTable, Class))
-			{
-				UE_LOG(Noxel, Warning, TEXT("[UNoxelNetworkingAgent::Server_Object_Implementation] Class not found in DataTable"));
-			}
-			Client_Object(RequestTime, EObjectOperation::Resign, nullptr);
+			UE_LOG(NoxelDataNetwork, Log, TEXT(
+					"[UNoxelNetworkingAgent::NotifyClientCallback_Implementation] Object is invalid, adding index to waiting list : TempObjectIndex = %d; CallbackIndex = %d"
+				), TempObjectsIndex, CallbackIndex);
+			ObjectsWaiting.Add(TempObjectsIndex, CallbackIndex);
 		}
-		return;
-	case EObjectOperation::Move:
-		if (Object && Craft)
+	}
+}
+
+void UNoxelNetworkingAgent::OnRep_TempObjects()
+{
+	UE_LOG(NoxelDataNetwork, Log, TEXT("[UNoxelNetworkingAgent::OnRepTempObjects] Called"));
+	for (int i = 0; i < TempObjects.Num(); ++i)
+	{
+		if (IsValid(TempObjects[i]))
 		{
-			if (Craft->Components.Contains(Object) && Object->GetOwner() == nullptr)
+			int32 CallbackIndex;
+			if (ObjectsWaiting.RemoveAndCopyValue(i, CallbackIndex))
 			{
-				Object->SetActorTransform(Location);
-				if (bNeedsOwnership)
+				UE_LOG(NoxelDataNetwork, Log, TEXT("[UNoxelNetworkingAgent::OnRepTempObjects] TempObject[%d] is valid, calling callback %d"),
+					i, CallbackIndex);
+				FObjectPermissionDelegate Callback;
+				if(ObjectCallbacks.RemoveAndCopyValue(CallbackIndex, Callback))
 				{
-					Object->SetOwner(GetOwner());
-					OwnedActor = Object;
+					if (Callback.IsBound())
+					{
+						Callback.Broadcast(TempObjects[i]);
+					}
+					else
+					{
+						UE_LOG(NoxelDataNetwork, Warning, TEXT("[UNoxelNetworkingAgent::OnRepTempObjects] Callback isn't bound !"));
+					}
 				}
-				Client_Object(RequestTime, EObjectOperation::Move, Object);
-				return;
-			}
-		}
-		Client_Object(RequestTime, EObjectOperation::Resign, nullptr);
-		return;
-	case EObjectOperation::Remove:
-		if (Object && Craft)
-		{
-			if (Craft->Components.Contains(Object) && Object->GetOwner() == nullptr)
-			{
-				Craft->Components.Remove(Object);
-				Object->Destroy();
-				Client_Object(RequestTime, EObjectOperation::Remove, nullptr);
-				return;
-			}
-		}
-		Client_Object(RequestTime, EObjectOperation::Resign, nullptr);
-		return;
-	case EObjectOperation::Resign:
-		return;
-	default:
-		break;
-	}
-}
-
-bool UNoxelNetworkingAgent::Server_Object_Validate(FDateTime RequestTime, EObjectOperation OperationType, TSubclassOf<AActor> Class, AActor* Object, FTransform Location, bool bNeedsOwnership)
-{
-	return canEdit(Object);
-}
-
-void UNoxelNetworkingAgent::Server_Connector_Implementation(UConnectorBase* A, UConnectorBase* B, bool bIsConnecting)
-{
-	if (A && B)
-	{
-		if (bIsConnecting)
-		{
-			A->Connect(B);
-		}
-		else 
-		{
-			A->Disconnect(B);
-		}
-	}
-}
-
-bool UNoxelNetworkingAgent::Server_Connector_Validate(UConnectorBase* A, UConnectorBase* B, bool bIsConnecting)
-{
-	return canEdit(A->GetOwner()) && B->GetOwner();
-}
-
-/*
-* Server -> All clients ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-*/
-
-void UNoxelNetworkingAgent::Clients_Voxel_Implementation(UVoxelComponent* Container, FIntVector Location, EVoxelOperation OperationType)
-{
-	Voxel(Container, Location, OperationType);
-}
-
-/*
-* Server -> Client ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-*/
-
-void UNoxelNetworkingAgent::Client_Object_Implementation(FDateTime RequestTime, EObjectOperation OperationType, AActor* Object, int32 ActorIndex)
-{
-	//UE_LOG(NoxelDataNetwork, Log, TEXT("[UNoxelNetworkingAgent::Client_Object_Implementation]"));
-	if (OperationType != EObjectOperation::Resign)
-	{
-		//UE_LOG(NoxelDataNetwork, Log, TEXT("[UNoxelNetworkingAgent::Client_Object_Implementation] Operation is correct"));
-		if (ObjectCallbacks.Contains(RequestTime))
-		{
-			//UE_LOG(NoxelDataNetwork, Log, TEXT("[UNoxelNetworkingAgent::Client_Object_Implementation] Callback found"));
-			FObjectPermissionDelegate Callback = ObjectCallbacks.FindAndRemoveChecked(RequestTime);
-			if (!Object) //If object replication hasn't come yet, put the spawn on hold
-			{
-				ObjectsWaiting.Add(ActorIndex, Callback);
-			}
-			else if (Callback.IsBound())
-			{
-				//UE_LOG(NoxelDataNetwork, Log, TEXT("[UNoxelNetworkingAgent::Client_Object_Implementation] Broadcasting callback"));
-				Callback.Broadcast(Object);
 			}
 		}
 	}
 }
-
-/*
-* Generic functions to agree to the server ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-*/
-
-void UNoxelNetworkingAgent::Voxel(UVoxelComponent* Container, FIntVector Location, EVoxelOperation OperationType)
-{
-	if(!Container){
-		UE_LOG(NoxelDataNetwork, Warning, TEXT("{Voxel} Received a broken container reference, aborting..."));
-		return;
-	}
-	switch(OperationType){
-	case (EVoxelOperation::Add):
-		Container->addCube(Location);
-		break;
-	case (EVoxelOperation::Remove):
-		Container->removeCube(Location);
-		break;
-	}
-	
-}
-
-/*
-* Checks ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-*/
 
 bool UNoxelNetworkingAgent::canEdit(AActor * Target)
 {
@@ -615,15 +518,5 @@ bool UNoxelNetworkingAgent::canEdit(AActor * Target)
 
 void UNoxelNetworkingAgent::OnCraftComponentsReplicated()
 {
-	for (const TPair<int32, FObjectPermissionDelegate> ComponentPair : ObjectsWaiting)
-	{
-		if (Craft->Components.IsValidIndex(ComponentPair.Key))
-		{
-			if (ComponentPair.Value.IsBound())
-			{
-				ComponentPair.Value.Broadcast(Craft->Components[ComponentPair.Key]);
-			}
-		}
-	}
-	ObjectsWaiting.Empty();
+	return;
 }

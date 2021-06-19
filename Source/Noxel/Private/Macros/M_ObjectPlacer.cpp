@@ -3,7 +3,6 @@
 #include "Macros/M_ObjectPlacer.h"
 #include "Runtime/UMG/Public/UMG.h"
 #include "Macros/M_Nodes.h"
-#include "EditorCharacter.h"
 #include "NObjects/NoxelPart.h"
 
 AM_ObjectPlacer::AM_ObjectPlacer()
@@ -28,15 +27,16 @@ void AM_ObjectPlacer::BeginPlay()
 
 void AM_ObjectPlacer::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
+	if (IsValid(Inventory) && EndPlayReason != EEndPlayReason::EndPlayInEditor)
+ 	{
+ 		Inventory->RemoveFromParent();
+ 	}
+ 	if (IsValid(ObjectSpawned))
+ 	{
+ 		GetNoxelNetworkingAgent()->RemoveTempObject(ObjectSpawned);
+ 	}
 	Super::EndPlay(EndPlayReason);
-	if (Inventory)
-	{
-		Inventory->RemoveFromParent();
-	}
-	if (IsValid(ObjectSpawned))
-	{
-		GetNoxelNetworkingAgent()->RemoveObject(ObjectSpawned);
-	}
+	
 }
 
 void AM_ObjectPlacer::Tick(float DeltaTime)
@@ -45,11 +45,7 @@ void AM_ObjectPlacer::Tick(float DeltaTime)
 
 	if (ObjectSpawned)
 	{
-		ObjectSpawned->SetActorLocation(getObjectLocation());
-		if (!GetWorld()->IsServer())
-		{
-			GetNoxelNetworkingAgent()->MoveObjectUnreliable(ObjectSpawned, FTransform(getObjectLocation()));
-		}
+		GetNoxelNetworkingAgent()->MoveTempObject(ObjectSpawned, FTransform(getObjectLocation()));
 
 		LeftClickHint = NSLOCTEXT(MACROS_NAMESPACE, "ObjectPositionConfirm", "Confirm object placement");
 		RightClickHint = NSLOCTEXT(MACROS_NAMESPACE, "ObjectCancel", "Cancel object placement");
@@ -62,9 +58,11 @@ void AM_ObjectPlacer::leftClickPressed_Implementation()
 {
 	if (ObjectSpawned)
 	{
-		ObjectSpawned->SetActorLocation(getObjectLocation());
-		GetNoxelNetworkingAgent()->MoveObject(FObjectPermissionDelegate(), FTransform(getObjectLocation()), ObjectSpawned, false);
+		GetNoxelNetworkingAgent()->RemoveTempObject(ObjectSpawned);
 		ObjectSpawned = nullptr;
+		FEditorQueue* queue = GetNoxelNetworkingAgent()->CreateEditorQueue();
+		queue->AddObjectAddOrder(GetCraft(), SelectedObject.ComponentID, FTransform(getObjectLocation()));
+		GetNoxelNetworkingAgent()->SendCommandQueue(queue);
 	}
 	else
 	{
@@ -84,49 +82,58 @@ void AM_ObjectPlacer::rightClickPressed_Implementation()
 {
 	if (ObjectSpawned)
 	{
-		GetNoxelNetworkingAgent()->RemoveObject(ObjectSpawned);
+		GetNoxelNetworkingAgent()->RemoveTempObject(ObjectSpawned);
 		ObjectSpawned = nullptr;
 	}
 }
 
 void AM_ObjectPlacer::ObjectSelected(FNoxelObjectData Object)
 {
+	SelectedObject = Object;
 	Inventory->RemoveFromParent();
 	FVector Location, Direction;
 	getRay(Location, Direction);
-	FVector BoundCenter, BoxExtent;
-	if (!Object.Class.IsNull())
+	FVector BoxExtent;
+	TSubclassOf<AActor> SpawnClass;
+	if (LoadObjectClassSynchronous(Object.Class, SpawnClass))
 	{
-		if (Object.Class.IsPending())
+		AActor* DefObj = SpawnClass->GetDefaultObject<AActor>();
+		if (IsValid(DefObj))
 		{
-			// ReSharper disable once CppExpressionWithoutSideEffects
-			Object.Class.LoadSynchronous();
-		}
-		if (Object.Class.IsValid())
-		{
-			UClass* ObjClass = Object.Class.Get();
-			if (IsValid(ObjClass))
-			{
-				AActor* DefObj = ObjClass->GetDefaultObject<AActor>();
-				if (IsValid(DefObj))
-				{
-					DefObj->GetActorBounds(true, BoundCenter, BoxExtent);
-					placementDistance = FMath::Max(BoxExtent.Size()*1.5f, 100.f);
-					UE_LOG(NoxelMacro, Log, TEXT("[AM_ObjectPlacer::ObjectSelected] Was able to get default object for placement distance"))
-				}
-			}
+			DefObj->GetActorBounds(true, BoundsCenter, BoxExtent);
+			placementDistance = FMath::Max(BoxExtent.Size()*1.5f, 100.f);
+			UE_LOG(NoxelMacro, Log, TEXT("[AM_ObjectPlacer::ObjectSelected] Was able to get default object for placement distance"))
 		}
 	}
-	FEditorQueue* queue = GetNoxelNetworkingAgent()->CreateEditorQueue();
-	//TODO : Add temp then spawn multiplayer
-	queue->AddObjectAddOrder(GetCraft(), Object.ComponentID, FTransform(Location + Direction * placementDistance));
-	GetNoxelNetworkingAgent()->SendCommandQueue(queue);
+	GetNoxelNetworkingAgent()->AddTempObject(onObjectDelegate, SpawnClass, FTransform(getObjectLocation()));
 }
 
 void AM_ObjectPlacer::NothingSelected()
 {
 	Inventory->RemoveFromParent();
 	switchMacro(AM_Nodes::StaticClass());
+}
+
+bool AM_ObjectPlacer::LoadObjectClassSynchronous(TSoftClassPtr<AActor> SoftClass, TSubclassOf<AActor>& ObjectClass)
+{
+	if (!SoftClass.IsNull())
+	{
+		if (SoftClass.IsPending())
+		{
+			// ReSharper disable once CppExpressionWithoutSideEffects
+			SoftClass.LoadSynchronous();
+		}
+		if (SoftClass.IsValid())
+		{
+			UClass* ObjClass = SoftClass.Get();
+			if (IsValid(ObjClass))
+			{
+				ObjectClass = ObjClass;
+				return true;
+			}
+		}
+	}
+	return false;
 }
 
 void AM_ObjectPlacer::onObjectCall(AActor* Actor)
@@ -136,22 +143,12 @@ void AM_ObjectPlacer::onObjectCall(AActor* Actor)
 	if (!ObjectSpawned)
 	{
 		UE_LOG(Noxel, Log, TEXT("[AM_ObjectPlacer::onObjectCall] ObjectSpawned is invalid"));
-		return;
 	}
-	if (ObjectSpawned->IsA<ANoxelPart>())
-	{
-		UE_LOG(Noxel, Log, TEXT("[AM_ObjectPlacer::onObjectCall] Setting new CurrentPart"));
-		GetOwningActor()->SetCurrentPart(Cast<ANoxelPart>(ObjectSpawned));
-	}
-	FVector BoundCenter, BoxExtent;
-	ObjectSpawned->GetActorBounds(true, BoundCenter, BoxExtent);
-	placementDistance = FMath::Max(BoxExtent.Size()*1.5f, 100.f);
-
 }
 
 FVector AM_ObjectPlacer::getObjectLocation()
 {
 	FVector Location, Direction;
 	getRay(Location, Direction);
-	return Location + Direction * placementDistance;
+	return Location + Direction * placementDistance - BoundsCenter;
 }
