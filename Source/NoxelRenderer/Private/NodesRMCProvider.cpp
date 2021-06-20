@@ -68,7 +68,7 @@ bool UNodesRMCProvider::GetHitNodeIndex(int32 faceIndex, int32 & HitNode)
 {
 	FScopeLock Lock(&PropertySyncRoot);
 	HitNode = faceIndex / (StaticMeshCollidable.Triangles.Num());
-	UE_LOG(NoxelRendererLog, Log, TEXT("[UNodesRMCProvider::GetHitNodeIndex(%d, %d)] NumTriangles = %d"), faceIndex, HitNode, StaticMeshCollidable.Triangles.Num());
+	//UE_LOG(NoxelRendererLog, Log, TEXT("[UNodesRMCProvider::GetHitNodeIndex(%d, %d)] NumTriangles = %d"), faceIndex, HitNode, StaticMeshCollidable.Triangles.Num());
 	return Nodes.IsValidIndex(HitNode);
 }
 
@@ -222,7 +222,7 @@ bool UNodesRMCProvider::GetCollisionMesh(FRuntimeMeshCollisionData& CollisionDat
 			CollisionData.Triangles.SetTriangleIndices(TrisIdx + NodeIdx * NumTris, A + NodeIdx * NumTris * 3, B + NodeIdx * NumTris * 3, C + NodeIdx * NumTris * 3);
 		}
 	}
-	UE_LOG(NoxelRendererLog, Log, TEXT("[UNodesRMCProvider::GetCollisionMesh] Recreated, %d nodes"), NumNodes);
+	//UE_LOG(NoxelRendererLog, Log, TEXT("[UNodesRMCProvider::GetCollisionMesh] Recreated, %d nodes"), NumNodes);
 
 	return true;
 }

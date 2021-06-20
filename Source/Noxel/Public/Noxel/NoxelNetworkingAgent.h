@@ -81,6 +81,9 @@ private:
 	void RemoveQueueFromBuffer(int32 OrderIndex);
 	bool GetQueueFromBuffer(int32 OrderIndex, FEditorQueue** Queue);
 
+	void UndoWaitingQueues();
+	void RedoWaitingQueues();
+
 public:
 	TArray<int32> GetReservedPanels(UNoxelContainer* Container);
 	void UseReservedPanels(TArray<FPanelID> Used);

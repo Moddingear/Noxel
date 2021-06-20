@@ -13,6 +13,7 @@
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FCraftLoadedEvent);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FComponentReplicatedEvent);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FEditorQueueExternalRunEvent);
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -55,6 +56,13 @@ public:
 	UPROPERTY(BlueprintAssignable)
 	FComponentReplicatedEvent OnComponentsReplicatedEvent;
 
+	//Called when a queue will be run from another player
+	UPROPERTY(BlueprintAssignable)
+	FEditorQueueExternalRunEvent OnReceiveQueueStart;
+	//Called after a queue was run from another player
+	UPROPERTY(BlueprintAssignable)
+	FEditorQueueExternalRunEvent OnReceiveQueueEnd;
+
 	////////////////////////////////////////////////////////////////
 
 	UFUNCTION(BlueprintPure)
@@ -66,6 +74,10 @@ public:
 	UFUNCTION(BlueprintPure)
 	TArray<class ANoxelPart*> GetParts();
 
+	bool HasAnyDataComponentConnected(AActor* Component);
+
+	bool HasAnyConnectorConnected(AActor* Component);
+	
 	//Add a component and registers it in the craft
 	AActor* AddComponent(TSubclassOf<AActor> Class, FTransform Location, FActorSpawnParameters SpawnParameters, bool bSetSpawnContext = true, bool bFinishSpawning = true);
 
@@ -74,7 +86,15 @@ public:
 
 	AActor* AddComponentFromComponentID(FString ComponentID, FTransform Location);
 
+	bool MoveComponent(AActor* Component, FTransform Location);
+
 	bool RemoveComponentIfUnconnected(AActor* Component);
+	
+	////////////////////////////////////////////////////////////////
+
+	void SetNodesContainersVisibility(bool NewVisibility);
+
+	void SetNoxelContainersVisibility(bool NewVisibility);
 
 	////////////////////////////////////////////////////////////////
 

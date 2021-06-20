@@ -80,6 +80,34 @@ TArray<ANoxelPart*> UCraftDataHandler::GetParts()
 	return Parts;
 }
 
+bool UCraftDataHandler::HasAnyDataComponentConnected(AActor* Component)
+{
+	TArray<UNoxelDataComponent*> DataComps;
+	Component->GetComponents<UNoxelDataComponent>(DataComps);
+	for (UNoxelDataComponent* DataComp : DataComps)
+	{
+		if (DataComp->IsConnected())
+		{
+			return true;
+		}
+	}
+	return false;
+}
+
+bool UCraftDataHandler::HasAnyConnectorConnected(AActor* Component)
+{
+	TArray<UConnectorBase*> connectors;
+	Component->GetComponents<UConnectorBase>(connectors);
+	for (UConnectorBase* Connector : connectors)
+	{
+		if (Connector->Connected.Num() >0) //TODO : Add function for this
+		{
+			return true;
+		}
+	}
+	return false;
+}
+
 AActor* UCraftDataHandler::AddComponent(TSubclassOf<AActor> Class, FTransform Location, FActorSpawnParameters SpawnParameters, bool bSetSpawnContext, bool bFinishSpawning)
 {
 	if (!Class)
@@ -146,31 +174,78 @@ AActor* UCraftDataHandler::AddComponentFromComponentID(FString ComponentID, FTra
 	return AddComponent(CompClass, Location, FActorSpawnParameters());
 }
 
+bool UCraftDataHandler::MoveComponent(AActor* Component, FTransform Location)
+{
+	if (!IsValid(Component))
+	{
+		return false;
+	}
+	if (HasAnyDataComponentConnected(Component))
+	{
+		return false;
+	}
+	if (GetWorld()->IsServer())
+	{
+		if (Components.Contains(Component))
+		{
+			Component->SetActorTransform(Location);
+			return true;
+		}
+	}
+	return false;
+}
+
 bool UCraftDataHandler::RemoveComponentIfUnconnected(AActor* Component)
 {
 	if (!IsValid(Component))
 	{
 		return false;
 	}
-	TArray<UNoxelDataComponent*> DataComps;
-	Component->GetComponents<UNoxelDataComponent>(DataComps);
-	for (UNoxelDataComponent* DataComp : DataComps)
+	if (HasAnyDataComponentConnected(Component))
 	{
-		if (DataComp->IsConnected())
-		{
-			return false;
-		}
+		return false;
 	}
-	TArray<UConnectorBase*> connectors;
-	Component->GetComponents<UConnectorBase>(connectors);
-	for (UConnectorBase* Connector : connectors)
+	if (HasAnyConnectorConnected(Component))
 	{
-		if (Connector->Connected.Num() >0) //TODO : Add function for this
-		{
-			return false;
-		}
+		return false;
 	}
 	return RemoveComponent(Component);
+}
+
+void UCraftDataHandler::SetNodesContainersVisibility(bool NewVisibility)
+{
+	for (int i = 0; i < Components.Num(); ++i)
+	{
+		if (!IsValid(Components[i]))
+		{
+			continue;
+		}
+		TArray<UNodesContainer*> containers;
+		Components[i]->GetComponents<UNodesContainer>(containers);
+		for (UNodesContainer* Container : containers)
+		{
+			Container->SetVisibility(NewVisibility, false);
+			Container->SetCollisionEnabled(NewVisibility ? ECollisionEnabled::QueryAndPhysics : ECollisionEnabled::NoCollision);
+		}
+	}
+}
+
+void UCraftDataHandler::SetNoxelContainersVisibility(bool NewVisibility)
+{
+	for (int i = 0; i < Components.Num(); ++i)
+	{
+		if (!IsValid(Components[i]))
+		{
+			continue;
+		}
+		TArray<UNoxelContainer*> containers;
+		Components[i]->GetComponents<UNoxelContainer>(containers);
+		for (UNoxelContainer* Container : containers)
+		{
+			Container->SetVisibility(NewVisibility, false);
+			Container->SetCollisionEnabled(NewVisibility ? ECollisionEnabled::QueryAndPhysics : ECollisionEnabled::NoCollision);
+		}
+	}
 }
 
 //Saving and loading --------------------------------------------------------------------------------------------------------------------------------

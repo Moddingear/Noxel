@@ -212,7 +212,7 @@ void UNoxelContainer::GetAdjacentPanelsFromNodes(FPanelData& data, const TArray<
 			const bool Adjacent = (AbsDeltaNodes == 1) || (AbsDeltaNodes == (NumNodes - 1));
 			if (Adjacent && OtherAdjacent) //Panels share an edge
 			{
-				UE_LOG(NoxelData, Log, TEXT("[UNoxelContainer::AddPanel] Panel %i shares an edge with another panel %i"), data.PanelIndex, OtherPanelIndex);
+				//UE_LOG(NoxelData, Log, TEXT("[UNoxelContainer::GetAdjacentPanelsFromNodes] Panel %i shares an edge with another panel %i"), data.PanelIndex, OtherPanelIndex);
 				Panels[OtherIdx].ConnectedPanels.AddUnique(data.PanelIndex);
 				data.ConnectedPanels.AddUnique(Panels[OtherIdx].PanelIndex);
 			}
@@ -312,13 +312,13 @@ bool UNoxelContainer::ConnectNodeDiffered(int32 Index, FNodeID Node)
 		UNoxelContainer* AttachedNoxel = Node.Object->GetAttachedNoxel();
 		if (AttachedNoxel != this && AttachedNoxel) //If the node is attached to another valid container
 		{
-			UE_LOG(NoxelData, Warning, TEXT("[UNoxelContainer::IsPanelValid] Nodes container can't be attached to this panel"));
+			UE_LOG(NoxelData, Warning, TEXT("[UNoxelContainer::ConnectNodeDiffered] Nodes container can't be attached to this panel"));
 			return false;
 		}
 	}
 	else
 	{
-		UE_LOG(NoxelData, Warning, TEXT("[UNoxelContainer::IsPanelValid] Node object is invalid"));
+		UE_LOG(NoxelData, Warning, TEXT("[UNoxelContainer::ConnectNodeDiffered] Node object is invalid"));
 		return false; //Invalid node, ew
 	}
 	int32 IndexInArray;

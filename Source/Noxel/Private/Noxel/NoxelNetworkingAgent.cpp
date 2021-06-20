@@ -40,6 +40,11 @@ void UNoxelNetworkingAgent::BeginPlay()
 			Craft = hangar->GetCraftDataHandler();
 			UE_LOG(NoxelDataNetwork, Log, TEXT("[UNoxelNetworkingAgent::BeginPlay] Craft found"));
 			Craft->OnComponentsReplicatedEvent.AddDynamic(this, &UNoxelNetworkingAgent::OnCraftComponentsReplicated);
+			if (!GetWorld()->IsServer())
+			{
+				Craft->OnReceiveQueueStart.AddDynamic(this, &UNoxelNetworkingAgent::UndoWaitingQueues);
+				Craft->OnReceiveQueueEnd.AddDynamic(this, &UNoxelNetworkingAgent::RedoWaitingQueues);
+			}
 		}
 		else {
 			UE_LOG(NoxelDataNetwork, Error, TEXT("[UNoxelNetworkingAgent::BeginPlay] Hangar pointer broken, please fix in Game State"));
@@ -122,6 +127,30 @@ bool UNoxelNetworkingAgent::GetQueueFromBuffer(int32 OrderIndex, FEditorQueue** 
 		}
 	}
 	return false;
+}
+
+void UNoxelNetworkingAgent::UndoWaitingQueues()
+{
+	for (int i = QueuesWaiting.Num() - 1; i >= 0; --i)
+	{
+		FEditorQueue* Queue;
+		if(GetQueueFromBuffer(QueuesWaiting[i], &Queue))
+		{
+			Queue->UndoQueue();
+		}
+	}
+}
+
+void UNoxelNetworkingAgent::RedoWaitingQueues()
+{
+	for (int i = 0; i < QueuesWaiting.Num(); ++i)
+	{
+		FEditorQueue* Queue;
+		if(GetQueueFromBuffer(QueuesWaiting[i], &Queue))
+		{
+			Queue->ExecuteQueue();
+		}
+	}
 }
 
 TArray<int32> UNoxelNetworkingAgent::GetReservedPanels(UNoxelContainer* Container)
@@ -260,12 +289,20 @@ void UNoxelNetworkingAgent::ClientsReceiveCommandQueue_Implementation(FEditorQue
 	}
 	else
 	{
+		if (!GetWorld()->IsServer())
+		{
+			Craft->OnReceiveQueueStart.Broadcast();
+		}
 		UE_LOG(NoxelDataNetwork, Log, TEXT("[UNoxelNetworkingAgent::ClientsReceiveCommandQueue_Implementation] Running queue from other player. IsServer = %s"), GetWorld()->IsServer() ? TEXT("true") : TEXT("false"));
 		FEditorQueue* Queue;
 		if(Networkable.DecodeQueue(&Queue))
 		{
 			AddQueueToBuffer(Queue);
 			Queue->ExecuteQueue();
+		}
+		if (!GetWorld()->IsServer())
+		{
+			Craft->OnReceiveQueueEnd.Broadcast();
 		}
 	}
 }

@@ -27,6 +27,7 @@ enum class EEditorQueueOrderType : uint8
 	PanelRemove 		UMETA(DisplayName = "Remove Panel"),
 	PanelProperties 	UMETA(DisplayName = "Change Panel Properties"),
 	ObjectAdd			UMETA(DisplayName = "Add Object"),
+	ObjectMove			UMETA(DisplayName = "Add Object"),
 	ObjectRemove		UMETA(DisplayName = "Remove Object"), //TODO
 	ConnectorConnect	UMETA(DisplayName = "Connect Connector"),
 	ConnectorDisconnect	UMETA(DisplayName = "Disconnect Connector")
@@ -222,6 +223,8 @@ struct NOXEL_API FEditorQueue
 	TArray<FPanelID> PanelReferences;
 
 	int32 OrderNumber;
+
+	bool IsRun = false;
 
 	FEditorQueue()
 		:OrderNumber(-1)
@@ -626,6 +629,65 @@ struct NOXEL_API FEditorQueueOrderAddObject : public FEditorQueueOrderTemplate
 	FEditorQueueOrderAddObject(UCraftDataHandler* InCraft, FString InObjectClass, FTransform InObjectTransform)
 		: FEditorQueueOrderTemplate(EEditorQueueOrderType::ObjectAdd), Craft(InCraft),
 		  ObjectClass(InObjectClass), ObjectTransform(InObjectTransform), SpawnedObject(nullptr)
+	{
+	}
+
+	virtual bool ExecuteOrder(FEditorQueue* Parent) override;
+
+	virtual bool UndoOrder(FEditorQueue* Parent) override;
+
+	virtual FEditorQueueOrderNetworkable ToNetworkable(FEditorQueueNetworkable* Parent) override;
+
+	virtual bool FromNetworkable(FEditorQueueNetworkable* Parent, int32 OrderIndex) override;
+
+	virtual FString ToString() override;
+};
+
+struct NOXEL_API FEditorQueueOrderMoveObject : public FEditorQueueOrderTemplate
+{
+	UCraftDataHandler* Craft; //TODO : Supply the craft elsewhere
+	FTransform OldObjectTransform;
+	FTransform NewObjectTransform;
+	AActor* ObjectToMove;
+
+	FEditorQueueOrderMoveObject()
+        : FEditorQueueOrderTemplate(EEditorQueueOrderType::ObjectMove), Craft(nullptr), ObjectToMove(nullptr)
+	{
+	}
+
+	FEditorQueueOrderMoveObject(UCraftDataHandler* InCraft, AActor* InObjectToMove, FTransform InObjectTransform)
+        : FEditorQueueOrderTemplate(EEditorQueueOrderType::ObjectMove), Craft(InCraft),
+		NewObjectTransform(InObjectTransform), ObjectToMove(InObjectToMove)
+	{
+	}
+
+	virtual bool ExecuteOrder(FEditorQueue* Parent) override;
+
+	virtual bool UndoOrder(FEditorQueue* Parent) override;
+
+	virtual FEditorQueueOrderNetworkable ToNetworkable(FEditorQueueNetworkable* Parent) override;
+
+	virtual bool FromNetworkable(FEditorQueueNetworkable* Parent, int32 OrderIndex) override;
+
+	virtual FString ToString() override;
+};
+
+struct NOXEL_API FEditorQueueOrderRemoveObject : public FEditorQueueOrderTemplate
+{
+	UCraftDataHandler* Craft; //TODO : Supply the craft elsewhere
+	AActor* ObjectToRemove;
+	FString ObjectClass;
+	FTransform ObjectTransform;
+	FString ObjectMetadata;
+
+	FEditorQueueOrderRemoveObject()
+        : FEditorQueueOrderTemplate(EEditorQueueOrderType::ObjectRemove), Craft(nullptr), ObjectToRemove(nullptr)
+	{
+	}
+
+	FEditorQueueOrderRemoveObject(UCraftDataHandler* InCraft, AActor* InObjectToRemove)
+        : FEditorQueueOrderTemplate(EEditorQueueOrderType::ObjectRemove), Craft(InCraft),
+		ObjectToRemove(InObjectToRemove)
 	{
 	}
 

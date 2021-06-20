@@ -195,14 +195,14 @@ bool UNoxelRMCProvider::ReorderNodes(UPARAM(ref) TArray<FVector>& Points, FVecto
 		float Y = Relative | Ydir;
 		float angle = FMath::Atan2(Y, X);
 		PointsAngles.Emplace(angle, PointIdx);
-		UE_LOG(NoxelRendererLog, Log, TEXT("[UNoxelRMCProvider::ReorderNodes] Point %i at relative location %s has angle %f"), PointIdx, *Relative.ToString(), angle);
+		//UE_LOG(NoxelRendererLog, Log, TEXT("[UNoxelRMCProvider::ReorderNodes] Point %i at relative location %s has angle %f"), PointIdx, *Relative.ToString(), angle);
 	}
 	PointsAngles.Sort();
 	OutNewIndex.Empty(Points.Num());
 	for (int32 PointIdx = 0; PointIdx < Points.Num(); PointIdx++)
 	{
 		OutNewIndex.Add(PointsAngles[PointIdx].Index);
-		UE_LOG(NoxelRendererLog, Log, TEXT("[UNoxelRMCProvider::ReorderNodes] OutNewIndex[%i] = %i"), PointIdx, OutNewIndex[PointIdx]);
+		//UE_LOG(NoxelRendererLog, Log, TEXT("[UNoxelRMCProvider::ReorderNodes] OutNewIndex[%i] = %i"), PointIdx, OutNewIndex[PointIdx]);
 	}
 	return true;
 }

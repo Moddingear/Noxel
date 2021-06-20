@@ -4,10 +4,12 @@
 #include "EditorCommandQueue.h"
 
 #include "Noxel.h"
+#include "NoxelDataAsset.h"
 #include "Noxel/NoxelDataStructs.h"
 #include "Noxel/NodesContainer.h"
 #include "Noxel/NoxelContainer.h"
 #include "Connectors/ConnectorBase.h"
+#include "NObjects/NObjectInterface.h"
 #include "Noxel/CraftDataHandler.h"
 
 DEFINE_LOG_CATEGORY(LogEditorCommandQueue);
@@ -63,8 +65,12 @@ bool FEditorQueueNetworkable::OrderFromNetworkable(int32 OrderIndex, FEditorQueu
  	case EEditorQueueOrderType::ObjectAdd:
  		order = new FEditorQueueOrderAddObject();
  		break;
+ 	case EEditorQueueOrderType::ObjectMove:
+ 		order = new FEditorQueueOrderMoveObject();
+ 		break;
  	case EEditorQueueOrderType::ObjectRemove:
- 		return false;
+ 		order = new FEditorQueueOrderRemoveObject();
+ 		break;
  	default:
  		UE_LOG(LogEditorCommandQueue, Warning, TEXT("[FEditorQueueNetworkable::OrderFromNetworkable] Order type is invalid or unimplemented : %d"), Orders[OrderIndex].OrderType);
  		break;
@@ -72,6 +78,9 @@ bool FEditorQueueNetworkable::OrderFromNetworkable(int32 OrderIndex, FEditorQueu
 	if (order != nullptr && order->FromNetworkable(this, OrderIndex))
 	{
 		*OutOrder = order;
+		ensureAlwaysMsgf(order->OrderType == Orders[OrderIndex].OrderType,
+			TEXT("[FEditorQueueNetworkable::OrderFromNetworkable] Order type mismatch for order %d in, given %d out"),
+			Orders[OrderIndex].OrderType, order->OrderType);
 		return true;
 	}
  	return false;
@@ -117,6 +126,11 @@ FEditorQueue::~FEditorQueue()
 
 bool FEditorQueue::RunQueue(bool bShouldExecute = true)
 {
+	if (IsRun == bShouldExecute) //Avoid running twice in the same direction
+	{
+		return true;
+	}
+	IsRun = bShouldExecute;
 	bool bStillValid = true;
 	TArray<UNoxelDataComponent*> AffArr;
 	int OrderIdx;
@@ -499,7 +513,7 @@ bool FEditorQueueOrderNodeAddRemove::UndoInArray(FEditorQueue* Parent, int i)
 
 FEditorQueueOrderNetworkable FEditorQueueOrderNodeAddRemove::ToNetworkable(FEditorQueueNetworkable* Parent)
 {
-	FEditorQueueOrderNetworkable Net(Add ? EEditorQueueOrderType::NodeAdd : EEditorQueueOrderType::NodeRemove);
+	FEditorQueueOrderNetworkable Net = FEditorQueueOrderArrayTemplate::ToNetworkable(Parent);
 	Net.Args = NodesToAddRemove;
 	return Net;
 }
@@ -580,7 +594,7 @@ bool FEditorQueueOrderNodeDisConnect::UndoInArray(FEditorQueue* Parent, int i)
 
 FEditorQueueOrderNetworkable FEditorQueueOrderNodeDisConnect::ToNetworkable(FEditorQueueNetworkable* Parent)
 {
-	FEditorQueueOrderNetworkable Net(Connect ? EEditorQueueOrderType::NodeConnect : EEditorQueueOrderType::NodeDisconnect);
+	FEditorQueueOrderNetworkable Net = FEditorQueueOrderArrayTemplate::ToNetworkable(Parent);
 	for (int i = 0; i < FMath::Min(Nodes.Num(), Panels.Num()); ++i)
 	{
 		Net.Args.Add(Nodes[i]);
@@ -655,7 +669,7 @@ bool FEditorQueueOrderPanelReference::UndoOrder(FEditorQueue* Parent)
 
 FEditorQueueOrderNetworkable FEditorQueueOrderPanelReference::ToNetworkable(FEditorQueueNetworkable* Parent)
 {
-	FEditorQueueOrderNetworkable Net(EEditorQueueOrderType::PanelReference);
+	FEditorQueueOrderNetworkable Net = FEditorQueueOrderTemplate::ToNetworkable(Parent);
 	Net.Args.Add(Parent->AddPointer(Container));
 	Net.Args.Append(PanelIndices);
 	return Net;
@@ -746,7 +760,7 @@ bool FEditorQueueOrderPanelAddRemove::UndoInArray(FEditorQueue* Parent, int i)
 
 FEditorQueueOrderNetworkable FEditorQueueOrderPanelAddRemove::ToNetworkable(FEditorQueueNetworkable* Parent)
 {
-	FEditorQueueOrderNetworkable Net(Add ? EEditorQueueOrderType::PanelAdd : EEditorQueueOrderType::PanelRemove);
+	FEditorQueueOrderNetworkable Net = FEditorQueueOrderArrayTemplate::ToNetworkable(Parent);
 	Net.Args.Append(PanelIndexRef);
 	return Net;
 }
@@ -830,7 +844,7 @@ bool FEditorQueueOrderPanelProperties::UndoInArray(FEditorQueue* Parent, int i)
 
 FEditorQueueOrderNetworkable FEditorQueueOrderPanelProperties::ToNetworkable(FEditorQueueNetworkable* Parent)
 {
-	FEditorQueueOrderNetworkable Net(EEditorQueueOrderType::PanelProperties);
+	FEditorQueueOrderNetworkable Net = FEditorQueueOrderArrayTemplate::ToNetworkable(Parent);
 	Net.AddFloat(ThicknessNormalAfter);
 	Net.AddFloat(ThicknessAntiNormalAfter);
 	Net.Args.Add(VirtualAfter);
@@ -925,7 +939,7 @@ bool FEditorQueueOrderConnectorDisConnect::UndoInArray(FEditorQueue* Parent, int
 
 FEditorQueueOrderNetworkable FEditorQueueOrderConnectorDisConnect::ToNetworkable(FEditorQueueNetworkable* Parent)
 {
-	FEditorQueueOrderNetworkable Net(Connect ? EEditorQueueOrderType::ConnectorConnect : EEditorQueueOrderType::ConnectorDisconnect);
+	FEditorQueueOrderNetworkable Net = FEditorQueueOrderArrayTemplate::ToNetworkable(Parent);
 	for (int i = 0; i < FMath::Min(A.Num(), B.Num()); ++i)
 	{
 		Net.Args.Add(Parent->AddPointer(A[i]));
@@ -1006,7 +1020,7 @@ bool FEditorQueueOrderAddObject::UndoOrder(FEditorQueue* Parent)
 
 FEditorQueueOrderNetworkable FEditorQueueOrderAddObject::ToNetworkable(FEditorQueueNetworkable* Parent)
 {
-	FEditorQueueOrderNetworkable Net(EEditorQueueOrderType::ObjectAdd);
+	FEditorQueueOrderNetworkable Net = FEditorQueueOrderTemplate::ToNetworkable(Parent);
 	const uint32 buffer32len = ObjectClass.Len()/4 + 1;
 	const uint32 bufferlen = buffer32len*4;
 	int32* buffer32 = new int32(buffer32len);
@@ -1054,4 +1068,137 @@ FString FEditorQueueOrderAddObject::ToString()
 {
 	return FEditorQueueOrderTemplate::ToString() + FString::Printf(
 		TEXT("; Craft@%p; ObjectClass = %s; ObjectTransform = %s"), Craft, *ObjectClass, *ObjectTransform.ToHumanReadableString());
+}
+
+bool FEditorQueueOrderMoveObject::ExecuteOrder(FEditorQueue* Parent)
+{
+	if (!IsValid(Craft) || !IsValid(ObjectToMove))
+	{
+		return false;
+	}
+	if (Craft->GetWorld()->IsServer())
+	{
+		OldObjectTransform = ObjectToMove->GetTransform();
+		return Craft->MoveComponent(ObjectToMove, NewObjectTransform);
+	}
+	return !Craft->HasAnyDataComponentConnected(ObjectToMove);
+}
+
+bool FEditorQueueOrderMoveObject::UndoOrder(FEditorQueue* Parent)
+{
+	if (!IsValid(Craft) || !IsValid(ObjectToMove))
+	{
+		return false;
+	}
+	if (Craft->GetWorld()->IsServer())
+	{
+		return Craft->MoveComponent(ObjectToMove, OldObjectTransform);
+	}
+	return !Craft->HasAnyDataComponentConnected(ObjectToMove);
+}
+
+FEditorQueueOrderNetworkable FEditorQueueOrderMoveObject::ToNetworkable(FEditorQueueNetworkable* Parent)
+{
+	FEditorQueueOrderNetworkable Net = FEditorQueueOrderTemplate::ToNetworkable(Parent);
+	Net.Args.Add(Parent->AddPointer(Craft));
+	Net.Args.Add(Parent->AddPointer(ObjectToMove));
+	Net.AddTransform(NewObjectTransform);
+	return Net;
+}
+
+bool FEditorQueueOrderMoveObject::FromNetworkable(FEditorQueueNetworkable* Parent, int32 OrderIndex)
+{
+	if (!FEditorQueueOrderTemplate::FromNetworkable(Parent, OrderIndex))
+	{
+		return false;
+	}
+	FEditorQueueOrderNetworkable InData = Parent->Orders[OrderIndex];
+	if (InData.Args.Num() < InData.GetTransformSize() +2)
+	{
+		return false;
+	}
+	Craft = Cast<UCraftDataHandler>(Parent->GetPointer(InData.Args[0]));
+	ObjectToMove = Cast<AActor>(Parent->GetPointer(InData.Args[1]));
+	NewObjectTransform = InData.GetTransform(2);
+	return true;
+}
+
+FString FEditorQueueOrderMoveObject::ToString()
+{
+	return FEditorQueueOrderTemplate::ToString()
+	+ FString::Printf(TEXT("; Craft@%p; ObjectToMove@%p; NewObjectTransform = %s"), Craft, ObjectToMove, *NewObjectTransform.ToString());
+}
+
+bool FEditorQueueOrderRemoveObject::ExecuteOrder(FEditorQueue* Parent)
+{
+	if (IsValid(Craft))
+	{
+		if (Craft->GetWorld()->IsServer())
+		{
+			ObjectTransform = ObjectToRemove->GetTransform();
+			if (ObjectToRemove->IsA<UNObjectInterface>())
+			{
+				INObjectInterface* Interface = Cast<INObjectInterface>(ObjectToRemove);
+				ObjectMetadata = Interface->OnReadMetadata();
+			}
+			ObjectClass = UNoxelDataAsset::getComponentIDFromClass(Craft->DataTable, ObjectToRemove->StaticClass());
+			return Craft->RemoveComponentIfUnconnected(ObjectToRemove);
+		}
+		return true;
+	}
+	UE_LOG(LogEditorCommandQueue, Warning, TEXT("[FEditorQueueOrderRemoveObject::ExecuteOrder] Craft is invalid"));
+	return false;
+}
+
+bool FEditorQueueOrderRemoveObject::UndoOrder(FEditorQueue* Parent)
+{
+	if (IsValid(Craft))
+	{
+		if (Craft->GetWorld()->IsServer())
+		{
+			ObjectToRemove = Craft->AddComponentFromComponentID(ObjectClass, ObjectTransform);
+			if (IsValid(ObjectToRemove))
+			{
+				if (ObjectToRemove->IsA<UNObjectInterface>())
+				{
+					INObjectInterface* Interface = Cast<INObjectInterface>(ObjectToRemove);
+					Interface->OnWriteMetadata(ObjectMetadata);
+				}
+				return true;
+			}
+		}
+		return true;
+	}
+	UE_LOG(LogEditorCommandQueue, Warning, TEXT("[FEditorQueueOrderRemoveObject::UndoOrder] Craft is invalid"));
+	return false;
+}
+
+FEditorQueueOrderNetworkable FEditorQueueOrderRemoveObject::ToNetworkable(FEditorQueueNetworkable* Parent)
+{
+	FEditorQueueOrderNetworkable Net = FEditorQueueOrderTemplate::ToNetworkable(Parent);
+	Net.Args.Add(Parent->AddPointer(Craft));
+	Net.Args.Add(Parent->AddPointer(ObjectToRemove));
+	return Net;
+}
+
+bool FEditorQueueOrderRemoveObject::FromNetworkable(FEditorQueueNetworkable* Parent, int32 OrderIndex)
+{
+	if (!FEditorQueueOrderTemplate::FromNetworkable(Parent, OrderIndex))
+	{
+		return false;
+	}
+	FEditorQueueOrderNetworkable InData = Parent->Orders[OrderIndex];
+	if (InData.Args.Num() < 2)
+	{
+		return false;
+	}
+	Craft = Cast<UCraftDataHandler>(Parent->GetPointer(InData.Args[0]));
+	ObjectToRemove = Cast<AActor>(Parent->GetPointer(InData.Args[1]));
+	return true;
+}
+
+FString FEditorQueueOrderRemoveObject::ToString()
+{
+	return FEditorQueueOrderTemplate::ToString()
+    + FString::Printf(TEXT("; Craft@%p; ObjectToRemove@%p"), Craft, ObjectToRemove);
 }

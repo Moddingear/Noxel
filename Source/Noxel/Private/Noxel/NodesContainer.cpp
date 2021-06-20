@@ -77,7 +77,7 @@ void UNodesContainer::TickComponent(float DeltaTime, ELevelTick TickType, FActor
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 	if (bIsMeshDirty)
 	{
-		UE_LOG(NoxelData, Log, TEXT("[UNodesContainer::TickComponent] Updating mesh from tick because it's dirty"));
+		//UE_LOG(NoxelData, Log, TEXT("[UNodesContainer::TickComponent] Updating mesh from tick because it's dirty"));
 		UpdateMesh();
 	}
 }
@@ -283,7 +283,7 @@ void UNodesContainer::MarkMeshDirty()
 void UNodesContainer::UpdateMesh()
 {
 	Super::UpdateMesh();
-	UE_LOG(NoxelData, Log, TEXT("[UNodesContainer::UpdateMesh@%p] Called"), this);
+	//UE_LOG(NoxelData, Log, TEXT("[UNodesContainer::UpdateMesh@%p] Called"), this);
 	bIsMeshDirty = false;
 	TArray<FNoxelRendererNodeData> RendererNodes;
 	RendererNodes.Reserve(Nodes.Num());
