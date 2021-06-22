@@ -254,7 +254,7 @@ void AM_Nodes::rightClickPressed_Implementation()
 			}
 			else if (traceNodes(location, end, node))
 			{
-				UE_LOG(NoxelMacro, Warning, TEXT("Asking to remove node, macro %s"), *node.Location.ToString());
+				UE_LOG(NoxelMacro, Warning, TEXT("Asking to remove node, location %s"), *node.Location.ToString());
 				FEditorQueue* queue = GetNoxelNetworkingAgent()->CreateEditorQueue();
 				queue->AddNodeReferenceOrder({node.Location}, node.Object);
 				queue->AddNodeRemoveOrder({0});
@@ -262,6 +262,7 @@ void AM_Nodes::rightClickPressed_Implementation()
 			}
 			else if (tracePanels(location, end, panel))
 			{
+				UE_LOG(NoxelMacro, Warning, TEXT("Asking to remove panel, id %d"), panel);
 				FPanelData pdata;
 				if(panel.Object->GetPanelByPanelIndex(panel.PanelIndex, pdata))
 				{
@@ -270,7 +271,7 @@ void AM_Nodes::rightClickPressed_Implementation()
 					auto nodes = queue->NodeListToNodeReferences(pdata.Nodes, nodemap);
 					TArray<int32> panels;
 					panels.Init(0, pdata.Nodes.Num());
-					queue->AddPanelReferenceOrder({0}, panel.Object);
+					queue->AddPanelReferenceOrder({panel.PanelIndex}, panel.Object);
 					queue->AddNodeDisconnectOrder(nodes, panels);
 					queue->AddPanelRemoveOrder({0});
 					GetNoxelNetworkingAgent()->SendCommandQueue(queue);

@@ -54,8 +54,10 @@ TArray<FNoxelRendererPanelData> UNoxelRMCProvider::GetPanels() const
 void UNoxelRMCProvider::SetPanels(UPARAM(ref) const TArray<FNoxelRendererPanelData>& InPanels)
 {
 	MarkCacheDirty();
-	FScopeLock Lock(&PropertySyncRoot);
-	Panels = InPanels;
+	{
+		FScopeLock Lock(&PropertySyncRoot);
+		Panels = InPanels;
+	}
 	MarkAllLODsDirty();
 	MarkCollisionDirty();
 }
@@ -655,11 +657,11 @@ bool UNoxelRMCProvider::GetCollisionMesh(FRuntimeMeshCollisionData& CollisionDat
 	GetShapeParams(TempNodes, TempPanels);
 	int32 NumPanels = TempPanels.Num();
 
-	int32 NumSides = GetNumSides(TempPanels);
+	int32 NumSidesAllPanels = GetNumSides(TempPanels);
 	int32 NumVertsPerSide, NumTrianglesPerSide;
 	GetNumIndicesPerSide(COLLISIONMESH_LOD, NumVertsPerSide, NumTrianglesPerSide);
-	CollisionData.ReserveVertices(NumSides * NumVertsPerSide);
-	int32 NumTriangles = NumSides * NumTrianglesPerSide;
+	CollisionData.ReserveVertices(NumSidesAllPanels * NumVertsPerSide);
+	int32 NumTriangles = NumSidesAllPanels * NumTrianglesPerSide;
 	CollisionData.Triangles.Reserve(NumTriangles);
 
 	TArray<int32> TempCollisionMap;
@@ -669,8 +671,10 @@ bool UNoxelRMCProvider::GetCollisionMesh(FRuntimeMeshCollisionData& CollisionDat
 	{
 		FNoxelRendererPanelData Panel = TempPanels[PanelIdx];
 		int32 NumNodes = Panel.Nodes.Num();
-
-		for (int32 i = 0; i < NumNodes; i++)
+		UE_LOG(NoxelRendererLog, Log,
+		       TEXT("[UNoxelRMCProvider::GetCollisionMesh] Adding to collision map panel index %d with %d sides"),
+		       Panel.PanelIndex, NumNodes*NumTrianglesPerSide);
+		for (int32 i = 0; i < NumNodes*NumTrianglesPerSide; i++)
 		{
 			TempCollisionMap.Add(Panel.PanelIndex);
 		}
@@ -707,6 +711,7 @@ bool UNoxelRMCProvider::GetCollisionMesh(FRuntimeMeshCollisionData& CollisionDat
 
 void UNoxelRMCProvider::CollisionUpdateCompleted()
 {
+	UE_LOG(NoxelRendererLog, Log, TEXT("[UNoxelRMCProvider::CollisionUpdateCompleted] CollisionMap updated"));
 	CollisionMap = NewCollisionMap;
 }
 

@@ -296,6 +296,7 @@ bool ANoxelMacroBase::tracePanels(FVector start, FVector end, FPanelID & id)
 {
 	FHitResult hit;
 	if (GetWorld()->LineTraceSingleByChannel(hit, start, end, ECollisionChannel::ECC_GameTraceChannel1, UNoxelLibrary::getCollisionParameters())) { //If something was hit in noxel collision channel
+		UE_LOG(NoxelMacro, Log, TEXT("[ANoxelMacroBase::tracePanels] Trace successful"));
 		return UNoxelContainer::GetPanelHit(hit, id);
 	}
 	return false;

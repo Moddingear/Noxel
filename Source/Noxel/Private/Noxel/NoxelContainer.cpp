@@ -182,13 +182,14 @@ void UNoxelContainer::GetAdjacentPanelsFromNodes(FPanelData& data, const TArray<
 	const int32 NumNodes = data.Nodes.Num();
 
 	//Clear current connections
-	for (int PanelIdx = 0; PanelIdx < data.ConnectedPanels.Num(); ++PanelIdx)
+	for (int PanelIdx = data.ConnectedPanels.Num() - 1; PanelIdx >= 0; --PanelIdx)
 	{
 		int32 OtherPanelIndex = data.ConnectedPanels[PanelIdx]; //This is the PanelIndex, not the index of the panel in the Panels array
 		int32 OtherIdx;
 		GetIndexOfPanelByPanelIndex(OtherPanelIndex, OtherIdx);
 		Panels[OtherIdx].ConnectedPanels.Remove(data.PanelIndex);
 		data.ConnectedPanels.Remove(Panels[OtherIdx].PanelIndex);
+		UE_LOG(NoxelData, Log, TEXT("[UNoxelContainer::GetAdjacentPanelsFromNodes] Removing connection between panels %i and %i"), data.PanelIndex, OtherPanelIndex);
 	}
 
 	//Make new connections
@@ -212,7 +213,7 @@ void UNoxelContainer::GetAdjacentPanelsFromNodes(FPanelData& data, const TArray<
 			const bool Adjacent = (AbsDeltaNodes == 1) || (AbsDeltaNodes == (NumNodes - 1));
 			if (Adjacent && OtherAdjacent) //Panels share an edge
 			{
-				//UE_LOG(NoxelData, Log, TEXT("[UNoxelContainer::GetAdjacentPanelsFromNodes] Panel %i shares an edge with another panel %i"), data.PanelIndex, OtherPanelIndex);
+				UE_LOG(NoxelData, Log, TEXT("[UNoxelContainer::GetAdjacentPanelsFromNodes] Panel %i shares an edge with another panel %i"), data.PanelIndex, OtherPanelIndex);
 				Panels[OtherIdx].ConnectedPanels.AddUnique(data.PanelIndex);
 				data.ConnectedPanels.AddUnique(Panels[OtherIdx].PanelIndex);
 			}
@@ -381,9 +382,17 @@ bool UNoxelContainer::RemovePanelDiffered(int32 Index)
 		FPanelData &data = Panels[IndexInArray];
 		if (data.Nodes.Num() == 0)
 		{
+			TArray<int32> AdjacentPanels, Occurrences;
+         	TArray<TArray<FNodeID>> NodesAttachedBy;
+         	TArray<int32> IgnoreFilter;
+         	IgnoreFilter.Add(data.PanelIndex);
+         	FindPanelsByNodes(data.Nodes, AdjacentPanels, Occurrences, NodesAttachedBy, IgnoreFilter);
+         	GetAdjacentPanelsFromNodes(data, AdjacentPanels, Occurrences, NodesAttachedBy); //remove connected
+			
+			UnusedIndices.Add(Index);
 			Panels.RemoveAt(IndexInArray);
-			UnusedIndices.Add(IndexInArray);
 			DifferedPanels.Remove(Index);
+			
 			return true;
 		}
 	}
@@ -436,9 +445,6 @@ bool UNoxelContainer::RemovePanel(int32 index)
 			DisconnectNodeDiffered(index, NodeID);
 		}
 		Panel = Panels[IndexInArray];
-		TArray<int32> AdjacentPanels, Occurrences;
-		TArray<TArray<FNodeID>> NodesAttachedBy;
-		GetAdjacentPanelsFromNodes(Panel, AdjacentPanels, Occurrences, NodesAttachedBy); //clear connected
 		RemovePanelDiffered(index);
 		return true;
 		
@@ -566,7 +572,6 @@ void UNoxelContainer::UpdateProviderData()
 		{
 			Panel.AdjacentPanels[i] = PanelRedirectorMap[Panel.AdjacentPanels[i]];
 		}
-		PanelsData[PanelIdx] = Panel; //set it back just in case
 	}
 	NoxelProvider->SetNodes(NodeData);
 	NoxelProvider->SetPanels(PanelsData);
@@ -591,5 +596,6 @@ bool UNoxelContainer::CheckDataValidity()
 
 void UNoxelContainer::UpdateMesh()
 {
+	UE_LOG(NoxelData, Log, TEXT("[UNoxelContainer::UpdateMesh] Called"));
 	UpdateProviderData();
 }

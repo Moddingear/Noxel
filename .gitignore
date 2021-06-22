@@ -17,3 +17,4 @@ Saved
 *.code-workspace
 Crafts/
 Releases/
+*_BuiltData.uasset
