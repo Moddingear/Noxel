@@ -66,6 +66,9 @@ public:
 	bool Alternate = false;
 
 	UPROPERTY(BlueprintReadWrite)
+	bool MoveWithFollowComponent = true;
+	
+	UPROPERTY(BlueprintReadWrite)
 	USceneComponent* FollowComponent;
 
 	//Hint display as the left click on the side of the hangar

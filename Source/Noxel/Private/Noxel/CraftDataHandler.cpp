@@ -225,7 +225,7 @@ void UCraftDataHandler::SetNodesContainersVisibility(bool NewVisibility)
 		for (UNodesContainer* Container : containers)
 		{
 			Container->SetVisibility(NewVisibility, false);
-			Container->SetCollisionEnabled(NewVisibility ? ECollisionEnabled::QueryAndPhysics : ECollisionEnabled::NoCollision);
+			Container->SetCollisionEnabled(NewVisibility ? ECollisionEnabled::QueryOnly : ECollisionEnabled::NoCollision);
 		}
 	}
 }

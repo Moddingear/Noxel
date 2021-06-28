@@ -47,7 +47,7 @@ void ANoxelMacroBase::BeginPlay()
 	Super::BeginPlay();
 
 	//Get the owner and it's networking agent
-	owningActor = (AEditorCharacter*)GetOwner();
+	owningActor = Cast<AEditorCharacter>(GetOwner());
 	if (owningActor == nullptr) 
 	{ 
 		UE_LOG(NoxelMacro, Error, TEXT("[ANoxelMacroBase::BeginPlay] Macro couldn't find owner")); 
@@ -107,13 +107,14 @@ void ANoxelMacroBase::EndPlay(const EEndPlayReason::Type EndPlayReason){
 void ANoxelMacroBase::Tick(float DeltaTime)
 {
 	ClearDraws();
-	if (IsValid(FollowComponent))
+	if (IsValid(FollowComponent) && MoveWithFollowComponent)
 	{
 		RootComponent->SetWorldTransform(FollowComponent->GetComponentTransform());
 		//UE_LOG(NoxelMacro, Log, TEXT("[ANoxelMacroBase::Tick] Macro is at transform %s, follow component is at %s"), *GetTransform().ToString(), *(FollowComponent->GetComponentTransform().ToString()));
 	}
 	else
 	{
+		RootComponent->SetWorldTransform(FTransform());
 		//UE_LOG(NoxelMacro, Warning, TEXT("[ANoxelMacroBase::Tick] Follow component is invalid"))
 	}
 	Super::Tick(DeltaTime);
@@ -173,7 +174,15 @@ ANoxelPart * ANoxelMacroBase::GetCurrentPart() const
 
 void ANoxelMacroBase::getRay(FVector & Location, FVector & Direction)
 {
-	FTransform comptransf = GetActorTransform();
+	FTransform comptransf;
+	if (IsValid(FollowComponent))
+	{
+		comptransf = FollowComponent->GetComponentTransform();
+	}
+	else
+	{
+		comptransf = GetActorTransform();
+	}
 	Location = comptransf.GetLocation();
 	Direction = comptransf.GetRotation().GetForwardVector();
 }

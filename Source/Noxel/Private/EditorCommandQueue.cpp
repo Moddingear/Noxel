@@ -329,6 +329,18 @@ void FEditorQueue::AddObjectAddOrder(UCraftDataHandler* Craft, FString ObjectCla
 	Orders.Add(order);
 }
 
+void FEditorQueue::AddConnectorConnectOrder(TArray<UConnectorBase*> A, TArray<UConnectorBase*> B)
+{
+	FEditorQueueOrderConnectorDisConnect* order = new FEditorQueueOrderConnectorDisConnect(A, B, true);
+	Orders.Add(order);
+}
+
+void FEditorQueue::AddConnectorDisconnectOrder(TArray<UConnectorBase*> A, TArray<UConnectorBase*> B)
+{
+	FEditorQueueOrderConnectorDisConnect* order = new FEditorQueueOrderConnectorDisConnect(A, B, false);
+	Orders.Add(order);
+}
+
 bool FEditorQueue::ToNetworkable(FEditorQueueNetworkable &Networkable)
 {
 	Networkable = FEditorQueueNetworkable();

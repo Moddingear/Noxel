@@ -21,6 +21,7 @@ AM_Connector::AM_Connector()
 		ConnectorMaterial = MaterialFinder.Object;
 	}
 	AlternationMethod = EAlternateType::Hold;
+	MoveWithFollowComponent = false;
 }
 
 // Called when the game starts
@@ -28,6 +29,15 @@ void AM_Connector::BeginPlay()
 {
 	Super::BeginPlay();
 	//UE_LOG(NoxelMacro, Warning, TEXT("Macro added"));
+	GetCraft()->SetNodesContainersVisibility(false);
+	GetCraft()->SetNoxelContainersVisibility(false);
+}
+
+void AM_Connector::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+	GetCraft()->SetNodesContainersVisibility(true);
+	GetCraft()->SetNoxelContainersVisibility(true);
+	Super::EndPlay(EndPlayReason);
 }
 
 UConnectorBase * AM_Connector::GetConnectorClicked()
@@ -139,13 +149,18 @@ void AM_Connector::leftClickPressed_Implementation()
 	{
 		TArray<UConnectorBase*> Connectors;
 		ConnectorSectionMap.GenerateValueArray(Connectors);
+		TArray<UConnectorBase*> A, B;
 		for (int32 ConnectorIdx = 0; ConnectorIdx < Connectors.Num(); ConnectorIdx++)
 		{
 			if (UConnectorBase::CanBothConnect(SelectedConnector, Connectors[ConnectorIdx]))
 			{
-				//GetNoxelNetworkingAgent()->ConnectConnector(SelectedConnector, Connectors[ConnectorIdx]);
+				A.Add(SelectedConnector);
+				B.Add(Connectors[ConnectorIdx]);
 			}
 		}
+		FEditorQueue* queue = GetNoxelNetworkingAgent()->CreateEditorQueue();
+        queue->AddConnectorConnectOrder(A, B);
+        GetNoxelNetworkingAgent()->SendCommandQueue(queue);
 		SelectedConnector = nullptr;
 	}
 }
@@ -157,11 +172,17 @@ void AM_Connector::leftClickReleased_Implementation()
 		UConnectorBase* SelectedConnector2 = GetConnectorClicked();
 		if (UConnectorBase::AreConnected(SelectedConnector, SelectedConnector2))
 		{
+			FEditorQueue* queue = GetNoxelNetworkingAgent()->CreateEditorQueue();
+			queue->AddConnectorDisconnectOrder({SelectedConnector}, {SelectedConnector2});
+			GetNoxelNetworkingAgent()->SendCommandQueue(queue);
 			//GetNoxelNetworkingAgent()->DisconnectConnector(SelectedConnector, SelectedConnector2);
 			//UE_LOG(Noxel, Log, TEXT("Were connected"));
 		}
 		else if(UConnectorBase::CanBothConnect(SelectedConnector, SelectedConnector2))
 		{
+			FEditorQueue* queue = GetNoxelNetworkingAgent()->CreateEditorQueue();
+			queue->AddConnectorConnectOrder({SelectedConnector}, {SelectedConnector2});
+			GetNoxelNetworkingAgent()->SendCommandQueue(queue);
 			//DrawDebugLine(GetWorld(), SelectedConnector->GetComponentLocation(), SelectedConnector2->GetComponentLocation(), FColor::Blue, true);
 			//UE_LOG(Noxel, Log, TEXT("[AM_Connector::leftClickReleased_Implementation] Connection made"));
 			//GetNoxelNetworkingAgent()->ConnectConnector(SelectedConnector, SelectedConnector2);
@@ -183,32 +204,36 @@ void AM_Connector::rightClickPressed_Implementation()
 	UE_LOG(NoxelMacro, Log, TEXT("Right click"));
 	if (Alternate)
 	{
-		TArray<UConnectorBase*> Connectors;
+		TArray<UConnectorBase*> Connectors, A, B;
 		ConnectorSectionMap.GenerateValueArray(Connectors);
-		for (UConnectorBase* A : Connectors)
+		for (UConnectorBase* ConnectorA : Connectors)
 		{
-			if (A->bIsMale)
+			if (ConnectorA->bIsMale)
 			{
-				for (UConnectorBase* B : Connectors)
+				for (UConnectorBase* ConnectorB : Connectors)
 				{
-					if (UConnectorBase::CanBothConnect(A, B))
+					if (UConnectorBase::CanBothConnect(ConnectorA, ConnectorB))
 					{
-						//GetNoxelNetworkingAgent()->ConnectConnector(A, B);
+						A.Add(ConnectorA);
+						B.Add(ConnectorB);
 					}
 				}
 			}
 		}
+		FEditorQueue* queue = GetNoxelNetworkingAgent()->CreateEditorQueue();
+		queue->AddConnectorConnectOrder(A, B);
+		GetNoxelNetworkingAgent()->SendCommandQueue(queue);
 	}
 	else
 	{
 		UConnectorBase* Selected = GetConnectorClicked();
-		if (Selected)
+		if (IsValid(Selected))
 		{
 			TArray<UConnectorBase*> OldConnections = Selected->Connected;
-			for (UConnectorBase* Connector : OldConnections)
-			{
-				//GetNoxelNetworkingAgent()->DisconnectConnector(Selected, Connector);
-			}
+			TArray<UConnectorBase*> A; A.Init(Selected, OldConnections.Num());
+			FEditorQueue* queue = GetNoxelNetworkingAgent()->CreateEditorQueue();
+			queue->AddConnectorDisconnectOrder(A, OldConnections);
+			GetNoxelNetworkingAgent()->SendCommandQueue(queue);
 		}
 	}
 }

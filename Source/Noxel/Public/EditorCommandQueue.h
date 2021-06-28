@@ -258,6 +258,9 @@ struct NOXEL_API FEditorQueue
 
 	void AddObjectAddOrder(UCraftDataHandler* Craft, FString ObjectClass, FTransform Location);
 
+	void AddConnectorConnectOrder(TArray<UConnectorBase*> A, TArray<UConnectorBase*> B);
+	void AddConnectorDisconnectOrder(TArray<UConnectorBase*> A, TArray<UConnectorBase*> B);
+
 	bool ToNetworkable(FEditorQueueNetworkable& Networkable);
 
 	//Returns the reserved panels that were used in the Execute direction
