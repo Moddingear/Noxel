@@ -2,6 +2,7 @@
 
 #pragma once
 
+
 #include "NoxelDataStructs.generated.h"
 
 class UNodesContainer;
@@ -58,10 +59,7 @@ struct NOXEL_API FNodeID
 		return Location;
 	}
 
-	bool IsValid() const
-	{
-		return Object;
-	}
+	bool IsValid() const;
 
 	FString ToString() const;
 

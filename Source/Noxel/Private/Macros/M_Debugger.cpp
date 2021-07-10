@@ -16,13 +16,13 @@ void AM_Debugger::BeginPlay()
 void AM_Debugger::leftClickPressed_Implementation()
 {
 	FVector start, end;
-	getTrace(start, end);
+	GetTraceFromFollow(start, end);
 	ANoxelPart* part;
-	if (tracePart(start, end, part)) {
+	if (TracePart(start, end, part)) {
 		FNodesContainerSave save;
 		FNoxelContainerSave nsave;
 		TMap<FNodeID, FNodeSavedRedirector> redirmap;
-		UCraftDataHandler::noxelNetworkToText(UCraftDataHandler::saveNoxelNetwork(getSelectedNoxelContainer()));
+		UCraftDataHandler::noxelNetworkToText(UCraftDataHandler::saveNoxelNetwork(GetSelectedNoxelContainer()));
 	}
 }
 

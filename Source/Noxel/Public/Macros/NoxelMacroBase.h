@@ -84,7 +84,7 @@ public:
 
 	//Used for BP to retrieve hints
 	UFUNCTION(BlueprintPure)
-	void getHints(FText& LeftClick, FText& RightClick, FText& Description, EAlternateType& Alternation, bool& IsAlternate) 
+	void GetHints(FText& LeftClick, FText& RightClick, FText& Description, EAlternateType& Alternation, bool& IsAlternate) 
 	{
 		LeftClick = LeftClickHint;
 		RightClick = RightClickHint;
@@ -117,22 +117,22 @@ public:
 	////////////////////////////////////////////////////////////////
 	//Get the ray emanating form the macro
 	UFUNCTION(BlueprintPure)
-	void getRay(FVector& Location, FVector& Direction);
+	bool GetRayFromFollow(FVector& Location, FVector& Direction);
 	//Get the trace from the macro
 	UFUNCTION(BlueprintPure)
-	void getTrace(FVector& start, FVector& end);
+	bool GetTraceFromFollow(FVector& start, FVector& end);
 
 	////////////////////////////////////////////////////////////////
 
 	UFUNCTION(BlueprintCallable)
-	FVector getNodePlacement(float PlacementDistance, UNodesContainer* Container);
+	FVector GetNodePlacement(float PlacementDistance, UNodesContainer* Container);
 	
 	////////////////////////////////////////////////////////////////
 
-	void setNodeColor(FNodeID id, ENoxelColor color);
+	void SetNodeColor(FNodeID id, ENoxelColor color);
 
 	UFUNCTION(BlueprintCallable)
-	void resetNodesColor();
+	void ResetNodesColor();
 
 	////////////////////////////////////////////////////////////////
 
@@ -140,24 +140,24 @@ public:
 	UVoxelComponent* GetVoxel();
 
 	UFUNCTION(BlueprintPure)
-	UNodesContainer* getSelectedNodesContainer();
+	UNodesContainer* GetSelectedNodesContainer();
 
 	UFUNCTION(BlueprintPure)
-	UNoxelContainer* getSelectedNoxelContainer();
+	UNoxelContainer* GetSelectedNoxelContainer();
 
 	UFUNCTION(BlueprintCallable)
-	void switchMacro(TSubclassOf<class ANoxelMacroBase> macro);
+	void SwitchMacro(TSubclassOf<class ANoxelMacroBase> macro);
 
 	////////////////////////////////////////////////////////////////
 
 	UFUNCTION(BlueprintCallable)
-	bool tracePart(FVector start, FVector end, ANoxelPart* & Part);
+	bool TracePart(FVector start, FVector end, ANoxelPart* & Part);
 
 	UFUNCTION(BlueprintCallable)
-	bool traceNodes(FVector start, FVector end, FNodeID& id);
+	bool TraceNodes(FVector start, FVector end, FNodeID& id);
 
 	UFUNCTION(BlueprintCallable)
-	bool tracePanels(FVector start, FVector end, FPanelID& id);
+	bool TracePanels(FVector start, FVector end, FPanelID& id);
 
 	////////////////////////////////////////////////////////////////
 

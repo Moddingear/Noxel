@@ -14,11 +14,6 @@ UForceConnector::UForceConnector()
 {
 	ConnectorID = FString("Force");
 	ConnectorName = NSLOCTEXT(CONNECTOR_NAMESPACE, "Force", "Serial Force Connector");
-	static ConstructorHelpers::FObjectFinder<UTexture2D> TextureFinder(TEXT("/Game/NoxelEditor/Macros/Textures/Connectors/Connector_SPI")); 
-	if(TextureFinder.Succeeded())
-	{
-		ConnectorTexture = TextureFinder.Object;
-	}
 }
 
 void UForceConnector::BeginPlay()
@@ -49,7 +44,7 @@ bool UForceConnector::CanConnect(UConnectorBase * other)
 {
 	if (UConnectorBase::CanConnect(other))
 	{
-		if (!bIsMale && Connected.Num() > 0) //If female and already connected
+		if (!bIsSender && Connected.Num() > 0) //If female and already connected
 		{
 			return false;
 		}

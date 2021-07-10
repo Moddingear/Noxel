@@ -2,6 +2,7 @@
 
 #include "Noxel/NoxelDataStructs.h"
 #include "Noxel/NodesContainer.h"
+#include "Kismet/KismetSystemLibrary.h"
 
 FNodeID FNodeID::FromWorld(UNodesContainer* InObject, FVector WorldLocation)
 {
@@ -15,6 +16,11 @@ FNodeID FNodeID::FromWorld(UNodesContainer* InObject, FVector WorldLocation)
 FVector FNodeID::ToWorld() const
 {
 	return Object->GetComponentTransform().TransformPosition(Location);
+}
+
+bool FNodeID::IsValid() const
+{
+	return UKismetSystemLibrary::IsValid(Object);
 }
 
 FString FNodeID::ToString() const

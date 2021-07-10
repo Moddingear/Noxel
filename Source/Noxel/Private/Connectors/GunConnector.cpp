@@ -8,11 +8,6 @@ UGunConnector::UGunConnector()
 {
 	ConnectorID = FString("Gun");
 	ConnectorName = NSLOCTEXT(CONNECTOR_NAMESPACE, "Gun", "Parallel Gun Connector");
-	static ConstructorHelpers::FObjectFinder<UTexture2D> TextureFinder(TEXT("/Game/NoxelEditor/Macros/Textures/Connectors/PFI"));
-	if(TextureFinder.Succeeded())
-	{
-		ConnectorTexture = TextureFinder.Object;
-	}
 }
 
 void UGunConnector::BeginPlay()

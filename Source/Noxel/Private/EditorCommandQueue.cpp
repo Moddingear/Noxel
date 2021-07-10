@@ -877,7 +877,7 @@ bool FEditorQueueOrderPanelProperties::FromNetworkable(FEditorQueueNetworkable* 
 	}
 	ThicknessNormalAfter = InData.GetFloat(0);
 	ThicknessAntiNormalAfter = InData.GetFloat(1);
-	VirtualAfter = InData.Args[2];
+	VirtualAfter = InData.Args[2]!=0;
 	PanelIndexRef.SetNum(InData.Args.Num()-3);
 	for (int i = 0; i < PanelIndexRef.Num(); ++i)
 	{

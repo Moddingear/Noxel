@@ -4,7 +4,6 @@
 
 #include "CoreMinimal.h"
 #include "Components/SceneComponent.h"
-#include "Engine/Texture2D.h"
 #include "ConnectorBase.generated.h"
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FConnectorDelegate);
@@ -27,7 +26,7 @@ protected:
 public:	
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
-	bool bIsMale;
+	bool bIsSender;
 
 	UPROPERTY(BlueprintReadOnly, Replicated)
 	TArray<UConnectorBase*> Connected;
@@ -38,10 +37,17 @@ public:
 	UPROPERTY(BlueprintAssignable)
 	FConnectorDelegate OnGetReceivedDelegate;
 
+	UPROPERTY(BlueprintReadOnly)
 	FString ConnectorID;
+
+	UPROPERTY(BlueprintReadOnly)
 	FText ConnectorName;
 
-	UTexture2D* ConnectorTexture;
+	UPROPERTY(BlueprintReadOnly)
+	UStaticMesh* ConnectorMesh;
+
+	UPROPERTY(BlueprintReadOnly)
+	UStaticMesh* WireMesh;
 
 	// Called every frame
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
@@ -66,6 +72,8 @@ public:
 
 	UFUNCTION(BlueprintPure)
 	static bool AreConnected(UConnectorBase* A, UConnectorBase* B);
+
+	FString GetConnectorName() const;
 
 protected:
 	void TriggerSetReceived()

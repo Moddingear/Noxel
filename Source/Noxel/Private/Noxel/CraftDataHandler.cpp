@@ -309,7 +309,7 @@ FCraftSave UCraftDataHandler::saveCraft()
 		Components[i]->GetComponents<UConnectorBase>(connectors);
 		for (UConnectorBase* connector : connectors)
 		{
-			if (connector->bIsMale)
+			if (connector->bIsSender)
 			{
 				FConnectorSavedRedirector cn;
 				saveConnector(connector, Components, cn);
@@ -753,7 +753,7 @@ bool UCraftDataHandler::loadNoxelContainer(UNoxelContainer * NoxelContainer, TMa
 //Connectors -----------------------------------------------------------
 void UCraftDataHandler::saveConnector(UConnectorBase * Connector, TArray<AActor*>& Components, FConnectorSavedRedirector & SavedData)
 {
-	if (!Connector->bIsMale)
+	if (!Connector->bIsSender)
 	{
 		return;
 	}

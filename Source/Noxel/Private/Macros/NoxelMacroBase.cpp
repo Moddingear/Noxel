@@ -98,7 +98,7 @@ void ANoxelMacroBase::BeginPlay()
 }
 
 void ANoxelMacroBase::EndPlay(const EEndPlayReason::Type EndPlayReason){
-	resetNodesColor();
+	ResetNodesColor();
 	//DestroyTransformGizmo();
 	Super::EndPlay(EndPlayReason);
 }
@@ -172,7 +172,7 @@ ANoxelPart * ANoxelMacroBase::GetCurrentPart() const
 
 //General trace utilities --------------------------------------------------------------------------------------------------------------------------------
 
-void ANoxelMacroBase::getRay(FVector & Location, FVector & Direction)
+bool ANoxelMacroBase::GetRayFromFollow(FVector& Location, FVector& Direction)
 {
 	FTransform comptransf;
 	if (IsValid(FollowComponent))
@@ -185,24 +185,26 @@ void ANoxelMacroBase::getRay(FVector & Location, FVector & Direction)
 	}
 	Location = comptransf.GetLocation();
 	Direction = comptransf.GetRotation().GetForwardVector();
+	return IsValid(FollowComponent);
 }
 
-void ANoxelMacroBase::getTrace(FVector & start, FVector & end)
+bool ANoxelMacroBase::GetTraceFromFollow(FVector& start, FVector& end)
 {
 	FVector dir;
-	getRay(start, dir);
+	const bool retval = GetRayFromFollow(start, dir);
 	end = start + dir * ray_length;
+	return retval;
 }
 
 // Node placement utilities ----------------------------------------------------------------
 
-FVector ANoxelMacroBase::getNodePlacement(float PlacementDistance, UNodesContainer* Container)
+FVector ANoxelMacroBase::GetNodePlacement(float PlacementDistance, UNodesContainer* Container)
 {
 	if(!Container){
-		Container = getSelectedNodesContainer();
+		Container = GetSelectedNodesContainer();
 	}
 	FVector location, direction;
-	getRay(location, direction);
+	GetRayFromFollow(location, direction);
 	FIntVector cube_hit, hit_normal;
 	if (GetVoxel() && GetVoxel()->trace(location, location + direction * PlacementDistance*2, cube_hit, hit_normal)) {
 		return FNodeID::FromWorld(Container, GetVoxel()->voxelToWorld(cube_hit));
@@ -212,7 +214,7 @@ FVector ANoxelMacroBase::getNodePlacement(float PlacementDistance, UNodesContain
 
 // Nodes colors --------------------------------------------------------------------------------------------------------------------------------
 
-void ANoxelMacroBase::setNodeColor(FNodeID id, ENoxelColor color)
+void ANoxelMacroBase::SetNodeColor(FNodeID id, ENoxelColor color)
 {
 	if (id.Object->SetNodeColor(id.Location, UFunctionLibrary::getColorFromJson(color))) 
 	{
@@ -229,27 +231,27 @@ void ANoxelMacroBase::setNodeColor(FNodeID id, ENoxelColor color)
 	}
 }
 
-void ANoxelMacroBase::resetNodesColor()
+void ANoxelMacroBase::ResetNodesColor()
 {
 	for (int32 i = ColoredNodes.Num() -1; i>= 0; i--)
 	{
-		setNodeColor(ColoredNodes[i], ENoxelColor::NodeInactive);
+		SetNodeColor(ColoredNodes[i], ENoxelColor::NodeInactive);
 	}
 }
 
 // Getting actors --------------------------------------------------------------------------------------------------------------------------------
 
-UNodesContainer* ANoxelMacroBase::getSelectedNodesContainer()
+UNodesContainer* ANoxelMacroBase::GetSelectedNodesContainer()
 {
 	ANoxelPart* part = GetCurrentPart();
 	if (part) {
 		return part->GetNodesContainer();
 	}
-	UE_LOG(NoxelMacro, Warning, TEXT("[ANoxelMacroBase::getSelectedNodesContainer] Part not found"));
+	UE_LOG(NoxelMacro, Warning, TEXT("[ANoxelMacroBase::GetSelectedNodesContainer] Part not found"));
 	return nullptr;
 }
 
-UNoxelContainer* ANoxelMacroBase::getSelectedNoxelContainer()
+UNoxelContainer* ANoxelMacroBase::GetSelectedNoxelContainer()
 {
 	ANoxelPart* part = GetCurrentPart();
 	if (part) {
@@ -258,7 +260,7 @@ UNoxelContainer* ANoxelMacroBase::getSelectedNoxelContainer()
 	return nullptr;
 }
 
-void ANoxelMacroBase::switchMacro(TSubclassOf<class ANoxelMacroBase> macro)
+void ANoxelMacroBase::SwitchMacro(TSubclassOf<class ANoxelMacroBase> macro)
 {
 	owningActor->SetMacro(macro);
 }
@@ -275,7 +277,7 @@ UVoxelComponent * ANoxelMacroBase::GetVoxel()
 
 // Trace --------------------------------------------------------------------------------------------------------------------------------
 
-bool ANoxelMacroBase::tracePart(FVector start, FVector end, ANoxelPart* & Part)
+bool ANoxelMacroBase::TracePart(FVector start, FVector end, ANoxelPart* & Part)
 {
 	FHitResult hit;
 	if (GetWorld()->LineTraceSingleByChannel(hit, start, end, ECollisionChannel::ECC_GameTraceChannel1)) { //If something was hit in noxel collision channel
@@ -287,7 +289,7 @@ bool ANoxelMacroBase::tracePart(FVector start, FVector end, ANoxelPart* & Part)
 	return false;
 }
 
-bool ANoxelMacroBase::traceNodes(FVector start, FVector end, FNodeID & id)
+bool ANoxelMacroBase::TraceNodes(FVector start, FVector end, FNodeID & id)
 {
 	FHitResult hit;
 	if (GetWorld()->LineTraceSingleByChannel(hit, start, end, ECollisionChannel::ECC_GameTraceChannel1, UNoxelLibrary::getCollisionParameters())) { //If something was hit in noxel collision channel
@@ -301,11 +303,11 @@ bool ANoxelMacroBase::traceNodes(FVector start, FVector end, FNodeID & id)
 	return false;
 }
 
-bool ANoxelMacroBase::tracePanels(FVector start, FVector end, FPanelID & id)
+bool ANoxelMacroBase::TracePanels(FVector start, FVector end, FPanelID & id)
 {
 	FHitResult hit;
 	if (GetWorld()->LineTraceSingleByChannel(hit, start, end, ECollisionChannel::ECC_GameTraceChannel1, UNoxelLibrary::getCollisionParameters())) { //If something was hit in noxel collision channel
-		UE_LOG(NoxelMacro, Log, TEXT("[ANoxelMacroBase::tracePanels] Trace successful"));
+		UE_LOG(NoxelMacro, Log, TEXT("[ANoxelMacroBase::TracePanels] Trace successful"));
 		return UNoxelContainer::GetPanelHit(hit, id);
 	}
 	return false;
@@ -353,7 +355,7 @@ void ANoxelMacroBase::DrawPanel(FPanelData PanelData)
 {
 	/*EPanelError errorcode;
 	FPanelData newData;
-	FPanelID PanelID = FPanelID(getSelectedNoxelContainer());
+	FPanelID PanelID = FPanelID(GetSelectedNoxelContainer());
 	UMaterialInterface* material;
 	if (UNoxelLibrary::CheckPanelValidity(PanelID, PanelData, true, errorcode, newData)) //Panel is valid
 	{

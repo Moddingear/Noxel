@@ -21,15 +21,17 @@ void AM_ObjectPlacer::BeginPlay()
 	Super::BeginPlay();
 	Inventory = CreateWidget<UUserWidget>(GetWorld()->GetFirstPlayerController(), wInventory);
 	Inventory->AddToViewport();
+	InventoryDisplayed = true;
 	onObjectDelegate.AddDynamic(this, &AM_ObjectPlacer::onObjectCall);
 	//UE_LOG(NoxelMacro, Warning, TEXT("Macro added"));
 }
 
 void AM_ObjectPlacer::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
-	if (IsValid(Inventory) && EndPlayReason != EEndPlayReason::EndPlayInEditor)
+	if (InventoryDisplayed && EndPlayReason != EEndPlayReason::EndPlayInEditor)
  	{
  		Inventory->RemoveFromParent();
+		InventoryDisplayed = false;
  	}
  	if (IsValid(ObjectSpawned))
  	{
@@ -66,7 +68,7 @@ void AM_ObjectPlacer::leftClickPressed_Implementation()
 	}
 	else
 	{
-		switchMacro(AM_Nodes::StaticClass());
+		SwitchMacro(AM_Nodes::StaticClass());
 	}
 }
 
@@ -91,8 +93,9 @@ void AM_ObjectPlacer::ObjectSelected(FNoxelObjectData Object)
 {
 	SelectedObject = Object;
 	Inventory->RemoveFromParent();
+	InventoryDisplayed = false;
 	FVector Location, Direction;
-	getRay(Location, Direction);
+	GetRayFromFollow(Location, Direction);
 	FVector BoxExtent;
 	TSubclassOf<AActor> SpawnClass;
 	if (LoadObjectClassSynchronous(Object.Class, SpawnClass))
@@ -111,7 +114,8 @@ void AM_ObjectPlacer::ObjectSelected(FNoxelObjectData Object)
 void AM_ObjectPlacer::NothingSelected()
 {
 	Inventory->RemoveFromParent();
-	switchMacro(AM_Nodes::StaticClass());
+	InventoryDisplayed = false;
+	SwitchMacro(AM_Nodes::StaticClass());
 }
 
 bool AM_ObjectPlacer::LoadObjectClassSynchronous(TSoftClassPtr<AActor> SoftClass, TSubclassOf<AActor>& ObjectClass)
@@ -149,6 +153,6 @@ void AM_ObjectPlacer::onObjectCall(AActor* Actor)
 FVector AM_ObjectPlacer::getObjectLocation()
 {
 	FVector Location, Direction;
-	getRay(Location, Direction);
+	GetRayFromFollow(Location, Direction);
 	return Location + Direction * placementDistance - BoundsCenter;
 }

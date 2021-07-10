@@ -5,7 +5,6 @@
 #include "ControlScheme.h"
 #include "ControlSchemes/DroneControlScheme.h"
 #include "Noxel/CraftDataHandler.h"
-#include "Kismet/KismetStringLibrary.h"
 #include "NObjects.h"
 #include "Net/UnrealNetwork.h"
 
@@ -18,10 +17,10 @@ AServer::AServer()
 
 	ForcesOut = CreateDefaultSubobject<UForceConnector>("Forces");
 	ForcesOut->SetupAttachment(staticMesh, TEXT("ForceConnector"));
-	ForcesOut->bIsMale = true;
+	ForcesOut->bIsSender = true;
 	GunsOut = CreateDefaultSubobject<UGunConnector>("Guns");
 	GunsOut->SetupAttachment(staticMesh, TEXT("GunConnector"));
-	GunsOut->bIsMale = true;
+	GunsOut->bIsSender = true;
 
 	SetupNodeContainerBySocket(staticMesh, "Node", nodesContainer);
 }

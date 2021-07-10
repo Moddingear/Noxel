@@ -25,7 +25,7 @@ void AM_Voxel::Tick(float DeltaTime)
 void AM_Voxel::leftClickPressed_Implementation()
 {
 	FVector location, direction, end;
-	getRay(location, direction);
+	GetRayFromFollow(location, direction);
 	end = location + direction * ray_length;
 	UVoxelComponent* voxel = GetVoxel();
 	if (!voxel) {
@@ -57,7 +57,7 @@ void AM_Voxel::middleClickPressed_Implementation()
 void AM_Voxel::rightClickPressed_Implementation()
 {
 	FVector location, direction;
-	getRay(location, direction);
+	GetRayFromFollow(location, direction);
 	const FVector end = location + direction * ray_length;
 	UVoxelComponent* voxel = GetVoxel();
 	if (!voxel) {

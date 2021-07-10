@@ -22,7 +22,7 @@ AEDF::AEDF()
 	
 	ForceIn = CreateDefaultSubobject<UForceConnector>("Forces");
 	ForceIn->SetupAttachment(staticMesh, TEXT("ForceConnector"));
-	ForceIn->bIsMale = false;
+	ForceIn->bIsSender = false;
 
 	nodesContainer->SetNodeSize(50.f);
 	SetupNodeContainerBySocket(staticMesh, "Node", nodesContainer);

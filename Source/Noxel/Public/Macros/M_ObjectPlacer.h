@@ -28,6 +28,9 @@ protected:
 public:
 	float placementDistance = 100.0f;
 	FVector BoundsCenter;
+private:
+	bool InventoryDisplayed = false;
+public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Widgets")
 		TSubclassOf<class UUserWidget> wInventory;

@@ -11,11 +11,14 @@ UConnectorBase::UConnectorBase()
 	// off to improve performance if you don't need them.
 	//PrimaryComponentTick.bCanEverTick = true;
 	SetIsReplicatedByDefault(true);
-	bIsMale = false;
+	bIsSender = false;
 
 	ConnectorID = FString("None");
 	ConnectorName = FText();
-	// ...
+	static ConstructorHelpers::FObjectFinder<UStaticMesh>ConnectorMeshConstructor(TEXT("StaticMesh'/Game/NoxelEditor/Connectors/Connector_JST_1x4.Connector_JST_1x4'"));
+	ConnectorMesh = ConnectorMeshConstructor.Object;
+	static ConstructorHelpers::FObjectFinder<UStaticMesh>WireMeshConstructor(TEXT("StaticMesh'/Game/NoxelEditor/Connectors/Wire_4.Wire_4'"));
+	WireMesh = WireMeshConstructor.Object;
 }
 
 void UConnectorBase::GetLifetimeReplicatedProps(TArray< FLifetimeProperty > & OutLifetimeProps) const
@@ -30,7 +33,7 @@ void UConnectorBase::BeginPlay()
 {
 	Super::BeginPlay();
 
-	if (bIsMale)
+	if (bIsSender)
 	{
 		AActor* Owner = GetOwner();
 		for (int32 i = 0; i < Connected.Num(); i++)
@@ -69,12 +72,12 @@ bool UConnectorBase::CanConnect(UConnectorBase * other)
 
 bool UConnectorBase::CanSend()
 {
-	return bIsMale;
+	return bIsSender;
 }
 
 bool UConnectorBase::CanReceive()
 {
-	return !bIsMale;
+	return !bIsSender;
 }
 
 bool UConnectorBase::Connect(UConnectorBase * other)
@@ -83,11 +86,11 @@ bool UConnectorBase::Connect(UConnectorBase * other)
 	{
 		Connected.Add(other);
 		other->Connected.Add(this);
-		if (bIsMale)
+		if (bIsSender)
 		{
 			other->GetOwner()->AddTickPrerequisiteActor(GetOwner());
 		}
-		if (other->bIsMale)
+		if (other->bIsSender)
 		{
 			GetOwner()->AddTickPrerequisiteActor(other->GetOwner());
 		}
@@ -102,7 +105,7 @@ bool UConnectorBase::Disconnect(UConnectorBase * other)
 	{
 		Connected.Remove(other);
 		other->Connected.Remove(this);
-		if (bIsMale)
+		if (bIsSender)
 		{
 			other->GetOwner()->RemoveTickPrerequisiteActor(GetOwner());
 		}
@@ -119,5 +122,10 @@ bool UConnectorBase::CanBothConnect(UConnectorBase * A, UConnectorBase * B)
 bool UConnectorBase::AreConnected(UConnectorBase * A, UConnectorBase * B)
 {
 	return A->Connected.Contains(B) && B->Connected.Contains(A);
+}
+
+FString UConnectorBase::GetConnectorName() const
+{
+	return GetOwner()->GetName() + TEXT(":") + GetName();
 }
 

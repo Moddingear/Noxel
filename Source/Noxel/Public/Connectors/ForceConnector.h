@@ -10,6 +10,7 @@
 #include "Connectors/ConnectorBase.h"
 #include "ForceConnector.generated.h"
 
+class UForceConnector;
 /**
  * 
  */

@@ -3,8 +3,12 @@
 #pragma once
 
 #include "CoreMinimal.h"
+
 #include "Macros/NoxelMacroBase.h"
 #include "M_Connector.generated.h"
+
+class USplineMeshComponent;
+class UConnectorBase;
 
 UCLASS(ClassGroup = "Noxel Macros")
 class NOXEL_API AM_Connector : public ANoxelMacroBase
@@ -22,21 +26,23 @@ protected:
 
 public:
 
-	class UConnectorBase* SelectedConnector;
+	TArray<UStaticMeshComponent*> ConnectorsMeshes;
+	TArray<UConnectorBase*> DisplayedConnectors;
+	TArray<USplineMeshComponent*> WiresMeshes;
 
-	float SphereSizeMin = 20;
-	float SphereSizeMax = 100;
+	UConnectorBase* SelectedConnector;
 
-	float DistMin = 0;
-	float DistMax = 2000;
+	TArray<UConnectorBase*> GetAllConnectors();
 
-	UMaterial* ConnectorMaterial;
+	void UpdateDisplayedConnectors();
 
-private:
+	void ShowOnlyConnectableConnectors();
 
-	TMap<int32, class UConnectorBase*> ConnectorSectionMap;
+	void DestroyAllWires();
 
-public:
+	USplineMeshComponent* MakeWire(FTransform Sender, FTransform Receiver, UStaticMesh* WireMesh);
+
+	void MakeAllWires();
 
 	UConnectorBase* GetConnectorClicked();
 
