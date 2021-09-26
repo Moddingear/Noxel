@@ -681,7 +681,7 @@ struct NOXEL_API FEditorQueueOrderRemoveObject : public FEditorQueueOrderTemplat
 	AActor* ObjectToRemove;
 	FString ObjectClass;
 	FTransform ObjectTransform;
-	FString ObjectMetadata;
+	FJsonObjectWrapper ObjectMetadata;
 
 	FEditorQueueOrderRemoveObject()
         : FEditorQueueOrderTemplate(EEditorQueueOrderType::ObjectRemove), Craft(nullptr), ObjectToRemove(nullptr)

@@ -20,9 +20,7 @@ AEDF::AEDF()
 	static ConstructorHelpers::FObjectFinder<UStaticMesh> BladesMeshBottom(TEXT("StaticMesh'/Game/NoxelEditor/NObjects/Meshes/EDF/EDF_BladesBottom.EDF_BladesBottom'"));
 	BladesBottom->SetStaticMesh(BladesMeshBottom.Object);
 	
-	ForceIn = CreateDefaultSubobject<UForceConnector>("Forces");
 	ForceIn->SetupAttachment(staticMesh, TEXT("ForceConnector"));
-	ForceIn->bIsSender = false;
 
 	nodesContainer->SetNodeSize(50.f);
 	SetupNodeContainerBySocket(staticMesh, "Node", nodesContainer);
@@ -37,10 +35,10 @@ void AEDF::BeginPlay()
 void AEDF::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
-	if (Enabled && ForceIn->LastOrder.Num() >= 2)
+	if (Enabled && ForceIn->GetLastOrder().Num() >= 2)
 	{
 		FTransform LocationWorld = GetActorTransform();
-		float lift = FMath::Clamp(ForceIn->LastOrder[0], 0.f, 1.f), torque = FMath::Clamp(ForceIn->LastOrder[1], -1.f, 1.f);
+		float lift = FMath::Clamp(ForceIn->GetLastOrder()[0], 0.f, 1.f), torque = FMath::Clamp(ForceIn->GetLastOrder()[1], -1.f, 1.f);
 		float addfortop = FMath::Sign(TopPropellerRotationSpeed) * BladesInverted ? 1.f : -1.f;
 		float RotationSpeedTop = TopPropellerRotationSpeed * (lift + torque * addfortop);
 		float RotationSpeedBottom = - TopPropellerRotationSpeed * (lift - torque * addfortop);
@@ -78,8 +76,8 @@ void AEDF::CheckBlades()
 
 TArray<FTorsor> AEDF::GetMaxTorsor()
 {
-	FTorsor Force = FTorsor(FVector(0, 0, MaxLift), FVector::ZeroVector, ForceIn, 0.f, 1.f);
-	FTorsor Torque = FTorsor(FVector::ZeroVector, FVector(0, 0, MaxTorque), ForceIn, -1.f, 1.f);
+	FTorsor Force = FTorsor(FVector(0, 0, MaxLift), FVector::ZeroVector, 0.f, 1.f);
+	FTorsor Torque = FTorsor(FVector::ZeroVector, FVector(0, 0, MaxTorque), -1.f, 1.f);
 	return TArray<FTorsor>({ Force, Torque });
 }
 
@@ -96,19 +94,20 @@ void AEDF::OnNObjectDisable_Implementation()
 	Super::OnNObjectDisable_Implementation();
 }
 
-FString AEDF::OnReadMetadata_Implementation()
+FJsonObjectWrapper AEDF::OnReadMetadata_Implementation(const TArray<AActor*>& Components)
 {
-	return FString();
+	return Super::OnReadMetadata_Implementation(Components);
 }
 
-bool AEDF::OnWriteMetadata_Implementation(const FString & Metadata)
+bool AEDF::OnWriteMetadata_Implementation(const FJsonObjectWrapper & Metadata, const TArray<AActor*>& Components)
 {
-	return false;
+	return Super::OnWriteMetadata_Implementation(Metadata, Components);
 }
 
 void AEDF::OnGetReceived()
 {
-	ForceIn->MaxTorsors = GetMaxTorsor();
+	TArray<FTorsor> Torsors = GetMaxTorsor();
+	ForceIn->SetTorsors(Torsors);
 }
 
 void AEDF::OnSetReceived()

@@ -14,12 +14,9 @@ class NOBJECTS_API UDroneControlScheme : public UControlScheme
 {
 	GENERATED_BODY()
 public:
-	TArray<FTorsor> ForceTorsors;
-	TArray<FTorsor> TorqueTorsors;
 
-	void GetUsableTorsors();
+	virtual FTRVector GetUsedForces() override;
+	virtual FTRVector GetUsedInputs() override;
 
-	float AttackAngle = 30.0f; //in deg
-
-	virtual TArray<float> Solve() override;
+	virtual FTRVector ApplyInputMatrix(FTRVector Input, FTransform Location, FTRVector Speed, FTRVector Acceleration, FTRVector Mass) override;
 };

@@ -6,8 +6,52 @@
 #include "Connectors/ForceConnector.h"
 #include "ControlScheme.generated.h"
 
+USTRUCT(BlueprintType)
+struct FTRVector
+{
+	GENERATED_BODY()
+
+	static NOBJECTS_API const FTRVector ZeroVector;
+	static NOBJECTS_API const FTRVector OneVector;
+	
+	UPROPERTY(BlueprintReadWrite)
+	FVector Translation;
+	UPROPERTY(BlueprintReadWrite)
+	FVector Rotation;
+
+	FTRVector()
+	{}
+
+	FTRVector(FVector InTranslation, FVector InRotation)
+		:Translation(InTranslation), Rotation(InRotation)
+	{}
+
+	FTRVector(float tx, float ty, float tz, float rx, float ry, float rz)
+		:Translation(tx, ty, tz), Rotation( rx, ry, rz)
+	{}
+
+	FTRVector operator+(const FTRVector& rhs) const
+	{
+		return FTRVector(Translation+rhs.Translation, Rotation+rhs.Rotation);
+	}
+	
+	FTRVector operator*(const float& rhs) const
+	{
+		return FTRVector(Translation*rhs, Rotation*rhs);
+	}
+	
+	FTRVector operator*(const FTRVector& rhs) const
+	{
+		return FTRVector(Translation*rhs.Translation, Rotation*rhs.Rotation);
+	}
+
+	float Sum()
+	{
+		return Translation.X + Translation.Y + Translation.Z + Rotation.X + Rotation.Y + Rotation.Z;
+	}
+};
 /**
- * 
+ * This class convert keyboard inputs and current craft location into wanted forces and torques
  */
 UCLASS()
 class NOBJECTS_API UControlScheme : public UObject
@@ -18,26 +62,23 @@ public:
 	~UControlScheme();
 
 protected:
-	FVector Translation;
-	FVector Rotation;
-	float Mass;
-	FVector COM;
-	TArray<FTorsor> inputForces;
 
 	AActor* getOwnerActor();
 
 public:
-	void SetInputValues(FVector InputTranslation, FVector InputRotation);
-	void SetForces(TArray<FTorsor> Forces);
-	void SetCOMAndMass(FVector COM, float Mass);
 
-	virtual TArray<float> Solve();
+	/*
+	 * Get forces and torques required to run this
+	 */
+	virtual FTRVector GetUsedForces();
+	/*
+	 * Get which inputs are used
+	 */
+	virtual FTRVector GetUsedInputs();
+	
+	/*
+	 * Convert keyboard inputs to forces and torques
+	 */
+	virtual FTRVector ApplyInputMatrix(FTRVector Input, FTransform Location, FTRVector Speed, FTRVector Acceleration, FTRVector Mass);
 
-	static TArray<float> VoronoiAngleFill(TArray<FVector>& ForcesLocation);
-
-	static TArray<float> GetSumOnDirection(FVector Direction, FVector Normal, TArray<FVector>& ForcesLocation);
-
-	static TArray<float>* NormalizeArray(TArray<float>& Input);
-
-	static bool CheckSaturation(TArray<FTorsor>& Torsors, TArray<float>& Floats, TArray<bool>& Saturated);
 };

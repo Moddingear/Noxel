@@ -1,6 +1,7 @@
 //Copyright 2016-2020 Gabriel Zerbib (Moddingear). All rights reserved.
 
 #pragma once
+#include "JsonObjectWrapper.h"
 
 
 #include "NoxelDataStructs.generated.h"
@@ -253,7 +254,9 @@ struct NOXEL_API FNodeSavedRedirector {
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	int32 nodeIndex;
 
-	FNodeSavedRedirector() {}
+	FNodeSavedRedirector(): parentIndex(0), nodesContainerIndex(0), nodeIndex(0)
+	{
+	}
 
 	FNodeSavedRedirector(const int32 InParentIndex, const int32 InNodesContainerIndex, const int32 InNodeIndex)
 		: parentIndex(InParentIndex),
@@ -311,7 +314,9 @@ struct NOXEL_API FPanelSavedData {
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	bool Virtual;
 
-	FPanelSavedData() {}
+	FPanelSavedData(): PanelIndex(0), ThicknessNormal(0), ThicknessAntiNormal(0), Virtual(false)
+	{
+	}
 
 	FPanelSavedData(const FPanelData data)
 	{
@@ -418,7 +423,7 @@ struct NOXEL_API FComponentSave {
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	TArray<FConnectorSavedRedirector> SavedConnectors;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	FString SavedMetadata;
+	FJsonObjectWrapper SavedMetadata;
 
 	FComponentSave() {}
 

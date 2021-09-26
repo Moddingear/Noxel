@@ -6,7 +6,6 @@
 #include "GameFramework/Actor.h"
 #include "Noxel/NodesContainer.h"
 #include "NObjectInterface.h"
-#include "Components/StaticMeshComponent.h"
 #include "NObjectSimpleBase.generated.h"
 
 UCLASS()
@@ -42,12 +41,12 @@ public:
 	virtual bool OnNObjectAttach_Implementation(ANoxelPart* Part) /*override*/;
 
 	UFUNCTION(BlueprintCallable, BlueprintNativeEvent)
-		FString OnReadMetadata();
-	virtual FString OnReadMetadata_Implementation() /*override*/;
+		FJsonObjectWrapper OnReadMetadata(const TArray<AActor*>& Components);
+	virtual FJsonObjectWrapper OnReadMetadata_Implementation(const TArray<AActor*>& Components) /*override*/;
 
 	UFUNCTION(BlueprintCallable, BlueprintNativeEvent)
-		bool OnWriteMetadata(const FString& Metadata);
-	virtual bool OnWriteMetadata_Implementation(const FString& Metadata) /*override*/;
+		bool OnWriteMetadata(const FJsonObjectWrapper& Metadata, const TArray<AActor*>& Components);
+	virtual bool OnWriteMetadata_Implementation(const FJsonObjectWrapper& Metadata, const TArray<AActor*>& Components) /*override*/;
 	//NObject Interface End
 
 	// Called every frame

@@ -3,11 +3,37 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "ControlScheme.h"
 #include "NObjects/NObjectPossessableBase.h"
-#include "Connectors/ForceConnector.h"
-#include "Connectors/GunConnector.h"
 #include "Server.generated.h"
 
+class UForceConnector;
+class UGunConnector;
+class UControlScheme;
+
+USTRUCT(BlueprintType)
+struct FTorsorBias
+{
+	GENERATED_BODY()
+
+	UPROPERTY(BlueprintReadWrite)
+	UForceConnector* Source;
+
+	UPROPERTY(BlueprintReadWrite)
+	int Index;
+	
+	UPROPERTY(BlueprintReadWrite)
+	FTRVector Bias;
+
+	FTorsorBias()
+	: Source(nullptr), Index(INDEX_NONE)
+	{
+	}
+
+	FTorsorBias(UForceConnector* InSource, int InIndex, FTRVector InBias)
+		:Source(InSource), Index(InIndex), Bias(InBias)
+	{}
+};
 /**
  * 
  */
@@ -35,14 +61,16 @@ public:
 	UCraftDataHandler* ReplicatedCraft;
 	
 	UPROPERTY(BlueprintReadWrite)
-	TSubclassOf<class UControlScheme> ControlSchemeClass;
+	TSubclassOf<UControlScheme> ControlSchemeClass;
 	UPROPERTY(BlueprintReadOnly)
-	class UControlScheme* ControlScheme;
+	UControlScheme* ControlScheme;
+
+	TArray<FTorsorBias> ForceBiases;
 
 	virtual void OnNObjectEnable_Implementation(UCraftDataHandler* Craft) override;
 	virtual void OnNObjectDisable_Implementation() override;
-	virtual FString OnReadMetadata_Implementation() override;
-	virtual bool OnWriteMetadata_Implementation(const FString& Metadata) override;
+	virtual FJsonObjectWrapper OnReadMetadata_Implementation(const TArray<AActor*>& Components) override;
+	virtual bool OnWriteMetadata_Implementation(const FJsonObjectWrapper& Metadata, const TArray<AActor*>& Components) override;
 
 	UFUNCTION()
 	void OnRep_CraftDataHandler();

@@ -6,6 +6,8 @@
 #include "ControlSchemes/DroneControlScheme.h"
 #include "Noxel/CraftDataHandler.h"
 #include "NObjects.h"
+#include "Connectors/GunConnector.h"
+#include "Connectors/ForceConnector.h"
 #include "Net/UnrealNetwork.h"
 
 AServer::AServer()
@@ -43,12 +45,43 @@ void AServer::Tick(float DeltaTime)
 	//UE_LOG(NObjects, Log, TEXT("[AServer::Tick] Enabled : %s"), *UKismetStringLibrary::Conv_BoolToString(Enabled));
 	if (Enabled && ControlScheme && ReplicatedCraft)
 	{
-		TArray<FTorsor> Torsors = ForcesOut->GetAllTorsors();
-		ControlScheme->SetForces(Torsors);
 		float mass; FVector COM;
 		ComputeCOMFromComponents(ReplicatedCraft->Components, COM, mass);
-		ControlScheme->SetCOMAndMass(COM, mass);
-		TArray<float> Results = ControlScheme->Solve();
+		
+		FTRVector WantedForces = ControlScheme->ApplyInputMatrix(
+			FTRVector::ZeroVector, //TODO
+			GetTransform(),
+			FTRVector(staticMesh->GetPhysicsLinearVelocity(), staticMesh->GetPhysicsAngularVelocityInRadians()),
+			FTRVector(0,0,GetWorld()->GetGravityZ(),0,0,0),
+			FTRVector(FVector::OneVector * mass, FVector::OneVector));
+		
+		TArray<FTorsor> Torsors = ForcesOut->GetAllTorsors();
+		int NumTorsors = Torsors.Num();
+		TArray<FTorsorBias> BiasTemp = ForceBiases;
+		TArray<FTorsorBias> BiasOrdered; BiasOrdered.Init(FTorsorBias(), NumTorsors);
+		TArray<float> Results; Results.Init(0, NumTorsors);
+		
+		FTRVector SumUnscaled = FTRVector::ZeroVector;
+		
+		for (int i = 0; i < NumTorsors; ++i)
+		{
+			FTorsor& CurrentTorsor = Torsors[i];
+			FTorsorBias Bias;
+			for (int j = 0; j < BiasTemp.Num(); ++j)
+			{
+				if (BiasTemp[j].Source == CurrentTorsor.Source && BiasTemp[j].Index == CurrentTorsor.Index)
+				{
+					Bias = BiasTemp[j];
+					BiasTemp.RemoveAtSwap(j);
+					break;
+				}
+			}
+			if (Bias.Source != nullptr)
+			{
+				BiasOrdered[i] = Bias;
+				float InputValue = (Bias.Bias*WantedForces).Sum();
+			}
+		}
 		ForcesOut->SendAllOrders(Torsors, Results);
 		FString ResultsString;
 		for (float r : Results)
@@ -74,14 +107,14 @@ void AServer::OnNObjectDisable_Implementation()
 	Super::OnNObjectDisable_Implementation();
 }
 
-FString AServer::OnReadMetadata_Implementation()
+FJsonObjectWrapper AServer::OnReadMetadata_Implementation(const TArray<AActor*>& Components)
 {
-	return Super::OnReadMetadata_Implementation();
+	return Super::OnReadMetadata_Implementation(Components);
 }
 
-bool AServer::OnWriteMetadata_Implementation(const FString & Metadata)
+bool AServer::OnWriteMetadata_Implementation(const FJsonObjectWrapper & Metadata, const TArray<AActor*>& Components)
 {
-	return Super::OnWriteMetadata_Implementation(Metadata);
+	return Super::OnWriteMetadata_Implementation(Metadata, Components);
 }
 
 void AServer::OnRep_CraftDataHandler()

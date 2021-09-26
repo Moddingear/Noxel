@@ -43,12 +43,12 @@ public:
 	virtual bool OnNObjectAttach_Implementation(ANoxelPart* Part);
 
 	UFUNCTION(BlueprintCallable, BlueprintNativeEvent)
-		FString OnReadMetadata();
-	virtual FString OnReadMetadata_Implementation();
+	FJsonObjectWrapper OnReadMetadata(const TArray<AActor*>& Components);
+	virtual FJsonObjectWrapper OnReadMetadata_Implementation(const TArray<AActor*>& Components);
 
 	UFUNCTION(BlueprintCallable, BlueprintNativeEvent)
-		bool OnWriteMetadata(const FString& Metadata);
-	virtual bool OnWriteMetadata_Implementation(const FString& Metadata);
+		bool OnWriteMetadata(const FJsonObjectWrapper& Metadata, const TArray<AActor*>& Components);
+	virtual bool OnWriteMetadata_Implementation(const FJsonObjectWrapper& Metadata, const TArray<AActor*>& Components);
 
 	void SetupNodeContainerBySocket(class UStaticMeshComponent* Mesh, FString SocketRegex, class UNodesContainer* Target);
 

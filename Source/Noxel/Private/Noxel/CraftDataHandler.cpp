@@ -320,7 +320,7 @@ FCraftSave UCraftDataHandler::saveCraft()
 		if (Components[i]->IsA<UNObjectInterface>())
 		{
 			INObjectInterface* ComponentInterface = Cast<INObjectInterface>(Components[i]);
-			SavedComponents[i].SavedMetadata = ComponentInterface->Execute_OnReadMetadata(Components[i]);
+			SavedComponents[i].SavedMetadata = ComponentInterface->Execute_OnReadMetadata(Components[i], Components);
 		}
 	}
 
@@ -424,7 +424,7 @@ void UCraftDataHandler::loadCraft(FCraftSave Craft, FTransform transform)
 		if (TempComp[i]->IsA<UNObjectInterface>())
 		{
 			INObjectInterface* ComponentInterface = Cast<INObjectInterface>(TempComp[i]);
-			ComponentInterface->OnWriteMetadata(comp.SavedMetadata);
+			ComponentInterface->Execute_OnWriteMetadata(comp.SavedMetadata, TempComp);
 		}
 	}
 

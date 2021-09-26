@@ -6,6 +6,10 @@
 #include "GameFramework/Actor.h"
 #include "Noxel/NodesContainer.h"
 #include "NObjectInterface.h"
+#include "Chaos/AABB.h"
+#include "Chaos/AABB.h"
+#include "Chaos/AABB.h"
+#include "Chaos/AABB.h"
 #include "Components/StaticMeshComponent.h"
 #include "NObjectPossessableBase.generated.h"
 
@@ -51,12 +55,12 @@ public:
 	virtual bool OnNObjectAttach_Implementation(ANoxelPart* Part) /*override*/;
 
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable)
-		FString OnReadMetadata();
-	virtual FString OnReadMetadata_Implementation() /*override*/;
+		FJsonObjectWrapper OnReadMetadata(const TArray<AActor*>& Components);
+	virtual FJsonObjectWrapper OnReadMetadata_Implementation(const TArray<AActor*>& Components) /*override*/;
 
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable)
-		bool OnWriteMetadata(const FString& Metadata);
-	virtual bool OnWriteMetadata_Implementation(const FString& Metadata) /*override*/;
+		bool OnWriteMetadata(const FJsonObjectWrapper& Metadata, const TArray<AActor*>& Components);
+	virtual bool OnWriteMetadata_Implementation(const FJsonObjectWrapper& Metadata, const TArray<AActor*>& Components) /*override*/;
 	//NObject Interface End
 
 	// Called to bind functionality to input

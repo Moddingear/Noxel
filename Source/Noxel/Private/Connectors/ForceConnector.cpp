@@ -21,7 +21,7 @@ void UForceConnector::BeginPlay()
 	Super::BeginPlay();
 }
 
-void UForceConnector::SendOrder(TArray<float> Order, UForceConnector* Target)
+void UForceConnector::SendOrder(TArray<float>& Order, UForceConnector* Target)
 {
 	if (Target && CanSend())
 	{
@@ -44,7 +44,7 @@ bool UForceConnector::CanConnect(UConnectorBase * other)
 {
 	if (UConnectorBase::CanConnect(other))
 	{
-		if (!bIsSender && Connected.Num() > 0) //If female and already connected
+		if (!bIsSender && Connected.Num() > 0) //If receiver and already connected
 		{
 			return false;
 		}
@@ -59,7 +59,7 @@ TArray<FTorsor> UForceConnector::GetAllTorsors()
 	Torsors.Reserve(Connected.Num());
 	for (int32 i = 0; i < Connected.Num(); i++)
 	{
-		Torsors.Append(GetMaxTorsor((UForceConnector*)Connected[i]));
+		Torsors.Append(GetMaxTorsor(Cast<UForceConnector>(Connected[i])));
 	}
 	return Torsors;
 }
@@ -86,4 +86,19 @@ void UForceConnector::SendAllOrders(TArray<FTorsor>& Torsors, TArray<float>& Sca
 	{
 		SendOrder(CurrentStack, CurrentSource);
 	}
+}
+
+void UForceConnector::SetTorsors(TArray<FTorsor>& InMaxTorsors)
+{
+	MaxTorsors = InMaxTorsors;
+	for (int i = 0; i < MaxTorsors.Num(); ++i)
+	{
+		MaxTorsors[i].Source = this;
+		MaxTorsors[i].Index = i;
+	}
+}
+
+TArray<float> UForceConnector::GetLastOrder()
+{
+	return LastOrder;
 }

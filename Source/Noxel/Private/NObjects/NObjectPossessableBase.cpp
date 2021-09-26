@@ -17,7 +17,7 @@ ANObjectPossessableBase::ANObjectPossessableBase()
 	bReplicates = true;
 	SetReplicatingMovement(true);
 	staticMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Static Mesh"));
-	RootComponent = (USceneComponent*)staticMesh;
+	RootComponent = Cast<USceneComponent>(staticMesh);
 	staticMesh->bEditableWhenInherited = true;
 
 	nodesContainer = CreateDefaultSubobject<UNodesContainer>(TEXT("Nodes Container"));
@@ -74,12 +74,12 @@ bool ANObjectPossessableBase::OnNObjectAttach_Implementation(ANoxelPart* Part)
 	return false;
 }
 
-FString ANObjectPossessableBase::OnReadMetadata_Implementation()
+FJsonObjectWrapper ANObjectPossessableBase::OnReadMetadata_Implementation(const TArray<AActor*>& Components)
 {
-	return FString();
+	return FJsonObjectWrapper();
 }
 
-bool ANObjectPossessableBase::OnWriteMetadata_Implementation(const FString & Metadata)
+bool ANObjectPossessableBase::OnWriteMetadata_Implementation(const FJsonObjectWrapper & Metadata, const TArray<AActor*>& Components)
 {
 	return false;
 }

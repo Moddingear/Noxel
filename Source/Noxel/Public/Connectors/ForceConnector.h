@@ -21,44 +21,50 @@ struct NOXEL_API FTorsor
 	GENERATED_BODY()
 
 	UPROPERTY(BlueprintReadWrite)
-		FVector RelativeLocation;
+	FVector RelativeLocation;
 
 	UPROPERTY(BlueprintReadWrite)
-		FVector Force; //R
+	FVector Force; //R
 
 	UPROPERTY(BlueprintReadWrite)
-		FVector Torque; //M
+	FVector Torque; //M
 
 	UPROPERTY(BlueprintReadWrite)
-		UForceConnector* Source;
+	UForceConnector* Source;
 
 	UPROPERTY(BlueprintReadWrite)
-		float RangeMin;
+	int Index;
 
 	UPROPERTY(BlueprintReadWrite)
-		float RangeMax;
+	float RangeMin;
 
-	FTorsor()
-	{};
+	UPROPERTY(BlueprintReadWrite)
+	float RangeMax;
 
-	FTorsor(FVector ForceIn, FVector TorqueIn, class UForceConnector* SourceIn, float RangeMinIn, float RangeMaxIn)
-		:RelativeLocation(FVector::ZeroVector),
-		Force(ForceIn),
-		Torque(TorqueIn),
-		Source(SourceIn),
-		RangeMin(RangeMinIn),
-		RangeMax(RangeMaxIn)
+	FTorsor(): Source(nullptr), Index(INDEX_NONE), RangeMin(0), RangeMax(0)
+	{
+	}
+	;
+
+	FTorsor(FVector ForceIn, FVector TorqueIn, float RangeMinIn, float RangeMaxIn)
+		: RelativeLocation(FVector::ZeroVector),
+		  Force(ForceIn),
+		  Torque(TorqueIn),
+		  Source(nullptr), Index(INDEX_NONE),
+		  RangeMin(RangeMinIn),
+		  RangeMax(RangeMaxIn)
 	{
 	}
 
-	FTorsor(FVector RelativeLocationIn, FVector ForceIn, FVector TorqueIn, class UForceConnector* SourceIn, float RangeMinIn, float RangeMaxIn)
-		:RelativeLocation(RelativeLocationIn),
-		Force(ForceIn),
-		Torque(TorqueIn),
-		Source(SourceIn),
-		RangeMin(RangeMinIn),
-		RangeMax(RangeMaxIn)
-	{}
+	FTorsor(FVector RelativeLocationIn, FVector ForceIn, FVector TorqueIn, float RangeMinIn, float RangeMaxIn)
+		: RelativeLocation(RelativeLocationIn),
+		  Force(ForceIn),
+		  Torque(TorqueIn),
+		  Source(nullptr), Index(INDEX_NONE),
+		  RangeMin(RangeMinIn),
+		  RangeMax(RangeMaxIn)
+	{
+	}
 
 	bool IsNull()
 	{
@@ -183,7 +189,9 @@ protected:
 
 public:
 
-	void SendOrder(TArray<float> Order, UForceConnector* Target);
+	
+
+	void SendOrder(TArray<float>& Order, UForceConnector* Target);
 
 	TArray<FTorsor> GetMaxTorsor(UForceConnector* Target);
 
@@ -193,10 +201,18 @@ public:
 
 	void SendAllOrders(TArray<FTorsor>& Torsors, TArray<float>& Scalars);
 
-	UPROPERTY(BlueprintReadWrite)
+	private:
+	
+	UPROPERTY()
 	TArray<float> LastOrder;
 
-	UPROPERTY(BlueprintReadWrite)
+	UPROPERTY()
 	TArray<FTorsor> MaxTorsors;
+
+	public:
+	
+	void SetTorsors(TArray<FTorsor>& InMaxTorsors);
+
+	TArray<float> GetLastOrder();
 
 };

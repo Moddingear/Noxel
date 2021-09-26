@@ -23,12 +23,12 @@ bool INObjectInterface::OnNObjectAttach_Implementation(ANoxelPart * Part)
 	return false;
 }
 
-FString INObjectInterface::OnReadMetadata_Implementation()
+FJsonObjectWrapper INObjectInterface::OnReadMetadata_Implementation(const TArray<AActor*>& Components)
 {
-	return FString();
+	return FJsonObjectWrapper();
 }
 
-bool INObjectInterface::OnWriteMetadata_Implementation(const FString& Metadata)
+bool INObjectInterface::OnWriteMetadata_Implementation(const FJsonObjectWrapper& Metadata, const TArray<AActor*>& Components)
 {
 	return false;
 }

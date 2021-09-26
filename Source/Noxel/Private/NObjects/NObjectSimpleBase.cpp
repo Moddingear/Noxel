@@ -13,7 +13,7 @@ ANObjectSimpleBase::ANObjectSimpleBase()
 	bReplicates = true;
 	SetReplicatingMovement(true);
 	staticMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Static Mesh"));
-	RootComponent = (USceneComponent*)staticMesh;
+	RootComponent = Cast<USceneComponent>(staticMesh);
 	staticMesh->bEditableWhenInherited = true;
 
 	nodesContainer = CreateDefaultSubobject<UNodesContainer>(TEXT("Nodes Container"));
@@ -44,12 +44,12 @@ bool ANObjectSimpleBase::OnNObjectAttach_Implementation(ANoxelPart * Part)
 	return false;
 }
 
-FString ANObjectSimpleBase::OnReadMetadata_Implementation()
+FJsonObjectWrapper ANObjectSimpleBase::OnReadMetadata_Implementation(const TArray<AActor*>& Components)
 {
-	return FString();
+	return FJsonObjectWrapper();
 }
 
-bool ANObjectSimpleBase::OnWriteMetadata_Implementation(const FString & Metadata)
+bool ANObjectSimpleBase::OnWriteMetadata_Implementation(const FJsonObjectWrapper & Metadata, const TArray<AActor*>& Components)
 {
 	return false;
 }

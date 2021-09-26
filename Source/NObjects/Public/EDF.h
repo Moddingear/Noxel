@@ -3,7 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "NObjects/NObjectSimpleBase.h"
+#include "MovementNObject.h"
 #include "Connectors/ForceConnector.h"
 #include "EDF.generated.h"
 
@@ -11,7 +11,7 @@
  * 
  */
 UCLASS()
-class NOBJECTS_API AEDF : public ANObjectSimpleBase
+class NOBJECTS_API AEDF : public AMovementNObject
 {
 	GENERATED_BODY()
 
@@ -28,8 +28,6 @@ public:
 	UStaticMeshComponent* BladesTop;
 	UPROPERTY(BlueprintReadOnly)
 	UStaticMeshComponent* BladesBottom;
-	UPROPERTY(BlueprintReadOnly)
-	UForceConnector* ForceIn;
 
 	UPROPERTY(BlueprintReadWrite)
 	float MaxLift = 50000000.f;
@@ -49,8 +47,8 @@ public:
 	virtual void OnNObjectEnable_Implementation(UCraftDataHandler* Craft) override;
 	virtual void OnNObjectDisable_Implementation() override;
 
-	virtual FString OnReadMetadata_Implementation() override;
-	virtual bool OnWriteMetadata_Implementation(const FString& Metadata) override;
+	virtual FJsonObjectWrapper OnReadMetadata_Implementation(const TArray<AActor*>& Components) override;
+	virtual bool OnWriteMetadata_Implementation(const FJsonObjectWrapper& Metadata, const TArray<AActor*>& Components) override;
 
 	//Force Connector Interface
 	UFUNCTION()
