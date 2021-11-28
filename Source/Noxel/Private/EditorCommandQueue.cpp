@@ -492,7 +492,7 @@ int FEditorQueueOrderNodeAddRemove::GetArrayLength(FEditorQueue* Parent)
 bool FEditorQueueOrderNodeAddRemove::ExecuteInArray(FEditorQueue* Parent, int i)
 {
 	const int32 NodeToAddRemove = NodesToAddRemove[i];
-	if(Parent->NodeReferences.IsValidIndex(NodeToAddRemove))
+	if(Parent->NodeReferences.IsValidIndex(NodeToAddRemove) && Parent->NodeReferences[NodeToAddRemove].Object->IsPlayerEditable())
 	{
 		if (Add)
 		{
@@ -509,7 +509,7 @@ bool FEditorQueueOrderNodeAddRemove::ExecuteInArray(FEditorQueue* Parent, int i)
 bool FEditorQueueOrderNodeAddRemove::UndoInArray(FEditorQueue* Parent, int i)
 {
 	const int32 NodeToAddRemove = NodesToAddRemove[i];
-	if(Parent->NodeReferences.IsValidIndex(NodeToAddRemove))
+	if(Parent->NodeReferences.IsValidIndex(NodeToAddRemove) && Parent->NodeReferences[NodeToAddRemove].Object->IsPlayerEditable())
 	{
 		if (Add)
 		{
@@ -1150,8 +1150,7 @@ bool FEditorQueueOrderRemoveObject::ExecuteOrder(FEditorQueue* Parent)
 			ObjectTransform = ObjectToRemove->GetTransform();
 			if (ObjectToRemove->IsA<UNObjectInterface>())
 			{
-				INObjectInterface* Interface = Cast<INObjectInterface>(ObjectToRemove);
-				ObjectMetadata = Interface->OnReadMetadata();
+				ObjectMetadata = INObjectInterface::Execute_OnReadMetadata(ObjectToRemove, Craft->GetComponents());
 			}
 			ObjectClass = UNoxelDataAsset::getComponentIDFromClass(Craft->DataTable, ObjectToRemove->StaticClass());
 			return Craft->RemoveComponentIfUnconnected(ObjectToRemove);
@@ -1173,8 +1172,7 @@ bool FEditorQueueOrderRemoveObject::UndoOrder(FEditorQueue* Parent)
 			{
 				if (ObjectToRemove->IsA<UNObjectInterface>())
 				{
-					INObjectInterface* Interface = Cast<INObjectInterface>(ObjectToRemove);
-					Interface->OnWriteMetadata(ObjectMetadata);
+					INObjectInterface::Execute_OnWriteMetadata(ObjectToRemove, ObjectMetadata, Craft->GetComponents());
 				}
 				return true;
 			}

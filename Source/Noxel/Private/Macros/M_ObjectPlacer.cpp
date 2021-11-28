@@ -89,6 +89,22 @@ void AM_ObjectPlacer::rightClickPressed_Implementation()
 	}
 }
 
+FBox AM_ObjectPlacer::GetDefaultBounds(TSubclassOf<AActor> Class)
+{
+	TArray<UObject*> Sub;
+	Class->GetDefaultObjectSubobjects(Sub);
+	FBox DefBounds = FBox();
+	for (UObject* SubObj : Sub)
+	{
+		if (SubObj->IsA<UStaticMeshComponent>())
+		{
+			UStaticMeshComponent* SubMesh = Cast<UStaticMeshComponent>(SubObj);
+			DefBounds += SubMesh->GetStaticMesh()->GetBoundingBox().ShiftBy(SubMesh->GetRelativeLocation());
+		}
+	}
+	return DefBounds;
+}
+
 void AM_ObjectPlacer::ObjectSelected(FNoxelObjectData Object)
 {
 	SelectedObject = Object;
@@ -100,13 +116,19 @@ void AM_ObjectPlacer::ObjectSelected(FNoxelObjectData Object)
 	TSubclassOf<AActor> SpawnClass;
 	if (LoadObjectClassSynchronous(Object.Class, SpawnClass))
 	{
-		AActor* DefObj = SpawnClass->GetDefaultObject<AActor>();
+		FBox DefBounds = GetDefaultBounds(SpawnClass);
+		placementDistance = FMath::Max(DefBounds.GetSize().Size()*1.5f, 100.f);
+		/*AActor* DefObj = GetWorld()->SpawnActorDeferred<AActor>(SpawnClass, FTransform::Identity, this,
+			Cast<APawn>(GetOwningActor()), ESpawnActorCollisionHandlingMethod::AlwaysSpawn);
+		DefObj->SetReplicates(false);
+		DefObj->FinishSpawning(FTransform::Identity, true);
 		if (IsValid(DefObj))
 		{
 			DefObj->GetActorBounds(true, BoundsCenter, BoxExtent);
 			placementDistance = FMath::Max(BoxExtent.Size()*1.5f, 100.f);
 			UE_LOG(NoxelMacro, Log, TEXT("[AM_ObjectPlacer::ObjectSelected] Was able to get default object for placement distance"))
 		}
+		GetWorld()->DestroyActor(DefObj);*/
 	}
 	GetNoxelNetworkingAgent()->AddTempObject(onObjectDelegate, SpawnClass, FTransform(getObjectLocation()));
 }

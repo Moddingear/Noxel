@@ -56,6 +56,8 @@ public:
 
 	virtual void rightClickPressed_Implementation() override;
 
+	FBox GetDefaultBounds(TSubclassOf<AActor> Class);
+	
 	UFUNCTION(BlueprintCallable)
 	void ObjectSelected(FNoxelObjectData Object);
 
