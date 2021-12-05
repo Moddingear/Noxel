@@ -112,7 +112,6 @@ void AM_ObjectPlacer::ObjectSelected(FNoxelObjectData Object)
 	InventoryDisplayed = false;
 	FVector Location, Direction;
 	GetRayFromFollow(Location, Direction);
-	FVector BoxExtent;
 	TSubclassOf<AActor> SpawnClass;
 	if (LoadObjectClassSynchronous(Object.Class, SpawnClass))
 	{
@@ -146,17 +145,13 @@ bool AM_ObjectPlacer::LoadObjectClassSynchronous(TSoftClassPtr<AActor> SoftClass
 	{
 		if (SoftClass.IsPending())
 		{
-			// ReSharper disable once CppExpressionWithoutSideEffects
-			SoftClass.LoadSynchronous();
+			ObjectClass = SoftClass.LoadSynchronous();
+			return true;
 		}
 		if (SoftClass.IsValid())
 		{
-			UClass* ObjClass = SoftClass.Get();
-			if (IsValid(ObjClass))
-			{
-				ObjectClass = ObjClass;
-				return true;
-			}
+			ObjectClass = SoftClass.Get();
+			return true;
 		}
 	}
 	return false;
@@ -169,7 +164,13 @@ void AM_ObjectPlacer::onObjectCall(AActor* Actor)
 	if (!ObjectSpawned)
 	{
 		UE_LOG(Noxel, Log, TEXT("[AM_ObjectPlacer::onObjectCall] ObjectSpawned is invalid"));
+		return;
 	}
+	FVector BoxExtent;
+	Actor->GetActorBounds(false, BoundsCenter, BoxExtent);
+	BoundsCenter-= Actor->GetActorLocation();
+	placementDistance = FMath::Max(BoxExtent.Size()*1.5f, 100.f);
+	UE_LOG(NoxelMacro, Log, TEXT("[AM_ObjectPlacer::onObjectCall] Extent = %s; Center = %s "), *BoxExtent.ToString(), *BoundsCenter.ToString());
 }
 
 FVector AM_ObjectPlacer::getObjectLocation()
