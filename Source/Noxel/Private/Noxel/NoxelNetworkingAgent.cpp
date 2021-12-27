@@ -16,6 +16,8 @@ UNoxelNetworkingAgent::UNoxelNetworkingAgent()
 	// Set this component to be initialized when the game starts, and to be ticked every frame.  You can turn these features
 	// off to improve performance if you don't need them.
 	SetIsReplicatedByDefault(true);
+	QueuesBufferSize = 0;
+	UndoIndex = -1;
 	PrimaryComponentTick.bCanEverTick = true;
 	PrimaryComponentTick.TickInterval = 1;
 	static ConstructorHelpers::FObjectFinder<UDataTable> DataConstructor(OBJECTLIBRARY_PATH);
@@ -24,6 +26,15 @@ UNoxelNetworkingAgent::UNoxelNetworkingAgent()
 	}
 	TempObjects.Init(nullptr, 10);
 	// ...
+}
+
+UNoxelNetworkingAgent::~UNoxelNetworkingAgent()
+{
+	for (int i = QueuesBuffer.Num() - 1; i >= 0; --i)
+	{
+		delete QueuesBuffer[i];
+	}
+	QueuesBuffer.Empty();
 }
 
 
@@ -95,11 +106,25 @@ void UNoxelNetworkingAgent::TickComponent(float DeltaTime, ELevelTick TickType, 
 
 void UNoxelNetworkingAgent::AddQueueToBuffer(FEditorQueue* Queue)
 {
-	if (QueuesBuffer.Num() == NOXELEDITORQUEUEBUFFERLENGTH)
+	unsigned long NQSize = Queue->GetSize();
+	int delidx = 0;
+	while (QueuesBufferSize + NQSize > NOXELEDITORQUEUEBUFFERMAXSIZE)
 	{
-		delete QueuesBuffer[0];
-		QueuesBuffer.RemoveAt(0);
+		if (!QueuesBuffer.IsValidIndex(delidx))
+		{
+			break;
+		}
+		if (QueuesWaiting.Contains(QueuesBuffer[delidx]->OrderNumber))
+		{
+			delidx++;
+			continue;
+		}
+		QueuesBufferSize -= QueuesBuffer[delidx]->GetSize();
+		delete QueuesBuffer[delidx];
+		QueuesBuffer.RemoveAt(delidx);
 	}
+	QueuesBufferSize += NQSize;
+	UE_LOG(NoxelDataNetwork, Log, TEXT("Buffer size is now %uld"), QueuesBufferSize);
 	QueuesBuffer.Add(Queue);
 }
 
@@ -109,6 +134,7 @@ void UNoxelNetworkingAgent::RemoveQueueFromBuffer(int32 OrderIndex)
 	{
 		if (QueuesBuffer[i]->OrderNumber == OrderIndex)
 		{
+			QueuesBufferSize -= QueuesBuffer[i]->GetSize();
 			delete QueuesBuffer[i];
 			QueuesBuffer.RemoveAt(i);
 			return;
@@ -134,9 +160,9 @@ void UNoxelNetworkingAgent::UndoWaitingQueues()
 	for (int i = QueuesWaiting.Num() - 1; i >= 0; --i)
 	{
 		FEditorQueue* Queue;
-		if(GetQueueFromBuffer(QueuesWaiting[i], &Queue))
+		if(GetQueueFromBuffer(QueuesWaiting[i].QueueIndex, &Queue))
 		{
-			Queue->UndoQueue();
+			Queue->RunQueue(!QueuesWaiting[i].WaitingDirection);
 		}
 	}
 }
@@ -146,9 +172,9 @@ void UNoxelNetworkingAgent::RedoWaitingQueues()
 	for (int i = 0; i < QueuesWaiting.Num(); ++i)
 	{
 		FEditorQueue* Queue;
-		if(GetQueueFromBuffer(QueuesWaiting[i], &Queue))
+		if(GetQueueFromBuffer(QueuesWaiting[i].QueueIndex, &Queue))
 		{
-			Queue->ExecuteQueue();
+			Queue->RunQueue(QueuesWaiting[i].WaitingDirection);
 		}
 	}
 }
@@ -232,7 +258,7 @@ void UNoxelNetworkingAgent::SendCommandQueue(FEditorQueue* Queue)
 	if (bValid)
 	{
 		UseReservedPanels(Queue->GetReservedPanelsUsed());
-		QueuesWaiting.Add(Queue->OrderNumber);
+		QueuesWaiting.Add(FWaitingQueue(Queue->OrderNumber, true));
 		FEditorQueueNetworkable Networkable;
 		if (Queue->ToNetworkable(Networkable))
 		{
@@ -246,6 +272,47 @@ void UNoxelNetworkingAgent::SendCommandQueue(FEditorQueue* Queue)
             }
 		}
 	}
+}
+
+
+bool UNoxelNetworkingAgent::CanUndoRedo(bool Redo)
+{
+	if (!Redo)
+	{
+		if (UndoIndex >= 0)
+		{
+			return true;
+		}
+	}
+	else
+	{
+		if (UndoIndex < UndoOrder.Num() - 1)
+		{
+			return true;
+		}
+	}
+	return false;
+}
+
+bool UNoxelNetworkingAgent::UndoRedo(bool Redo)
+{
+	if (!CanUndoRedo(Redo))
+	{
+		return false;
+	}
+	FEditorQueue* Queue;
+	if (!GetQueueFromBuffer(UndoOrder[UndoIndex + Redo], &Queue))
+	{
+		return false;
+	}
+	if(!Queue->RunQueue(Redo))
+	{
+		return false;
+	}
+	QueuesWaiting.Add(FWaitingQueue(Queue->OrderNumber, Redo));
+	ServerUndoRedo(UndoOrder[UndoIndex + Redo], Redo);
+	UndoIndex += Redo ? 1 : -1;
+	return true;
 }
 
 void UNoxelNetworkingAgent::ServerReceiveCommandQueue_Implementation(FEditorQueueNetworkable Networkable)
@@ -262,7 +329,7 @@ void UNoxelNetworkingAgent::ServerReceiveCommandQueue_Implementation(FEditorQueu
 	
 	if (bValid)
 	{
-		QueuesWaiting.Add(Queue->OrderNumber);
+		QueuesWaiting.Add(FWaitingQueue(Queue->OrderNumber, true));
 		ClientsReceiveCommandQueue(Networkable);
 		AddQueueToBuffer(Queue);
 	}
@@ -283,9 +350,14 @@ bool UNoxelNetworkingAgent::ServerReceiveCommandQueue_Validate(FEditorQueueNetwo
 
 void UNoxelNetworkingAgent::ClientsReceiveCommandQueue_Implementation(FEditorQueueNetworkable Networkable)
 {
-	if (QueuesWaiting.Contains(Networkable.OrderNumber))
+	int32 OrderNumber = Networkable.OrderNumber;
+	int index = QueuesWaiting.IndexOfByPredicate([OrderNumber](FWaitingQueue wait){return wait.QueueIndex == OrderNumber;});
+	if (index != INDEX_NONE )
 	{
-		QueuesWaiting.Remove(Networkable.OrderNumber);
+		QueuesWaiting.RemoveAt(index);
+		UndoOrder.SetNum(UndoIndex + 2);
+		UndoOrder[UndoIndex+1] = Networkable.OrderNumber;
+		UndoIndex++;
 	}
 	else
 	{
@@ -309,7 +381,11 @@ void UNoxelNetworkingAgent::ClientsReceiveCommandQueue_Implementation(FEditorQue
 
 void UNoxelNetworkingAgent::ClientRectifyCommandQueue_Implementation(int32 IndexToRectify, bool ShouldExecute)
 {
-	QueuesWaiting.Remove(IndexToRectify);
+	int index = QueuesWaiting.IndexOfByPredicate([IndexToRectify](FWaitingQueue wait){return wait.QueueIndex == IndexToRectify;});
+	if (index != INDEX_NONE )
+	{
+		QueuesWaiting.RemoveAt(index);
+	}
 	FEditorQueue* Queue;
 	if(GetQueueFromBuffer(IndexToRectify, &Queue))
 	{
@@ -323,6 +399,7 @@ void UNoxelNetworkingAgent::ClientRectifyCommandQueue_Implementation(int32 Index
 		{
 			UseReservedPanels(Queue->GetReservedPanelsUsed()); //Can get reserved panels after doing
 		}
+		RemoveQueueFromBuffer(IndexToRectify);
 	}
 }
 
