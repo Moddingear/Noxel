@@ -362,6 +362,18 @@ TArray<FPanelID> FEditorQueue::GetReservedPanelsUsed()
 	return Used;
 }
 
+unsigned long FEditorQueue::GetSize()
+{
+	unsigned long OrdersSize = 0;
+	for (FEditorQueueOrderTemplate* Order : Orders)
+	{
+		OrdersSize += Order->GetSize();
+	}
+	return sizeof(FEditorQueue) + Orders.GetAllocatedSize()
+	+ NodeReferences.GetAllocatedSize() + PanelReferences.GetAllocatedSize()
+	+ OrdersSize;
+}
+
 bool FEditorQueueOrderArrayTemplate::ExecuteOrder(FEditorQueue* Parent)
 {
 	if (PreArray(Parent))
@@ -479,6 +491,11 @@ FString FEditorQueueOrderNodeReference::ToString()
 	return FEditorQueueOrderTemplate::ToString() + FString::Printf(TEXT("; ContainerName = (%s), Vectors : "), *Container->GetName()) + LocString;
 }
 
+unsigned long FEditorQueueOrderNodeReference::GetSize()
+{
+	return sizeof(FEditorQueueOrderNodeReference) + Locations.GetAllocatedSize();
+}
+
 bool FEditorQueueOrderNodeAddRemove::PreArray(FEditorQueue* Parent)
 {
 	return true;
@@ -554,6 +571,11 @@ TArray<UNoxelDataComponent*> FEditorQueueOrderNodeAddRemove::GetAffectedDataComp
 FString FEditorQueueOrderNodeAddRemove::ToString()
 {
 	return FEditorQueueOrderTemplate::ToString() + FString::Printf(TEXT("; Add =  %d, NodeToAddRemove.Num() = (%d)"), Add, NodesToAddRemove.Num());
+}
+
+unsigned long FEditorQueueOrderNodeAddRemove::GetSize()
+{
+	return sizeof(FEditorQueueOrderNodeAddRemove) + NodesToAddRemove.GetAllocatedSize();
 }
 
 bool FEditorQueueOrderNodeDisConnect::PreArray(FEditorQueue* Parent)
@@ -664,6 +686,11 @@ FString FEditorQueueOrderNodeDisConnect::ToString()
 	return FEditorQueueOrderTemplate::ToString() + FString::Printf(TEXT("; Connections : %s"), *Connections);
 }
 
+unsigned long FEditorQueueOrderNodeDisConnect::GetSize()
+{
+	return sizeof(FEditorQueueOrderNodeDisConnect) + Nodes.GetAllocatedSize() + Panels.GetAllocatedSize();
+}
+
 bool FEditorQueueOrderPanelReference::ExecuteOrder(FEditorQueue* Parent)
 {
 	for (int i = 0; i < PanelIndices.Num(); ++i)
@@ -720,6 +747,11 @@ FString FEditorQueueOrderPanelReference::ToString()
 		PanelIndicesString += FString::Printf(TEXT("%d; "), PanelIndices[i]);
 	}
 	return FEditorQueueOrderTemplate::ToString() + FString::Printf(TEXT("; Container = %s; PanelIndices.Num() = %d; PanelIndices : %s"), *Container->GetName(), PanelIndices.Num(), *PanelIndicesString);
+}
+
+unsigned long FEditorQueueOrderPanelReference::GetSize()
+{
+	return sizeof(FEditorQueueOrderPanelReference) + PanelIndices.GetAllocatedSize();
 }
 
 bool FEditorQueueOrderPanelAddRemove::PreArray(FEditorQueue* Parent)
@@ -820,6 +852,11 @@ TArray<FPanelID> FEditorQueueOrderPanelAddRemove::GetReservedPanelsUsed(FEditorQ
 	return Used;
 }
 
+unsigned long FEditorQueueOrderPanelAddRemove::GetSize()
+{
+	return sizeof(FEditorQueueOrderPanelAddRemove) + PanelIndexRef.GetAllocatedSize();
+}
+
 bool FEditorQueueOrderPanelProperties::PreArray(FEditorQueue* Parent)
 {
 	const int32 NumPanels = GetArrayLength(Parent);
@@ -905,6 +942,13 @@ FString FEditorQueueOrderPanelProperties::ToString()
 	}
 	return FEditorQueueOrderTemplate::ToString() + FString::Printf(TEXT("; ThicknessNormal = %f; ThicknessAntiNormal = %f; Virtual = %s; PanelIndexRef.Num() = %d : {%s}"),
 		ThicknessNormalAfter, ThicknessAntiNormalAfter, VirtualAfter ? TEXT("True") : TEXT("False"), PanelIndexRef.Num(), *PanelRefString);
+}
+
+unsigned long FEditorQueueOrderPanelProperties::GetSize()
+{
+	return sizeof(FEditorQueueOrderPanelProperties)
+	+ PanelIndexRef.GetAllocatedSize() + VirtualBefore.GetAllocatedSize()
+	+ ThicknessNormalBefore.GetAllocatedSize() + ThicknessAntiNormalBefore.GetAllocatedSize();
 }
 
 bool FEditorQueueOrderConnectorDisConnect::PreArray(FEditorQueue* Parent)
@@ -1001,6 +1045,11 @@ FString FEditorQueueOrderConnectorDisConnect::ToString()
 		A.Num(), B.Num(), *ABString);
 }
 
+unsigned long FEditorQueueOrderConnectorDisConnect::GetSize()
+{
+	return sizeof(FEditorQueueOrderConnectorDisConnect) + A.GetAllocatedSize() + B.GetAllocatedSize();
+}
+
 bool FEditorQueueOrderAddObject::ExecuteOrder(FEditorQueue* Parent)
 {
 	if (IsValid(Craft))
@@ -1082,6 +1131,11 @@ FString FEditorQueueOrderAddObject::ToString()
 		TEXT("; Craft@%p; ObjectClass = %s; ObjectTransform = %s"), Craft, *ObjectClass, *ObjectTransform.ToHumanReadableString());
 }
 
+unsigned long FEditorQueueOrderAddObject::GetSize()
+{
+	return sizeof(FEditorQueueOrderAddObject) + ObjectClass.GetAllocatedSize();
+}
+
 bool FEditorQueueOrderMoveObject::ExecuteOrder(FEditorQueue* Parent)
 {
 	if (!IsValid(Craft) || !IsValid(ObjectToMove))
@@ -1139,6 +1193,11 @@ FString FEditorQueueOrderMoveObject::ToString()
 {
 	return FEditorQueueOrderTemplate::ToString()
 	+ FString::Printf(TEXT("; Craft@%p; ObjectToMove@%p; NewObjectTransform = %s"), Craft, ObjectToMove, *NewObjectTransform.ToString());
+}
+
+unsigned long FEditorQueueOrderMoveObject::GetSize()
+{
+	return sizeof(FEditorQueueOrderMoveObject);
 }
 
 bool FEditorQueueOrderRemoveObject::ExecuteOrder(FEditorQueue* Parent)
@@ -1211,4 +1270,9 @@ FString FEditorQueueOrderRemoveObject::ToString()
 {
 	return FEditorQueueOrderTemplate::ToString()
     + FString::Printf(TEXT("; Craft@%p; ObjectToRemove@%p"), Craft, ObjectToRemove);
+}
+
+unsigned long FEditorQueueOrderRemoveObject::GetSize()
+{
+	return sizeof(FEditorQueueOrderRemoveObject) + ObjectClass.GetAllocatedSize() + ObjectMetadata.JsonString.GetAllocatedSize();
 }

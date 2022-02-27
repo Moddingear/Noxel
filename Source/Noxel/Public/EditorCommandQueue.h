@@ -265,6 +265,8 @@ struct NOXEL_API FEditorQueue
 
 	//Returns the reserved panels that were used in the Execute direction
 	TArray<FPanelID> GetReservedPanelsUsed();
+
+	unsigned long GetSize();
 };
 
 
@@ -317,6 +319,11 @@ struct NOXEL_API FEditorQueueOrderTemplate
 	virtual TArray<FPanelID> GetReservedPanelsUsed(FEditorQueue* Parent)
 	{
 		return {};
+	}
+
+	virtual unsigned long GetSize()
+	{
+		return sizeof(FEditorQueueOrderTemplate);
 	}
 };
 
@@ -389,6 +396,8 @@ struct NOXEL_API FEditorQueueOrderNodeReference : public FEditorQueueOrderTempla
 	virtual TArray<UNoxelDataComponent*> GetAffectedDataComponents(FEditorQueue* Parent) override;
 
 	virtual FString ToString() override;
+
+	virtual unsigned long GetSize() override;
 };
 
 //Adds or removes a number of nodes already referenced
@@ -426,6 +435,8 @@ struct NOXEL_API FEditorQueueOrderNodeAddRemove : public FEditorQueueOrderArrayT
 	virtual TArray<UNoxelDataComponent*> GetAffectedDataComponents(FEditorQueue* Parent) override;
 
 	virtual FString ToString() override;
+
+	virtual unsigned long GetSize() override;
 
 };
 
@@ -466,6 +477,8 @@ struct NOXEL_API FEditorQueueOrderNodeDisConnect : public FEditorQueueOrderArray
 
 	virtual FString ToString() override;
 
+	virtual unsigned long GetSize() override;
+
 };
 
 //Creates the references to panels belonging to one NoxelContainer
@@ -497,6 +510,9 @@ struct NOXEL_API FEditorQueueOrderPanelReference : public FEditorQueueOrderTempl
 	virtual TArray<UNoxelDataComponent*> GetAffectedDataComponents(FEditorQueue* Parent) override;
 
 	virtual FString ToString() override;
+
+	virtual unsigned long GetSize() override;
+	
 };
 
 //Adds or removes a number of panels already referenced
@@ -536,6 +552,8 @@ struct NOXEL_API FEditorQueueOrderPanelAddRemove : public FEditorQueueOrderArray
 	virtual FString ToString() override;
 
 	virtual TArray<FPanelID> GetReservedPanelsUsed(FEditorQueue* Parent) override;
+
+	virtual unsigned long GetSize() override;
 };
 
 //Sets new data to a number of panels
@@ -581,6 +599,8 @@ struct NOXEL_API FEditorQueueOrderPanelProperties : public FEditorQueueOrderArra
 	virtual TArray<UNoxelDataComponent*> GetAffectedDataComponents(FEditorQueue* Parent) override;
 
 	virtual FString ToString() override;
+
+	virtual unsigned long GetSize() override;
 };
 
 //Connects or disconnects a number of connectors
@@ -615,6 +635,8 @@ struct NOXEL_API FEditorQueueOrderConnectorDisConnect : public FEditorQueueOrder
 	virtual bool FromNetworkable(FEditorQueueNetworkable* Parent, int32 OrderIndex) override;
 
 	virtual FString ToString() override;
+
+	virtual unsigned long GetSize() override;
 };
 
 struct NOXEL_API FEditorQueueOrderAddObject : public FEditorQueueOrderTemplate
@@ -644,6 +666,8 @@ struct NOXEL_API FEditorQueueOrderAddObject : public FEditorQueueOrderTemplate
 	virtual bool FromNetworkable(FEditorQueueNetworkable* Parent, int32 OrderIndex) override;
 
 	virtual FString ToString() override;
+
+	virtual unsigned long GetSize() override;
 };
 
 struct NOXEL_API FEditorQueueOrderMoveObject : public FEditorQueueOrderTemplate
@@ -673,6 +697,8 @@ struct NOXEL_API FEditorQueueOrderMoveObject : public FEditorQueueOrderTemplate
 	virtual bool FromNetworkable(FEditorQueueNetworkable* Parent, int32 OrderIndex) override;
 
 	virtual FString ToString() override;
+
+	virtual unsigned long GetSize() override;
 };
 
 struct NOXEL_API FEditorQueueOrderRemoveObject : public FEditorQueueOrderTemplate
@@ -703,6 +729,8 @@ struct NOXEL_API FEditorQueueOrderRemoveObject : public FEditorQueueOrderTemplat
 	virtual bool FromNetworkable(FEditorQueueNetworkable* Parent, int32 OrderIndex) override;
 
 	virtual FString ToString() override;
+
+	virtual unsigned long GetSize() override;
 };
 
 

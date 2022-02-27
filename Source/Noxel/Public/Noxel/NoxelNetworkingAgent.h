@@ -19,7 +19,7 @@
 #include "Components/ActorComponent.h"
 #include "NoxelNetworkingAgent.generated.h"
 
-#define NOXELEDITORQUEUEBUFFERLENGTH 256
+#define NOXELEDITORQUEUEBUFFERMAXSIZE (1024*1024*1024) //1GB
 
 UENUM()
 enum class EVoxelOperation : uint8
@@ -37,6 +37,23 @@ enum class EObjectOperation : uint8
 	Resign				UMETA(DisplayName = "Resign ownership")
 };
 
+USTRUCT()
+struct FWaitingQueue
+{
+	GENERATED_BODY()
+
+	int32 QueueIndex;
+	bool WaitingDirection; //true for Execute
+
+	FWaitingQueue()
+		:QueueIndex(-1), WaitingDirection(true)
+	{}
+
+	FWaitingQueue(int32 InQueueIndex, bool InWaitingDirection)
+		:QueueIndex(InQueueIndex), WaitingDirection(InWaitingDirection)
+	{}
+};
+
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FObjectPermissionDelegate, AActor*, Actor);
 
 UCLASS(ClassGroup = "Noxel", meta=(BlueprintSpawnableComponent) )
@@ -47,6 +64,7 @@ class NOXEL_API UNoxelNetworkingAgent : public UActorComponent
 public:	
 	// Sets default values for this component's properties
 	UNoxelNetworkingAgent();
+	~UNoxelNetworkingAgent();
 
 	AActor* OwnedActor;
 	UDataTable* DataTable;
@@ -60,7 +78,7 @@ protected:
 	TMap<int32, FObjectPermissionDelegate> ObjectCallbacks;
 	TMap<int32, int32> ObjectsWaiting; //Link TempObject indices to callbacks indices
 
-	TArray<int32> QueuesWaiting;
+	TArray<FWaitingQueue> QueuesWaiting;
 
 	TMap<UNoxelContainer*, TArray<int32>> ReservedPanels;
 	TArray<UNoxelContainer*> ReservedWaiting;
@@ -68,7 +86,11 @@ public:
 	UPROPERTY(ReplicatedUsing= OnRep_TempObjects)
 	TArray<AActor*> TempObjects;
 private:
-	TArray<FEditorQueue*, TInlineAllocator<NOXELEDITORQUEUEBUFFERLENGTH>> QueuesBuffer;
+	unsigned long QueuesBufferSize;
+	TArray<FEditorQueue*> QueuesBuffer;
+
+	TArray<int32> UndoOrder; //added from first to last action done, when undoing should undo the last
+	int32 UndoIndex;
 	
 	int32 NextQueueIndex = 0;
 
@@ -103,6 +125,10 @@ public:
 	//client executes the queue, if valid sends it 
 	void SendCommandQueue(FEditorQueue* Queue);
 
+	bool CanUndoRedo(bool Redo);
+	
+	bool UndoRedo(bool Redo);
+
 private:
 	//Send to server to check
 	UFUNCTION(Server, Reliable, WithValidation)
@@ -115,6 +141,15 @@ private:
 	//Client was wrong, should undo
 	UFUNCTION(Client, Reliable)
 	void ClientRectifyCommandQueue(int32 IndexToRectify, bool ShouldExecute);
+
+	UFUNCTION(Server, Reliable, WithValidation)
+	void ServerUndoRedo(int32 OrderIndex, bool Redo);
+
+	UFUNCTION(NetMulticast, Reliable)
+	void ClientsUndoRedo(int32 OrderIndex, bool Redo);
+
+	UFUNCTION(Client, Reliable)
+	void ClientRectifyUndoRedo(int32 OrderIndex, bool Redo);
 	
 public:
 
