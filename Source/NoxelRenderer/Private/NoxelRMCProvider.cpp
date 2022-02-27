@@ -179,6 +179,81 @@ bool UNoxelRMCProvider::PlaneFit(UPARAM(ref) TArray<FVector>& Points, FVector & 
 	return true;
 }
 
+FRuntimeMeshCollisionBox UNoxelRMCProvider::BoxFit(FNoxelRendererPanelData& Panel, TArray<FVector>& TempNodes)
+{
+	int NumNodes = Panel.Nodes.Num();
+	
+	FVector Axis1 = Panel.Normal * (Panel.ThicknessNormal + Panel.ThicknessAntiNormal);
+	FVector Axis1Normalized = Panel.Normal;
+	FVector Axis1Center = Panel.Center + Panel.Normal * (Panel.ThicknessNormal-Panel.ThicknessAntiNormal);
+	
+	FVector Axis2Normalized = FVector::ZeroVector;
+	float MinAxis2 =0;
+	float MaxAxis2 =0;
+	
+	FVector Axis3Normalized = Axis1Normalized ^ Axis2Normalized;
+	float MinAxis3 =0;
+	float MaxAxis3 =0;
+
+	float Area = +INFINITY;
+
+	for (int j = 0; j < NumNodes; ++j)
+	{
+		FVector Side = TempNodes[Panel.Nodes[j]] - TempNodes[Panel.Nodes[(j+1)%NumNodes]];
+		FVector LocalAxis2Normalized = (Side - Axis1Normalized * FVector::DotProduct(Side, Axis1Normalized)).GetSafeNormal();
+		float LocalMinAxis2 = +INFINITY, LocalMaxAxis2 = -INFINITY;
+	
+		FVector LocalAxis3Normalized = Axis1Normalized ^ LocalAxis2Normalized;
+		float LocalMinAxis3 = +INFINITY, LocalMaxAxis3 = -INFINITY;
+		
+		for (int i = 0; i < NumNodes; ++i)
+		{
+			FVector nodepos = TempNodes[Panel.Nodes[i]];
+			
+			float PosAxis2 = FVector::DotProduct(nodepos, LocalAxis2Normalized);
+			if (PosAxis2 < LocalMinAxis2)
+			{
+				LocalMinAxis2 = PosAxis2;
+			}
+			if (PosAxis2 > LocalMaxAxis2)
+			{
+				LocalMaxAxis2 = PosAxis2;
+			}
+			
+			float PosAxis3 = FVector::DotProduct(nodepos, LocalAxis3Normalized);
+			if (PosAxis3 < LocalMinAxis3)
+			{
+				LocalMinAxis3 = PosAxis3;
+			}
+			if (PosAxis3 > LocalMaxAxis3)
+			{
+				LocalMaxAxis3 = PosAxis3;
+			}
+		}
+
+		float LocalArea = (LocalMaxAxis2 - LocalMinAxis2) * (LocalMaxAxis3 - LocalMinAxis3);
+
+		if (LocalArea < Area)
+		{
+			Area = LocalArea;
+			Axis2Normalized = LocalAxis2Normalized;
+			MinAxis2 = LocalMinAxis2;
+			MaxAxis2 = LocalMaxAxis2;
+	
+			Axis3Normalized = LocalAxis3Normalized;
+			MinAxis3 = LocalMinAxis3;
+			MaxAxis3 = LocalMaxAxis3;
+		}
+	}
+	FRotator BoxRotation = UKismetMathLibrary::MakeRotationFromAxes(Axis2Normalized, Axis3Normalized, Axis1Normalized);
+	FVector BoxCenter = Axis1Normalized * FVector::DotProduct(Axis1Center, Axis1Normalized)
+		+Axis2Normalized * (MinAxis2 + MaxAxis2)/2.f
+		+Axis3Normalized * (MinAxis3 + MaxAxis3)/2.f;
+	FVector BoxExtents = FVector(MaxAxis2 - MinAxis2, MaxAxis3 - MinAxis3, Axis1.Size());
+	//DrawDebugBox(GetWorld(), BoxCenter, BoxExtents/2, BoxRotation.Quaternion(), FColor::White, true);
+	return FRuntimeMeshCollisionBox(BoxCenter, BoxRotation, BoxExtents);
+}
+
 bool UNoxelRMCProvider::ReorderNodes(UPARAM(ref) TArray<FVector>& Points, FVector PlaneCentroid, FVector PlaneNormal, TArray<int32>& OutNewIndex)
 {
 	if (Points.Num() < 1)
@@ -239,13 +314,13 @@ void UNoxelRMCProvider::GetShapeParams(TArray<FVector>& OutNodes, TArray<FNoxelR
 
 void UNoxelRMCProvider::MarkCacheDirty()
 {
-	FScopeLock Lock(&CacheSyncRoot);
+	FRWScopeLock Lock(CacheSyncRoot, FRWScopeLockType::SLT_Write);
 	bIsCacheDirty = true;
 }
 
 bool UNoxelRMCProvider::GetCachedData(TArray<FNoxelRendererBakedIntersectionData>& OutIntersectionData)
 {
-	FScopeLock Lock(&CacheSyncRoot);
+	FRWScopeLock Lock(CacheSyncRoot, FRWScopeLockType::SLT_ReadOnly);
 	OutIntersectionData = CachedIntersectionData;
 	return !bIsCacheDirty;
 }
@@ -400,7 +475,7 @@ void UNoxelRMCProvider::MakeCacheIfDirty()
 		AllPanelsIntersections.Emplace(ThisPanelIntersections);
 	}
 
-	FScopeLock Lock(&CacheSyncRoot);
+	FRWScopeLock Lock(CacheSyncRoot, FRWScopeLockType::SLT_Write);
 	CachedIntersectionData = AllPanelsIntersections;
 	bIsCacheDirty = false;
 }
@@ -634,10 +709,20 @@ bool UNoxelRMCProvider::GetSectionMeshForLOD(int32 LODIndex, int32 SectionId, FR
 
 FRuntimeMeshCollisionSettings UNoxelRMCProvider::GetCollisionSettings()
 {
+	TArray<FVector> TempNodes;
+	TArray<FNoxelRendererPanelData> TempPanels;
+	GetShapeParams(TempNodes, TempPanels);
 	FRuntimeMeshCollisionSettings Settings;
 	Settings.bUseAsyncCooking = true;
-	Settings.bUseComplexAsSimple = true;
-	//TODO : Simple collision for the panels (box fit)
+	Settings.bUseComplexAsSimple = false;
+
+	TArray<FRuntimeMeshCollisionBox>& CollisionBoxes = Settings.Boxes;
+	CollisionBoxes.Reserve(TempPanels.Num());
+	//FlushPersistentDebugLines(GetWorld());
+	for (int i = 0; i < TempPanels.Num(); ++i)
+	{
+		CollisionBoxes.Add(BoxFit(TempPanels[i], TempNodes));
+	}
 	return Settings;
 }
 

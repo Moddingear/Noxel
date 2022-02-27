@@ -39,7 +39,7 @@ void ANoxelHangarBase::BeginPlay()
 	{
 		UE_LOG(Noxel, Log, TEXT("[ANoxelHangarBase::BeginPlay] Loading default craft"));
         Craft->SpawnContext = ECraftSpawnContext::Editor;
-        Craft->loadCraft(Craft->GetDefaultCraftSave(), FTransform(FVector(0,0,100)));
+        Craft->loadCraft(Craft->GetDefaultCraftSave(), FTransform(FVector(0,0,0)));
         UE_LOG(Noxel, Log, TEXT("[ANoxelHangarBase::BeginPlay] %s : %d components"), *Craft->GetFullName(), Craft->Components.Num());
     
         AGameStateBase* gs = GetWorld()->GetGameState();

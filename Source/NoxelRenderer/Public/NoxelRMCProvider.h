@@ -19,7 +19,7 @@ private:
 
 	UMaterialInterface* NoxelMaterial;
 
-	mutable FCriticalSection CacheSyncRoot;
+	mutable FRWLock CacheSyncRoot;
 	//Should cache be rebuilt ?
 	bool bIsCacheDirty;
 	//Cached intersection data, needed for LODs 0 and 1
@@ -57,6 +57,10 @@ public:
 	UFUNCTION(BlueprintCallable)
 	//PlaneLocation is the centroid
 	static bool PlaneFit(UPARAM(ref) TArray<FVector>& Points, FVector& OutPlaneLocation, FVector& OutPlaneNormal);
+
+	UFUNCTION(BlueprintCallable)
+	//Fit a box around the panel, with all points inside the box, of thickness greater or equal to that of the sides
+	FRuntimeMeshCollisionBox BoxFit(UPARAM(ref) FNoxelRendererPanelData& Panel, UPARAM(ref) TArray<FVector>& TempNodes);
 
 	//OutNewIndex contains at position [i] the index of the node that should be at position i
 	UFUNCTION(BlueprintCallable)

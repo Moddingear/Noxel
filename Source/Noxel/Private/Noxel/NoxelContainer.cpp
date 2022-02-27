@@ -584,7 +584,8 @@ bool UNoxelContainer::IsConnected()
 
 bool UNoxelContainer::CheckDataValidity()
 {
-	for (int32 PanelIdx : DifferedPanels)
+	TArray<int32> diffcopy(DifferedPanels);
+	for (int32 PanelIdx : diffcopy)
 	{
 		if (!FinishAddPanel(PanelIdx))
 		{
