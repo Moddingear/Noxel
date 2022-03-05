@@ -8,20 +8,21 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="2ed74af6-b6bf-4ba9-87d3-bee0bfad75bf" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/.idea/.idea.Noxel.dir/.idea/vcs.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/.idea.Noxel.dir/.idea/vcs.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/.idea.Noxel.dir/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/.idea.Noxel.dir/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/Noxel/Private/Noxel/NoxelContainer.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/Noxel/Private/Noxel/NoxelContainer.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/Noxel/Private/NoxelHangarBase.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/Noxel/Private/NoxelHangarBase.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/NoxelRenderer/Private/NoxelRMCProvider.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/NoxelRenderer/Private/NoxelRMCProvider.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/NoxelRenderer/Public/NoxelRMCProvider.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/NoxelRenderer/Public/NoxelRMCProvider.h" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
     <option name="LAST_RESOLUTION" value="IGNORE" />
   </component>
-  <component name="HighlightingSettingsPerFile">
-    <setting file="file://C:/Program Files (x86)/Windows Kits/10/Include/10.0.17763.0/ucrt/corecrt_math.h" root0="SKIP_HIGHLIGHTING" />
+  <component name="Git.Settings">
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+  </component>
+  <component name="IdeDocumentHistory">
+    <changedPaths>
+      <option value="$PROJECT_DIR$/Source/Noxel/Public/Tests/BruteForceSolver.h" />
+      <option value="$PROJECT_DIR$/Source/Noxel/Public/Tests/BruteForceSolver.cpp" />
+    </changedPaths>
   </component>
   <component name="MarkdownSettingsMigration">
     <option name="stateVersion" value="1" />
