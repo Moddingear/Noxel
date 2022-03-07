@@ -10,6 +10,16 @@
 #include "Engine/DemoNetDriver.h"
 #include "NObjects/NoxelPart.h"
 
+bool FWaitingQueue::operator==(const FWaitingQueue rhs)
+{
+	return QueueIndex == rhs.QueueIndex && WaitingDirection == rhs.WaitingDirection;
+}
+
+bool FWaitingQueue::operator==(const int32 rhs) const
+{
+	return QueueIndex == rhs;
+}
+
 // Sets default values for this component's properties
 UNoxelNetworkingAgent::UNoxelNetworkingAgent()
 {
@@ -296,7 +306,8 @@ bool UNoxelNetworkingAgent::CanUndoRedo(bool Redo)
 
 bool UNoxelNetworkingAgent::UndoRedo(bool Redo)
 {
-	if (!CanUndoRedo(Redo))
+	//TODO
+	/*if (!CanUndoRedo(Redo))
 	{
 		return false;
 	}
@@ -311,7 +322,7 @@ bool UNoxelNetworkingAgent::UndoRedo(bool Redo)
 	}
 	QueuesWaiting.Add(FWaitingQueue(Queue->OrderNumber, Redo));
 	ServerUndoRedo(UndoOrder[UndoIndex + Redo], Redo);
-	UndoIndex += Redo ? 1 : -1;
+	UndoIndex += Redo ? 1 : -1;*/
 	return true;
 }
 

@@ -52,6 +52,10 @@ struct FWaitingQueue
 	FWaitingQueue(int32 InQueueIndex, bool InWaitingDirection)
 		:QueueIndex(InQueueIndex), WaitingDirection(InWaitingDirection)
 	{}
+
+	bool operator==(const FWaitingQueue rhs);
+
+	bool operator==(const int32 rhs) const;
 };
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FObjectPermissionDelegate, AActor*, Actor);
@@ -142,14 +146,14 @@ private:
 	UFUNCTION(Client, Reliable)
 	void ClientRectifyCommandQueue(int32 IndexToRectify, bool ShouldExecute);
 
-	UFUNCTION(Server, Reliable, WithValidation)
-	void ServerUndoRedo(int32 OrderIndex, bool Redo);
+	/*UFUNCTION(Server, Reliable, WithValidation)
+	void ServerUndoRedo(int32 OrderIndex, bool Redo) = 0;
 
 	UFUNCTION(NetMulticast, Reliable)
-	void ClientsUndoRedo(int32 OrderIndex, bool Redo);
+	void ClientsUndoRedo(int32 OrderIndex, bool Redo) = 0;
 
 	UFUNCTION(Client, Reliable)
-	void ClientRectifyUndoRedo(int32 OrderIndex, bool Redo);
+	void ClientRectifyUndoRedo(int32 OrderIndex, bool Redo) = 0;*/
 	
 public:
 

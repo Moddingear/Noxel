@@ -9,6 +9,10 @@
   <component name="ChangeListManager">
     <list default="true" id="2ed74af6-b6bf-4ba9-87d3-bee0bfad75bf" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/.idea.Noxel.dir/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/.idea.Noxel.dir/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/Noxel/Private/Noxel/NoxelNetworkingAgent.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/Noxel/Private/Noxel/NoxelNetworkingAgent.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/Noxel/Public/Noxel/NoxelNetworkingAgent.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/Noxel/Public/Noxel/NoxelNetworkingAgent.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/Noxel/Public/Tests/BruteForceSolver.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/Noxel/Private/Tests/BruteForceSolver.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/Noxel/Public/Tests/BruteForceSolver.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/Noxel/Public/Tests/BruteForceSolver.h" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -93,6 +97,9 @@
       <workItem from="1645697220512" duration="2765000" />
       <workItem from="1645952828292" duration="7567000" />
       <workItem from="1645982770223" duration="2062000" />
+      <workItem from="1646508080115" duration="5108000" />
+      <workItem from="1646557781963" duration="3394000" />
+      <workItem from="1646683808325" duration="7670000" />
     </task>
     <servers />
   </component>
@@ -109,5 +116,12 @@
   </component>
   <component name="VcsManagerConfiguration">
     <option name="CLEAR_INITIAL_COMMIT_MESSAGE" value="true" />
+  </component>
+  <component name="XDebuggerManager">
+    <watches-manager>
+      <configuration name="Uproject">
+        <watch expression="@ ALREADY PREPROCESSED @matrix" />
+      </configuration>
+    </watches-manager>
   </component>
 </project>
