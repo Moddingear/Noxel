@@ -95,13 +95,13 @@ struct FOutputMatrix
 class FGradientDescentRunner : public FRunnable
 {
 	TArray<FForceSource> Sources;
-	FOutputMatrix State;
-	int Col;
 	int MaxIterations;
-	TArray<float> Start;
+	FInputVector Direction;
+	
+	FOutputColumn State;
 	TArray<float> Width;
 
-	int i;
+	int Iteration;
 	bool done;
 
 private:
@@ -110,7 +110,7 @@ private:
 public:
 	
 	FGradientDescentRunner(const TArray<FForceSource>& InSources, 
-	const FOutputMatrix InState, int InCol, int InMaxIterations, TArray<float> InStart, TArray<float> InWidth);
+	const FInputVector InDirection, int InMaxIterations);
 
 	~FGradientDescentRunner();
 
@@ -121,10 +121,11 @@ public:
 
 	float GetProgress() const;
 
+	int GetIteration() const;
+
 	bool IsDone() const;
 
 	FOutputColumn GetOutput() const;
-	int GetColumn() const;
 };
 
 UCLASS(BlueprintType)
@@ -143,30 +144,32 @@ public:
 	static TArray<FForceSource> MakeTestCube(FVector extents);
 
 	UFUNCTION(BlueprintCallable)
-	static FInputVector GetOutputVector(UPARAM(ref) TArray<FForceSource>& sources, UPARAM(ref) TArray<float>& input, UPARAM(ref) FOutputMatrix& state, bool WithSaturation);
+	static FInputVector GetOutputVector(UPARAM(ref) TArray<FForceSource>& sources, UPARAM(ref) FOutputColumn& state, bool WithSaturation);
 
-	//Returns a score between 0 and 2, where 0 is best
+	//Returns a score, where higher is best (not linear AT ALL)
 	UFUNCTION()
 	static float GetScore(UPARAM(ref) FInputVector& input, UPARAM(ref) FInputVector& output);
 
 	//Returns an array of score gradients for each source axis
 	UFUNCTION()
-	static TArray<float> ComputeGradient(UPARAM(ref) TArray<FForceSource>& sources, UPARAM(ref) TArray<float>& input,
-	                                     UPARAM(ref) FOutputMatrix& state, int col, TArray<float> epsilon);
+	static TArray<float> ComputeGradient(UPARAM(ref) TArray<FForceSource>& sources,
+	                                     UPARAM(ref) FOutputColumn& state, TArray<float> epsilon);
 
 	UFUNCTION(BlueprintCallable)
 	static TArray<float> Desaturate(UPARAM(ref) TArray<FForceSource>& sources, TArray<float> inputs);
 
 	UFUNCTION(BlueprintCallable)
-	void StartSolveInputs(UPARAM(ref) TArray<FForceSource>& sources, TArray<FInputVector> InputsToOptimise, int MaxIterations);
+	int StartSolveInputs(UPARAM(ref) TArray<FForceSource>& sources, FInputVector InputToOptimise, int MaxIterations);
 
+	int GetRunnerIteration(int RunnerIdx);
+	
 	UFUNCTION(BlueprintCallable)
-	TArray<float> GetRunnerProgress();
+	float GetRunnerProgress(int RunnerIdx);
 
     UFUNCTION(BlueprintCallable)
-	bool IsDone();
+	bool IsDone(int RunnerIdx);
 
 	UFUNCTION(BlueprintCallable)
-	FOutputMatrix GetOutput();
+	FOutputColumn GetOutput(int RunnerIdx);
 	
 };

@@ -1,7 +1,8 @@
-#include "Tests/BruteForceSolver.h"
+#include "NObjects/BruteForceSolver.h"
 
 float& FInputVector::GetComponent(int i)
 {
+	check(i<6 && i>=0);
 	if (i <3)
 	{
 		return Translation.Component(i);
@@ -132,14 +133,11 @@ FString FOutputMatrix::ToString() const
 }
 
 FGradientDescentRunner::FGradientDescentRunner(const TArray<FForceSource>& InSources, 
-                                               const FOutputMatrix InState, int InCol, int InMaxIterations, TArray<float> InStart, TArray<float> InWidth)
+                                               const FInputVector InDirection, int InMaxIterations)
 {
 	Sources = (InSources);
-	State = (InState);
-	Col = (InCol);
+	Direction = (InDirection);
 	MaxIterations = (InMaxIterations);
-	Start = (InStart);
-	Width = (InWidth);
 	done = (false);
 	StopFlag = (false);
 	Thread = FRunnableThread::Create(this, TEXT("Gradient Descent Runner Thread"));
@@ -161,14 +159,21 @@ bool FGradientDescentRunner::Init()
 
 uint32 FGradientDescentRunner::Run()
 {
-	FOutputColumn& column = State.InputCoefficients[Col];
-	column.InputCoefficients = Start;
-	TArray<float> input;
-	input.SetNumZeroed(State.InputCoefficients.Num());
-	input[Col] = 1;
-	for (i = 0; (i < MaxIterations) && (!StopFlag); ++i)
+	int NumSources = Sources.Num();
+	State.OptimisedDirection = Direction;
+	State.InputCoefficients.SetNumZeroed(NumSources); Width.SetNumZeroed(NumSources);
+	
+	for (int j = 0; j < NumSources; ++j)
 	{
-		TArray<float> gradient = UBruteForceSolver::ComputeGradient(Sources, input, State, Col, Width);
+		float min = Sources[j].RangeMin, max = Sources[j].RangeMax;
+		float extent = max - min;
+		State.InputCoefficients[j] = min + extent*0.5;
+		Width[j] = extent*0.25;
+	}
+	
+	for (Iteration = 0; (Iteration < MaxIterations) && (!StopFlag); ++Iteration)
+	{
+		TArray<float> gradient = UBruteForceSolver::ComputeGradient(Sources, State, Width);
 		
 		int bestGradient = 0;
 		for (int j = 1; j < Sources.Num(); ++j)
@@ -178,7 +183,7 @@ uint32 FGradientDescentRunner::Run()
 				bestGradient = j;
 			}
 		}
-		column.InputCoefficients[bestGradient] += Width[bestGradient] * (gradient[bestGradient] > 0 ? 1 : -1);
+		State.InputCoefficients[bestGradient] += Width[bestGradient] * (gradient[bestGradient] > 0 ? 1 : -1);
 		Width[bestGradient]*=0.5;
 		
 		/*for (int j = 0; j < Sources.Num(); ++j)
@@ -187,7 +192,7 @@ uint32 FGradientDescentRunner::Run()
 			Width[j]*=0.5;
 		}*/
 	}
-	done = !StopFlag;
+	done = true;
 	return 0;
 }
 
@@ -204,7 +209,12 @@ void FGradientDescentRunner::Exit()
 
 float FGradientDescentRunner::GetProgress() const
 {
-	return (float)i/MaxIterations;
+	return (float)Iteration/MaxIterations;
+}
+
+int FGradientDescentRunner::GetIteration() const
+{
+	return Iteration;
 }
 
 bool FGradientDescentRunner::IsDone() const
@@ -214,12 +224,7 @@ bool FGradientDescentRunner::IsDone() const
 
 FOutputColumn FGradientDescentRunner::GetOutput() const
 {
-	return State.InputCoefficients[Col];
-}
-
-int FGradientDescentRunner::GetColumn() const
-{
-	return Col;
+	return State;
 }
 
 UBruteForceSolver::~UBruteForceSolver()
@@ -276,10 +281,10 @@ TArray<FForceSource> UBruteForceSolver::MakeTestCube(FVector extents)
 	return forces;
 }
 
-FInputVector UBruteForceSolver::GetOutputVector(TArray<FForceSource>& sources, TArray<float>& input,
-                                                FOutputMatrix& state, bool WithSaturation)
+FInputVector UBruteForceSolver::GetOutputVector(TArray<FForceSource>& sources, 
+                                                FOutputColumn& state, bool WithSaturation)
 {
-	TArray<float> outputs = state.GetOutputValues(input);
+	TArray<float>& outputs = state.InputCoefficients;
 	FInputVector OutputForces;
 	for (int i = 0; i < FMath::Min(outputs.Num(), sources.Num()); ++i)
 	{
@@ -291,8 +296,9 @@ FInputVector UBruteForceSolver::GetOutputVector(TArray<FForceSource>& sources, T
 
 float UBruteForceSolver::GetScore(FInputVector& input, FInputVector& output)
 {
-	float wanted =0;
-	float unwanted =0;
+	return 1/(1+FInputVector::Distance(input, output));
+	/*float wanted = 0;
+	float unwanted = 1;
 	for (int i = 0; i < 6; ++i)
 	{
 		if (abs(input.GetComponent(i)) > SMALL_NUMBER)
@@ -304,19 +310,44 @@ float UBruteForceSolver::GetScore(FInputVector& input, FInputVector& output)
 			unwanted += abs(output.GetComponent(i));
 		}
 	}
+	float dotmul = 1;
+	if (!input.Translation.IsNearlyZero() && !output.Translation.IsNearlyZero())
+	{
+		FVector outputWanted;
+		for (int i = 0; i < 3; ++i)
+		{
+			if (abs(input.Translation.Component(i)) > SMALL_NUMBER)
+			{
+				outputWanted.Component(i) = output.Translation.Component(i);
+			}
+		}
+		dotmul *= input.Translation.GetSafeNormal() | outputWanted.GetSafeNormal();
+	}
+	if (!input.Rotation.IsNearlyZero() && !output.Rotation.IsNearlyZero())
+	{
+		FVector outputWanted;
+		for (int i = 0; i < 3; ++i)
+		{
+			if (abs(input.Rotation.Component(i)) > SMALL_NUMBER)
+			{
+				outputWanted.Component(i) = output.Rotation.Component(i);
+			}
+		}
+		dotmul *= input.Rotation.GetSafeNormal() | outputWanted.GetSafeNormal();
+	}
 	
-	return wanted / (1+unwanted);
+	return wanted / unwanted * dotmul;*/
 }
 
-TArray<float> UBruteForceSolver::ComputeGradient(TArray<FForceSource>& sources, TArray<float>& input,
-                                                 FOutputMatrix& state, int col, TArray<float> epsilon)
+TArray<float> UBruteForceSolver::ComputeGradient(TArray<FForceSource>& sources, 
+                                                 FOutputColumn& state, TArray<float> epsilon)
 {
 	int numsources = sources.Num();
 	TArray<float> gradient;
 	gradient.SetNumZeroed(numsources);
-	FOutputColumn& column = state.InputCoefficients[col];
-	const FInputVector output = GetOutputVector(sources, input, state, false);
-	FInputVector wanted = state.GetInputVector(input).GetUnsafeNormal();
+	FOutputColumn& column = state;
+	const FInputVector output = GetOutputVector(sources, state, false);
+	FInputVector wanted = state.OptimisedDirection;
 	for (int i = 0; i < numsources; ++i)
 	{
 		float center = column.InputCoefficients[i];
@@ -359,63 +390,39 @@ TArray<float> UBruteForceSolver::Desaturate(TArray<FForceSource>& sources, TArra
 	return output;
 }
 
-void UBruteForceSolver::StartSolveInputs(TArray<FForceSource>& sources, TArray<FInputVector> InputsToOptimise, int MaxIterations)
+int UBruteForceSolver::StartSolveInputs(TArray<FForceSource>& sources, FInputVector InputToOptimise, int MaxIterations)
 {
-	FOutputMatrix matrix;
-	int NumSources = sources.Num();
-	int NumCols = InputsToOptimise.Num();
-	matrix.InputCoefficients.SetNumZeroed(NumCols);
-	for (int i = 0; i < NumCols; ++i)
-	{
-		matrix.InputCoefficients[i].InputCoefficients.SetNumZeroed(NumSources);
-		matrix.InputCoefficients[i].OptimisedDirection = InputsToOptimise[i];
-	}
-	TArray<float> Starts, Widths;
-	Starts.SetNumZeroed(NumSources); Widths.SetNumZeroed(NumSources);
-	for (int i = 0; i < NumCols; ++i)
-	{
-		for (int j = 0; j < NumSources; ++j)
-		{
-			float min = sources[j].RangeMin, max = sources[j].RangeMax;
-			float extent = max - min;
-			Starts[j] = min + extent*0.5;
-			Widths[j] = extent*0.25;
-		}
-		FGradientDescentRunner* Runner = new FGradientDescentRunner(sources, matrix, i, MaxIterations * NumSources, Starts, Widths);
-		Runners.Add(Runner);
-	}
-}
-
-TArray<float> UBruteForceSolver::GetRunnerProgress()
-{
-	TArray<float> results;
-	for (FGradientDescentRunner* runner : Runners)
-	{
-		results.Add(runner->GetProgress());
-	}
-	return results;
-}
-
-bool UBruteForceSolver::IsDone()
-{
-	for (FGradientDescentRunner* runner : Runners)
-	{
-		if (!runner->IsDone())
-		{
-			return false;
-		}
-	}
-	return true;
-}
-
-FOutputMatrix UBruteForceSolver::GetOutput()
-{
-	FOutputMatrix matrix;
-	matrix.InputCoefficients.SetNumZeroed(Runners.Num());
+	const int NumSources = sources.Num();
 	
-	for (int i=0; i<Runners.Num(); ++i)
+	FGradientDescentRunner* Runner = new FGradientDescentRunner(sources, InputToOptimise, MaxIterations * NumSources);
+	return Runners.Add(Runner);
+	
+}
+
+int UBruteForceSolver::GetRunnerIteration(int RunnerIdx)
+{
+	check(Runners.IsValidIndex(RunnerIdx));
+	return Runners[RunnerIdx]->GetIteration();
+}
+
+float UBruteForceSolver::GetRunnerProgress(int RunnerIdx)
+{
+	check(Runners.IsValidIndex(RunnerIdx));
+	return Runners[RunnerIdx]->GetProgress();
+}
+
+bool UBruteForceSolver::IsDone(int RunnerIdx)
+{
+	return Runners[RunnerIdx]->IsDone();
+}
+
+FOutputColumn UBruteForceSolver::GetOutput(int RunnerIdx)
+{
+	check(Runners.IsValidIndex(RunnerIdx));
+	Runners[RunnerIdx]->Stop();
+	while (!Runners[RunnerIdx]->IsDone())
 	{
-		matrix.InputCoefficients[Runners[i]->GetColumn()] = Runners[i]->GetOutput();
+		
 	}
-	return matrix;
+	return Runners[RunnerIdx]->GetOutput();
 }

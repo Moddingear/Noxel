@@ -3,7 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "BruteForceSolver.h"
+#include "NObjects/BruteForceSolver.h"
 #include "GameFramework/Actor.h"
 #include "BruteForceTester.generated.h"
 
@@ -18,7 +18,7 @@ public:
 	UBruteForceSolver* Solver;
 
 	TArray<FForceSource> Sources;
-	bool PrintedResults;
+	TArray<bool> PrintedResults;
 	// Sets default values for this actor's properties
 	ABruteForceTester();
 
