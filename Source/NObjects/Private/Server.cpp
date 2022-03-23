@@ -9,6 +9,7 @@
 #include "Connectors/GunConnector.h"
 #include "Connectors/ForceConnector.h"
 #include "Net/UnrealNetwork.h"
+#include "NObjects/BruteForceSolver.h"
 
 AServer::AServer()
 {
@@ -37,6 +38,7 @@ void AServer::GetLifetimeReplicatedProps(TArray< FLifetimeProperty > & OutLifeti
 void AServer::BeginPlay()
 {
 	Super::BeginPlay();
+	Solver = NewObject<UBruteForceSolver>();
 }
 
 void AServer::Tick(float DeltaTime)
@@ -45,50 +47,55 @@ void AServer::Tick(float DeltaTime)
 	//UE_LOG(NObjects, Log, TEXT("[AServer::Tick] Enabled : %s"), *UKismetStringLibrary::Conv_BoolToString(Enabled));
 	if (Enabled && ControlScheme && ReplicatedCraft)
 	{
-		float mass; FVector COM;
-		ComputeCOMFromComponents(ReplicatedCraft->Components, COM, mass);
-		
-		FTRVector WantedForces = ControlScheme->ApplyInputMatrix(
-			FTRVector::ZeroVector, //TODO
+		float Mass; FVector COM, InertiaTensor;
+		ComputeCOMFromComponents(ReplicatedCraft->Components, COM, Mass, InertiaTensor);
+
+		const FTRVector Inertia(FVector(Mass), InertiaTensor);
+
+		const FTRVector WantedForces = ControlScheme->ApplyInputMatrix(
+			FTRVector(TranslationInputs, FVector::ZeroVector), //TODO get inputs from the player
 			GetTransform(),
+			Camera->GetComponentTransform(),
 			FTRVector(staticMesh->GetPhysicsLinearVelocity(), staticMesh->GetPhysicsAngularVelocityInRadians()),
-			FTRVector(0,0,GetWorld()->GetGravityZ(),0,0,0),
-			FTRVector(FVector::OneVector * mass, FVector::OneVector));
+			FTRVector(0,0,GetWorld()->GetGravityZ(),0,0,0), Inertia);
+
+		const FTRVector WantedOutput = WantedForces / Inertia;
 		
 		TArray<FTorsor> Torsors = ForcesOut->GetAllTorsors();
-		int NumTorsors = Torsors.Num();
-		TArray<FTorsorBias> BiasTemp = ForceBiases;
-		TArray<FTorsorBias> BiasOrdered; BiasOrdered.Init(FTorsorBias(), NumTorsors);
-		TArray<float> Results; Results.Init(0, NumTorsors);
-		
-		FTRVector SumUnscaled = FTRVector::ZeroVector;
+		const int NumTorsors = Torsors.Num();
+
+		TArray<FForceSource> TorsorsConverted;
+		TorsorsConverted.Reserve(NumTorsors);
+
+		FTransform COMTransform = FTransform(GetActorRotation(), COM);
 		
 		for (int i = 0; i < NumTorsors; ++i)
 		{
-			FTorsor& CurrentTorsor = Torsors[i];
-			FTorsorBias Bias;
-			for (int j = 0; j < BiasTemp.Num(); ++j)
-			{
-				if (BiasTemp[j].Source == CurrentTorsor.Source && BiasTemp[j].Index == CurrentTorsor.Index)
-				{
-					Bias = BiasTemp[j];
-					BiasTemp.RemoveAtSwap(j);
-					break;
-				}
-			}
-			if (Bias.Source != nullptr)
-			{
-				BiasOrdered[i] = Bias;
-				float InputValue = (Bias.Bias*WantedForces).Sum();
-			}
+			FForceSource Source = Torsors[i].ToForceSource(COMTransform);
+			Source.ForceAndTorque = Source.ForceAndTorque / Inertia;
+			TorsorsConverted.Add(Source);
 		}
-		ForcesOut->SendAllOrders(Torsors, Results);
-		FString ResultsString;
+		for (int i = 0; i < TorsorsConverted.Num(); ++i)
+		{
+			UE_LOG(NObjects, Log, TEXT("Source %d : %s"), i, *TorsorsConverted[i].ToString());
+		}
+		if (Solver->GetNumRunners() > 0)
+		{
+			FOutputColumn col = Solver->GetOutput(0);
+			//UE_LOG(NObjects, Log, TEXT("Runner done (after %d iterations)! Matrix :\r\n%s"), Solver->GetRunnerIteration(0), *col.ToString());
+			FTRVector outVec = UBruteForceSolver::GetOutputVector(TorsorsConverted, col, false);
+			UE_LOG(NObjects, Log, TEXT("Test Runner, result %s after %d iterations, will ask for %s"), *outVec.ToString(), Solver->GetRunnerIteration(0), *WantedOutput.ToString());
+			ForcesOut->SendAllOrders(Torsors, col.InputCoefficients);
+			Solver->ClearRunners();
+		}
+		Solver->StartSolveInputs(TorsorsConverted, WantedOutput, 10000);
+		
+		/*FString ResultsString;
 		for (float r : Results)
 		{
 			ResultsString += FString::SanitizeFloat(r, 7) + FString("; ");
 		}
-		UE_LOG(NObjects, Log, TEXT("Mass is %f, found %d forces, results : %s"), mass, Torsors.Num(), *ResultsString);
+		UE_LOG(NObjects, Log, TEXT("Mass is %f, found %d forces, results : %s"), mass, Torsors.Num(), *ResultsString);*/
 	}
 }
 

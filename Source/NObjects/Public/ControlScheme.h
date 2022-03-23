@@ -6,50 +6,7 @@
 #include "Connectors/ForceConnector.h"
 #include "ControlScheme.generated.h"
 
-USTRUCT(BlueprintType)
-struct FTRVector
-{
-	GENERATED_BODY()
-
-	static NOBJECTS_API const FTRVector ZeroVector;
-	static NOBJECTS_API const FTRVector OneVector;
-	
-	UPROPERTY(BlueprintReadWrite)
-	FVector Translation;
-	UPROPERTY(BlueprintReadWrite)
-	FVector Rotation;
-
-	FTRVector()
-	{}
-
-	FTRVector(FVector InTranslation, FVector InRotation)
-		:Translation(InTranslation), Rotation(InRotation)
-	{}
-
-	FTRVector(float tx, float ty, float tz, float rx, float ry, float rz)
-		:Translation(tx, ty, tz), Rotation( rx, ry, rz)
-	{}
-
-	FTRVector operator+(const FTRVector& rhs) const
-	{
-		return FTRVector(Translation+rhs.Translation, Rotation+rhs.Rotation);
-	}
-	
-	FTRVector operator*(const float& rhs) const
-	{
-		return FTRVector(Translation*rhs, Rotation*rhs);
-	}
-	
-	FTRVector operator*(const FTRVector& rhs) const
-	{
-		return FTRVector(Translation*rhs.Translation, Rotation*rhs.Rotation);
-	}
-
-	float Sum()
-	{
-		return Translation.X + Translation.Y + Translation.Z + Rotation.X + Rotation.Y + Rotation.Z;
-	}
-};
+struct FTRVector;
 /**
  * This class convert keyboard inputs and current craft location into wanted forces and torques
  */
@@ -78,7 +35,10 @@ public:
 	
 	/*
 	 * Convert keyboard inputs to forces and torques
+	 * Local space (relative to possessed actor)
+	 * Input in local space, Location in world space (of the possessed actor)
+	 * CameraTransform, speed and acceleration in world space
 	 */
-	virtual FTRVector ApplyInputMatrix(FTRVector Input, FTransform Location, FTRVector Speed, FTRVector Acceleration, FTRVector Mass);
+	virtual FTRVector ApplyInputMatrix(FTRVector Input, FTransform Location, FTransform CameraTransform, FTRVector Speed, FTRVector Acceleration, FTRVector Mass);
 
 };

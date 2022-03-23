@@ -1,6 +1,9 @@
 #include "NObjects/BruteForceSolver.h"
 
-float& FInputVector::GetComponent(int i)
+NOXEL_API const FTRVector FTRVector::ZeroVector(0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f);
+NOXEL_API const FTRVector FTRVector::OneVector(1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f);
+
+float& FTRVector::GetComponent(int i)
 {
 	check(i<6 && i>=0);
 	if (i <3)
@@ -13,51 +16,66 @@ float& FInputVector::GetComponent(int i)
 	}
 }
 
-FInputVector FInputVector::operator+(const FInputVector& V) const
+FTRVector FTRVector::operator+(const FTRVector& V) const
 {
-	return FInputVector(Translation + V.Translation, Rotation + V.Rotation);
+	return FTRVector(Translation + V.Translation, Rotation + V.Rotation);
 }
 
-FInputVector FInputVector::operator-(const FInputVector& V) const
+FTRVector FTRVector::operator-(const FTRVector& V) const
 {
-	return FInputVector(Translation - V.Translation, Rotation - V.Rotation);
+	return FTRVector(Translation - V.Translation, Rotation - V.Rotation);
 }
 
-FORCEINLINE FInputVector FInputVector::operator*(const float& x) const
+FORCEINLINE FTRVector FTRVector::operator*(const float& x) const
 {
-	return FInputVector(Translation * x, Rotation * x);
+	return FTRVector(Translation * x, Rotation * x);
 }
 
-FORCEINLINE FInputVector FInputVector::operator+=(const FInputVector& V)
+FTRVector FTRVector::operator*(const FTRVector& V) const
+{
+	return FTRVector(Translation * V.Translation, Rotation * V.Rotation);
+}
+
+FTRVector FTRVector::operator/(const FTRVector& V) const
+{
+	return FTRVector(Translation / V.Translation, Rotation / V.Rotation);
+}
+
+FORCEINLINE FTRVector FTRVector::operator+=(const FTRVector& V)
 {
 	Translation += V.Translation;
 	Rotation += V.Rotation;
 	return *this;
 }
 
-float FInputVector::GetSizeSquared()
+float FTRVector::GetSizeSquared()
 {
 	return Translation.SizeSquared() + Rotation.SizeSquared();
 }
 
-float FInputVector::GetSize()
+float FTRVector::GetSize()
 {
 	return FMath::Sqrt(GetSizeSquared());
 }
 
-FInputVector FInputVector::GetUnsafeNormal()
+FTRVector FTRVector::GetUnsafeNormal()
 {
 	return *this * FMath::InvSqrt(GetSizeSquared());
 }
 
-float FInputVector::Distance(FInputVector A, FInputVector B)
+float FTRVector::Distance(FTRVector A, FTRVector B)
 {
-	FInputVector C = A-B;
-	float SizeSquared = C.Translation.SizeSquared() + C.Rotation.SizeSquared();
+	FTRVector C = A-B;
+	const float SizeSquared = C.Translation.SizeSquared() + C.Rotation.SizeSquared();
 	return FMath::Sqrt(SizeSquared);
 }
 
-FString FInputVector::ToString() const
+float FTRVector::Sum() const
+{
+	return Translation.X + Translation.Y + Translation.Z + Rotation.X + Rotation.Y + Rotation.Z;
+}
+
+FString FTRVector::ToString() const
 {
 	return TEXT("T:") + Translation.ToString() + TEXT(" / R:") + Rotation.ToString();
 }
@@ -107,10 +125,10 @@ TArray<float> FOutputMatrix::GetOutputValues(TArray<float> input) const
 	return sum;
 }
 
-FInputVector FOutputMatrix::GetInputVector(TArray<float> input) const
+FTRVector FOutputMatrix::GetInputVector(TArray<float> input) const
 {
 	checkf(input.Num() == InputCoefficients.Num(), TEXT("[FOutputMatrix::GetInputVector] Input vector isn't the same size as the array of optimised directions !"));
-	FInputVector acc;
+	FTRVector acc;
 	for (int i = 0; i < input.Num(); ++i)
 	{
 		if (abs(input[i]) < SMALL_NUMBER)
@@ -132,14 +150,118 @@ FString FOutputMatrix::ToString() const
 	return str;
 }
 
-FGradientDescentRunner::FGradientDescentRunner(const TArray<FForceSource>& InSources, 
-                                               const FInputVector InDirection, int InMaxIterations)
+FExhaustiveRunner::FExhaustiveRunner(const TArray<FForceSource>& InSources, const FTRVector InDirection, int InCuts)
 {
-	Sources = (InSources);
-	Direction = (InDirection);
-	MaxIterations = (InMaxIterations);
-	done = (false);
-	StopFlag = (false);
+	Sources = InSources;
+	Direction = InDirection;
+	Cuts = InCuts;
+	
+	done = false;
+	StopFlag = false;
+	Thread = FRunnableThread::Create(this, TEXT("Exhaustive Runner Thread"));
+}
+
+TArray<float> FExhaustiveRunner::GetAlpha(int SliceIndex, int NumSlices)
+{
+	int NumSources = Sources.Num();
+	TArray<float> alphas;
+	alphas.SetNumZeroed(NumSources);
+	int Slice = SliceIndex;
+	for (int j = 0; j < NumSources; ++j)
+	{
+		int progress = Slice % NumSlices;
+		Slice = Slice / NumSlices;
+		alphas[j] = (float)progress / NumSlices;
+	}
+	return alphas;
+}
+
+FExhaustiveRunner::~FExhaustiveRunner()
+{
+	if (Thread)
+	{
+		Thread->Kill();
+		delete Thread;
+	}
+}
+
+uint32 FExhaustiveRunner::Run()
+{
+	int NumSources = Sources.Num();
+	BestState.OptimisedDirection = Direction;
+	BestState.InputCoefficients.SetNumZeroed(NumSources);
+	TArray<float> SliceExtents, SliceStarts;
+	SliceExtents.SetNumZeroed(NumSources);
+	SliceStarts.SetNumZeroed(NumSources);
+	
+	top = 1;
+	for (int j = 0; j < NumSources; ++j)
+	{
+		float min = Sources[j].RangeMin, max = Sources[j].RangeMax;
+		float extent = max - min;
+		SliceStarts[j] = min;
+		SliceExtents[j] = extent;
+		top *= Cuts;
+	}
+
+	for (i = 0; i < top && !StopFlag; ++i)
+	{
+		TArray<float> alphas = GetAlpha(i, Cuts);
+		for (int j = 0; j < NumSources; ++j)
+		{
+			alphas[j] = SliceStarts[j] + SliceExtents[j] * alphas[j];
+		}
+		FOutputColumn State;
+		State.InputCoefficients = alphas;
+		FTRVector Output = UBruteForceSolver::GetOutputVector(Sources, State, false);
+		float Score = UBruteForceSolver::GetScore(Direction, Output);
+		if (Score > BestScore)
+		{
+			BestState.InputCoefficients = alphas;
+			BestScore = Score;
+		}
+	}
+
+	done = true;
+	return 0;
+}
+
+void FExhaustiveRunner::Stop()
+{
+	StopFlag = true;
+	FRunnable::Stop();
+}
+
+float FExhaustiveRunner::GetProgress() const
+{
+	return (float)i/top;
+}
+
+int FExhaustiveRunner::GetIteration() const
+{
+	return i;
+}
+
+bool FExhaustiveRunner::IsDone() const
+{
+	return done;
+}
+
+FOutputColumn FExhaustiveRunner::GetOutput() const
+{
+	return BestState;
+}
+
+FGradientDescentRunner::FGradientDescentRunner(const TArray<FForceSource>& InSources, 
+                                               const FTRVector InDirection, int InMaxIterations, EGradientDescentMethod InDescentMethod)
+{
+	Sources = InSources;
+	Direction = InDirection;
+	MaxIterations = InMaxIterations;
+	DescentMethod = InDescentMethod;
+	
+	done = false;
+	StopFlag = false;
 	Thread = FRunnableThread::Create(this, TEXT("Gradient Descent Runner Thread"));
 }
 
@@ -152,11 +274,6 @@ FGradientDescentRunner::~FGradientDescentRunner()
 	}
 }
 
-bool FGradientDescentRunner::Init()
-{
-	return FRunnable::Init();
-}
-
 uint32 FGradientDescentRunner::Run()
 {
 	int NumSources = Sources.Num();
@@ -167,11 +284,23 @@ uint32 FGradientDescentRunner::Run()
 	{
 		float min = Sources[j].RangeMin, max = Sources[j].RangeMax;
 		float extent = max - min;
-		State.InputCoefficients[j] = min + extent*0.5;
-		Width[j] = extent*0.25;
+		
+		switch (DescentMethod)
+		{
+		case Binomial:
+			State.InputCoefficients[j] = min + extent*0.5;
+			Width[j] = extent*0.25;
+			break;
+		case FixedEpsilon:
+			State.InputCoefficients[j] = FMath::Clamp(0.f, min, max);
+			Width[j] = extent/MaxIterations/NumSources;
+			break;
+		default:
+			break;
+		}
 	}
 	
-	for (Iteration = 0; (Iteration < MaxIterations) && (!StopFlag); ++Iteration)
+	for (Iteration = 0; !StopFlag; ++Iteration)
 	{
 		TArray<float> gradient = UBruteForceSolver::ComputeGradient(Sources, State, Width);
 		
@@ -180,17 +309,28 @@ uint32 FGradientDescentRunner::Run()
 		{
 			if (abs(gradient[j]) > abs(gradient[bestGradient]))
 			{
-				bestGradient = j;
+				if (gradient[j] > abs(gradient[bestGradient]) && State.InputCoefficients[j] < Sources[j].RangeMax) //above
+				{
+					bestGradient = j;
+				}
+				if (-gradient[j] > abs(gradient[bestGradient]) && State.InputCoefficients[j] > Sources[j].RangeMin) //below
+				{
+					bestGradient = j;
+				}
 			}
 		}
 		State.InputCoefficients[bestGradient] += Width[bestGradient] * (gradient[bestGradient] > 0 ? 1 : -1);
-		Width[bestGradient]*=0.5;
-		
-		/*for (int j = 0; j < Sources.Num(); ++j)
+		switch (DescentMethod)
 		{
-			column.InputCoefficients[j] += Width[j] * (gradient[j] > 0 ? 1 : -1) * (abs(gradient[j]) > SMALL_NUMBER ? 1 : 0);
-			Width[j]*=0.5;
-		}*/
+		case Binomial:
+			Width[bestGradient]*=0.5;
+			break;
+		case FixedEpsilon:
+			break;
+		default:
+			break;
+		}
+		
 	}
 	done = true;
 	return 0;
@@ -200,11 +340,6 @@ void FGradientDescentRunner::Stop()
 {
 	StopFlag = true;
 	FRunnable::Stop();
-}
-
-void FGradientDescentRunner::Exit()
-{
-	FRunnable::Exit();
 }
 
 float FGradientDescentRunner::GetProgress() const
@@ -229,10 +364,7 @@ FOutputColumn FGradientDescentRunner::GetOutput() const
 
 UBruteForceSolver::~UBruteForceSolver()
 {
-	for (int i = 0; i < Runners.Num(); ++i)
-	{
-		delete Runners[i];
-	}
+	ClearRunners();
 }
 
 TArray<FForceSource> UBruteForceSolver::MakeTestCube(FVector extents)
@@ -281,11 +413,11 @@ TArray<FForceSource> UBruteForceSolver::MakeTestCube(FVector extents)
 	return forces;
 }
 
-FInputVector UBruteForceSolver::GetOutputVector(TArray<FForceSource>& sources, 
+FTRVector UBruteForceSolver::GetOutputVector(TArray<FForceSource>& sources, 
                                                 FOutputColumn& state, bool WithSaturation)
 {
 	TArray<float>& outputs = state.InputCoefficients;
-	FInputVector OutputForces;
+	FTRVector OutputForces;
 	for (int i = 0; i < FMath::Min(outputs.Num(), sources.Num()); ++i)
 	{
 		float drive = WithSaturation ? FMath::Clamp(outputs[i], sources[i].RangeMin, sources[i].RangeMax) : outputs[i];
@@ -294,9 +426,9 @@ FInputVector UBruteForceSolver::GetOutputVector(TArray<FForceSource>& sources,
 	return OutputForces;
 }
 
-float UBruteForceSolver::GetScore(FInputVector& input, FInputVector& output)
+float UBruteForceSolver::GetScore(FTRVector& input, FTRVector& output)
 {
-	return 1/(1+FInputVector::Distance(input, output));
+	return 1/(1+FTRVector::Distance(input, output));
 	/*float wanted = 0;
 	float unwanted = 1;
 	for (int i = 0; i < 6; ++i)
@@ -342,23 +474,20 @@ float UBruteForceSolver::GetScore(FInputVector& input, FInputVector& output)
 TArray<float> UBruteForceSolver::ComputeGradient(TArray<FForceSource>& sources, 
                                                  FOutputColumn& state, TArray<float> epsilon)
 {
-	int numsources = sources.Num();
+	const int numsources = sources.Num();
 	TArray<float> gradient;
 	gradient.SetNumZeroed(numsources);
-	FOutputColumn& column = state;
-	const FInputVector output = GetOutputVector(sources, state, false);
-	FInputVector wanted = state.OptimisedDirection;
+	const FTRVector Output = GetOutputVector(sources, state, false);
+	FTRVector wanted = state.OptimisedDirection;
 	for (int i = 0; i < numsources; ++i)
 	{
-		float center = column.InputCoefficients[i];
-		FInputVector sourceval = sources[i].ForceAndTorque;
-		FInputVector outputzero = output-sourceval*center;
-		FInputVector outputmin = outputzero + sourceval*(center - epsilon[i]);
-		FInputVector outputmax = outputzero + sourceval*(center + epsilon[i]);
+		FTRVector sourceval = sources[i].ForceAndTorque;
+		FTRVector outputmin = Output - sourceval*epsilon[i];
+		FTRVector outputmax = Output + sourceval*epsilon[i];
 		
 		const float scoremin = GetScore(wanted, outputmin);
 		const float scoremax = GetScore(wanted, outputmax);
-		gradient[i] = (scoremax-scoremin);
+		gradient[i] = scoremax-scoremin;
 	}
 	return gradient;
 }
@@ -390,13 +519,23 @@ TArray<float> UBruteForceSolver::Desaturate(TArray<FForceSource>& sources, TArra
 	return output;
 }
 
-int UBruteForceSolver::StartSolveInputs(TArray<FForceSource>& sources, FInputVector InputToOptimise, int MaxIterations)
+int UBruteForceSolver::StartSolveInputs(TArray<FForceSource>& sources, FTRVector InputToOptimise, int MaxIterations)
 {
-	const int NumSources = sources.Num();
 	
-	FGradientDescentRunner* Runner = new FGradientDescentRunner(sources, InputToOptimise, MaxIterations * NumSources);
+	FGradientDescentRunner* Runner = new FGradientDescentRunner(sources, InputToOptimise, MaxIterations, EGradientDescentMethod::Binomial);
+	//nbiter = cuts^numsources = exp(numsources * log(cuts))
+	//log(nbiter) = numsources * log(cuts)
+	//log(cuts) = log(nbiter)/numsources
+	//cuts = nbiter / exp(numsoures)
+	//cuts = nbiter * exp(-numsources)
+	//const float cuts = MaxIterations * FMath::Exp(-sources.Num());
+	//FExhaustiveRunner* Runner = new FExhaustiveRunner(sources, InputToOptimise, floor(cuts));
 	return Runners.Add(Runner);
-	
+}
+
+int UBruteForceSolver::GetNumRunners() const
+{
+	return Runners.Num();
 }
 
 int UBruteForceSolver::GetRunnerIteration(int RunnerIdx)
@@ -413,6 +552,7 @@ float UBruteForceSolver::GetRunnerProgress(int RunnerIdx)
 
 bool UBruteForceSolver::IsDone(int RunnerIdx)
 {
+	check(Runners.IsValidIndex(RunnerIdx));
 	return Runners[RunnerIdx]->IsDone();
 }
 
@@ -425,4 +565,13 @@ FOutputColumn UBruteForceSolver::GetOutput(int RunnerIdx)
 		
 	}
 	return Runners[RunnerIdx]->GetOutput();
+}
+
+void UBruteForceSolver::ClearRunners()
+{
+	for (int i = Runners.Num() - 1; i >= 0; --i)
+	{
+		delete Runners[i];
+	}
+	Runners.Reset();
 }

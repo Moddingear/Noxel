@@ -11,6 +11,7 @@
 #include "ForceConnector.generated.h"
 
 class UForceConnector;
+struct FForceSource;
 /**
  * 
  */
@@ -66,7 +67,7 @@ struct NOXEL_API FTorsor
 	{
 	}
 
-	bool IsNull()
+	bool IsNearlyZero()
 	{
 		return Torque.IsNearlyZero() && Force.IsNearlyZero();
 	}
@@ -137,6 +138,18 @@ struct NOXEL_API FTorsor
 	{
 		return (RelativeLocation == other.RelativeLocation && Force == other.Force && Torque == other.Torque && Source == other.Source && RangeMin == other.RangeMin && RangeMax == other.RangeMax);
 	}
+
+	FTorsor GetTorsorAt(FTransform WorldTransform)
+	{
+		FTransform SourceTransform = GetOwnerTransform() * FTransform(RelativeLocation);
+		FTransform cumul = SourceTransform.Inverse() * WorldTransform;
+		FVector newforce = cumul.TransformVector(Force);
+		FVector torquerebased = cumul.TransformVector(Torque);
+		FVector newtorque = torquerebased + newforce ^ cumul.GetTranslation();
+		return FTorsor(newforce, newtorque, RangeMin, RangeMax);
+	}
+
+	FForceSource ToForceSource(FTransform WorldLocation);
 
 	/*FTorsor Displace(FVector NewRelativeLocation)
 	{

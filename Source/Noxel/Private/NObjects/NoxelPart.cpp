@@ -16,10 +16,14 @@ ANoxelPart::ANoxelPart()
 	PrimaryActorTick.bCanEverTick = true;
 	noxelContainer = CreateDefaultSubobject<UNoxelContainer>(TEXT("Noxel Container"));
 	RootComponent = noxelContainer;
-
+	
+	noxelContainer->SetNotifyRigidBodyCollision(true);
+	noxelContainer->OnComponentHit.AddDynamic(this, &ANoxelPart::OnNoxelHit);
+	
 	nodesContainer = CreateDefaultSubobject<UNodesContainer>(TEXT("Nodes Container"));
 	nodesContainer->SetupAttachment(RootComponent);
 	nodesContainer->SetNodesDefault(TArray<FVector>(), true);
+	
 
 }
 
@@ -28,6 +32,7 @@ void ANoxelPart::BeginPlay()
 {
 	Super::BeginPlay();
 	UE_LOG(Noxel, Log, TEXT("[(%s)ANoxelPart::BeginPlay] Server : %s; Part location : %s"), *GetName(), GetWorld()->IsServer() ? TEXT("True") : TEXT("False"), *GetActorLocation().ToString());
+	
 }
 
 UNoxelContainer * ANoxelPart::GetNoxelContainer()
@@ -45,5 +50,18 @@ void ANoxelPart::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
+}
+
+void ANoxelPart::OnNoxelHit(UPrimitiveComponent* HitComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp,
+	FVector NormalImpulse, const FHitResult& Hit)
+{
+	if (OtherActor)
+	{
+		UE_LOG(Noxel, Log, TEXT("Component %s/%s has been hit by %s/%s : Impulse %s"), *GetName(), *noxelContainer->GetName(), *OtherActor->GetName(), *OtherComp->GetName(), *NormalImpulse.ToString());
+	}
+	else
+	{
+		UE_LOG(Noxel, Log, TEXT("Component %s/%s has been hit by %s : Impulse %s"), *GetName(), *noxelContainer->GetName(), *OtherComp->GetName(), *NormalImpulse.ToString());
+	}
 }
 

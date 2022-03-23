@@ -3,6 +3,7 @@
 
 #include "ControlSchemes/DroneControlScheme.h"
 #include "NObjects.h"
+#include "NObjects/BruteForceSolver.h"
 
 FTRVector UDroneControlScheme::GetUsedForces()
 {
@@ -14,13 +15,16 @@ FTRVector UDroneControlScheme::GetUsedInputs()
 	return FTRVector(1,1,1,0,0,1);
 }
 
-FTRVector UDroneControlScheme::ApplyInputMatrix(FTRVector Input, FTransform Location, FTRVector Speed,
-                                                FTRVector Acceleration, FTRVector Mass)
+FTRVector UDroneControlScheme::ApplyInputMatrix(FTRVector Input, FTransform Location, FTransform CameraTransform,
+                                                FTRVector Speed, FTRVector Acceleration, FTRVector Mass)
 {
 	FTRVector OutputForce = FTRVector::ZeroVector;
 	float UpForce = Mass.Translation.Z / (Location.GetRotation().GetUpVector() | FVector::UpVector) * (Input.Translation.Z * 0.5 + 1) * -Acceleration.Translation.Z;
 	OutputForce.Translation.Z = UpForce;
-	FVector RotVec(Input.Translation.X, Input.Translation.Y, Input.Rotation.Z);
-	OutputForce.Rotation = RotVec * Mass.Rotation;
+	FVector RotVec(-Input.Translation.Y, Input.Translation.X, Input.Rotation.Z);
+	FVector RestoringMoment = Location.GetRotation().Euler();
+	RestoringMoment.Z = 0;
+	RestoringMoment*=-10;
+	OutputForce.Rotation = (RotVec*1 + RestoringMoment) * Mass.Rotation;
 	return OutputForce;
 }

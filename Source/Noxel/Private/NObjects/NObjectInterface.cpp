@@ -54,10 +54,12 @@ void INObjectInterface::SetupNodeContainerBySocket(UStaticMeshComponent * Mesh, 
 	UE_LOG(Noxel, Log, TEXT("[%s::SetupNodeContainerBySocket] Found %d nodes"), *Mesh->GetOwner()->GetClass()->GetFName().ToString(), NodesFound);
 }
 
-bool INObjectInterface::ComputeCOMFromComponents(TArray<AActor*> &Actors, FVector &COM, float &Mass)
+bool INObjectInterface::ComputeCOMFromComponents(TArray<AActor*> &Actors, FVector &COM, float &Mass, FVector& InertiaTensor)
 {
 	FVector WeightedCenter = FVector::ZeroVector;
 	float TotalMass = 0;
+	InertiaTensor = FVector::ZeroVector;
+	TArray<UPrimitiveComponent*> Roots;
 	for (int i = 0; i < Actors.Num(); i++)
 	{
 		AActor* curr = Actors[i];
@@ -78,6 +80,8 @@ bool INObjectInterface::ComputeCOMFromComponents(TArray<AActor*> &Actors, FVecto
 				//UE_LOG(Noxel, Log, TEXT("[INObjectInterface::ComputeCOMFromComponents] Component %s is welded to another object, skipping"), *root->GetName());
 				continue;
 			}
+			Roots.Add(root);
+			FTransform rootTransform = root->GetComponentTransform();
 			float mass = root->GetMass();
 			FVector com = root->GetCenterOfMass();
 			WeightedCenter += com * mass;
@@ -86,5 +90,17 @@ bool INObjectInterface::ComputeCOMFromComponents(TArray<AActor*> &Actors, FVecto
 	}
 	COM = WeightedCenter / TotalMass;
 	Mass = TotalMass;
+
+	for (UPrimitiveComponent* root : Roots)
+	{
+		FTransform rootTransform = root->GetComponentTransform();
+		float mass = root->GetMass();
+		FVector com = root->GetCenterOfMass();
+		FVector AngularInertia = root->GetInertiaTensor();
+		FVector InertiaRebased = rootTransform.TransformVector(AngularInertia);
+		FVector InertiaFinal = InertiaRebased + (com - COM) * mass;
+		InertiaTensor += InertiaFinal;
+	}
+	
 	return true;
 }

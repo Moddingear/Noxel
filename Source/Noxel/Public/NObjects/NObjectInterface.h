@@ -52,7 +52,8 @@ public:
 
 	void SetupNodeContainerBySocket(class UStaticMeshComponent* Mesh, FString SocketRegex, class UNodesContainer* Target);
 
-	bool ComputeCOMFromComponents(TArray<AActor*> &Actors, FVector &COM, float &Mass);
+	//Everything is in world space
+	bool ComputeCOMFromComponents(TArray<AActor*> &Actors, FVector &COM, float &Mass, FVector& InertiaTensor);
 };
 
 /*

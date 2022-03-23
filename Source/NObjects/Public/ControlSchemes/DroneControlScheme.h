@@ -18,5 +18,5 @@ public:
 	virtual FTRVector GetUsedForces() override;
 	virtual FTRVector GetUsedInputs() override;
 
-	virtual FTRVector ApplyInputMatrix(FTRVector Input, FTransform Location, FTRVector Speed, FTRVector Acceleration, FTRVector Mass) override;
+	virtual FTRVector ApplyInputMatrix(FTRVector Input, FTransform Location, FTransform CameraTransform, FTRVector Speed, FTRVector Acceleration, FTRVector Mass) override;
 };

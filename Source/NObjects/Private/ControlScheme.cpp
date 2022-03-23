@@ -3,9 +3,7 @@
 
 #include "ControlScheme.h"
 #include "NObjects.h"
-
-NOBJECTS_API const FTRVector FTRVector::ZeroVector(0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f);
-NOBJECTS_API const FTRVector FTRVector::OneVector(1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f);
+#include "NObjects/BruteForceSolver.h"
 
 UControlScheme::UControlScheme()
 {
@@ -29,7 +27,7 @@ FTRVector UControlScheme::GetUsedInputs()
 	return FTRVector::ZeroVector;
 }
 
-FTRVector UControlScheme::ApplyInputMatrix(FTRVector Input, FTransform Location, FTRVector Speed, FTRVector Acceleration, FTRVector Mass)
+FTRVector UControlScheme::ApplyInputMatrix(FTRVector Input, FTransform Location, FTransform CameraTransform, FTRVector Speed, FTRVector Acceleration, FTRVector Mass)
 {
 	return Input;
 }

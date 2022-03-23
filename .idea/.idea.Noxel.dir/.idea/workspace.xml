@@ -9,10 +9,27 @@
   <component name="ChangeListManager">
     <list default="true" id="2ed74af6-b6bf-4ba9-87d3-bee0bfad75bf" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/.idea.Noxel.dir/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/.idea.Noxel.dir/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/Noxel/Private/Tests/BruteForceSolver.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/Noxel/Private/NObjects/BruteForceSolver.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/NObjects/Private/ControlScheme.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/NObjects/Private/ControlScheme.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/NObjects/Private/ControlSchemes/DroneControlScheme.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/NObjects/Private/ControlSchemes/DroneControlScheme.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/NObjects/Private/EDF.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/NObjects/Private/EDF.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/NObjects/Private/Server.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/NObjects/Private/Server.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/NObjects/Public/ControlScheme.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/NObjects/Public/ControlScheme.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/NObjects/Public/ControlSchemes/DroneControlScheme.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/NObjects/Public/ControlSchemes/DroneControlScheme.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/NObjects/Public/EDF.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/NObjects/Public/EDF.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/NObjects/Public/Server.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/NObjects/Public/Server.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/Noxel/Private/Connectors/ForceConnector.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/Noxel/Private/Connectors/ForceConnector.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/Noxel/Private/NObjects/BruteForceSolver.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/Noxel/Private/NObjects/BruteForceSolver.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/Noxel/Private/NObjects/NObjectInterface.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/Noxel/Private/NObjects/NObjectInterface.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/Noxel/Private/NObjects/NObjectPossessableBase.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/Noxel/Private/NObjects/NObjectPossessableBase.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/Noxel/Private/NObjects/NoxelPart.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/Noxel/Private/NObjects/NoxelPart.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/Noxel/Private/Noxel/CraftDataHandler.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/Noxel/Private/Noxel/CraftDataHandler.cpp" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Source/Noxel/Private/Tests/BruteForceTester.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/Noxel/Private/Tests/BruteForceTester.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/Noxel/Public/Tests/BruteForceSolver.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/Noxel/Public/NObjects/BruteForceSolver.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/Noxel/Public/Tests/BruteForceTester.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/Noxel/Public/Tests/BruteForceTester.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/Noxel/Public/Connectors/ForceConnector.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/Noxel/Public/Connectors/ForceConnector.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/Noxel/Public/NObjects/BruteForceSolver.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/Noxel/Public/NObjects/BruteForceSolver.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/Noxel/Public/NObjects/NObjectInterface.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/Noxel/Public/NObjects/NObjectInterface.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/Noxel/Public/NObjects/NObjectPossessableBase.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/Noxel/Public/NObjects/NObjectPossessableBase.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/Noxel/Public/NObjects/NoxelPart.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/Noxel/Public/NObjects/NoxelPart.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/NoxelRenderer/Private/NoxelRMCProvider.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/NoxelRenderer/Private/NoxelRMCProvider.cpp" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -29,6 +46,9 @@
       <filtered-out-file-type name="TAG" />
       <filtered-out-file-type name="COMMIT_BY_MESSAGE" />
     </file-type-list>
+  </component>
+  <component name="HighlightingSettingsPerFile">
+    <setting file="file://$PROJECT_DIR$/Intermediate/Build/Win64/UE4Editor/Inc/Noxel/NoxelPart.gen.cpp" root0="SKIP_HIGHLIGHTING" />
   </component>
   <component name="IdeDocumentHistory">
     <changedPaths>
@@ -109,6 +129,11 @@
       <workItem from="1646557781963" duration="3394000" />
       <workItem from="1646683808325" duration="7670000" />
       <workItem from="1646852400492" duration="6402000" />
+      <workItem from="1647711831581" duration="4564000" />
+      <workItem from="1647772132303" duration="7708000" />
+      <workItem from="1647806744759" duration="11624000" />
+      <workItem from="1647967172565" duration="6000000" />
+      <workItem from="1648074078030" duration="577000" />
     </task>
     <servers />
   </component>
@@ -129,7 +154,7 @@
   <component name="XDebuggerManager">
     <watches-manager>
       <configuration name="Uproject">
-        <watch expression="@ ALREADY PREPROCESSED @matrix" />
+        <watch expression="@ ALREADY PREPROCESSED @Enabled" />
       </configuration>
     </watches-manager>
   </component>

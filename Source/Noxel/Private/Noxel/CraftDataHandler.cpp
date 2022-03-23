@@ -13,6 +13,7 @@
 #include "NObjects/NoxelPart.h"
 #include "NObjects/NObjectInterface.h"
 #include "NoxelDataAsset.h"
+#include "RuntimeMesh.h"
 
 #include "JsonObjectConverter.h"
 #include "Kismet/KismetMathLibrary.h"
@@ -475,6 +476,7 @@ void UCraftDataHandler::enableCraft()
 		for (UNodesContainer* NodeContainer : Part->GetNoxelContainer()->GetConnectedNodesContainers())
 		{
 			AActor* NObject = NodeContainer->GetOwner();
+			UPrimitiveComponent* root = Cast<UPrimitiveComponent>(NObject->GetRootComponent());
 			if (AlreadyConnected.Contains(NObject))
 			{
 				continue;
@@ -487,7 +489,17 @@ void UCraftDataHandler::enableCraft()
 					continue;
 				}
 			}
-			NObject->AttachToActor(Part, FAttachmentTransformRules::KeepWorldTransform);
+			//Update the UBodySetup to something valid to allow welding 
+			Part->GetNoxelContainer()->GetRuntimeMesh()->ForceCollisionUpdate();
+			//NObject->AttachToActor(Part, FAttachmentTransformRules::KeepWorldTransform);
+			FAttachmentTransformRules rules(EAttachmentRule::KeepWorld, true);
+			root->WeldTo(Part->GetNoxelContainer());
+			FString attachedTo = TEXT("nothing");
+			if (root->GetAttachmentRoot())
+			{
+				attachedTo = root->GetAttachmentRoot()->GetName();
+			}
+			UE_LOG(Noxel, Log, TEXT("Attaching %s to %s : IsWelded = %d, attached to %s"), *NObject->GetName(), *Part->GetName(), root->IsWelded(), *attachedTo);
 			AlreadyConnected.Add(NObject);
 		}
 	}
@@ -497,10 +509,10 @@ void UCraftDataHandler::enableCraft()
 		{
 			if (UPrimitiveComponent* rootPrimitive = Cast<UPrimitiveComponent>(NObject->GetRootComponent()))
 			{
-				/*if (URuntimeMeshComponent* RootRuntime = Cast<URuntimeMeshComponent>(rootPrimitive))
+				if (URuntimeMeshComponent* RootRuntime = Cast<URuntimeMeshComponent>(rootPrimitive))
 				{
-					//Force update collision if needed
-				}*/
+					
+				}
 				rootPrimitive->SetSimulatePhysics(true);
 			}
 			/*else

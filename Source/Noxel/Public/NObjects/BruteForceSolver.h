@@ -1,57 +1,75 @@
 #pragma once
 #include "CoreMinimal.h"
-
 #include "BruteForceSolver.generated.h"
 
-
+UENUM()
+enum EGradientDescentMethod
+{
+	Binomial,
+	FixedEpsilon,
+	Exhaustive
+};
 
 USTRUCT(BlueprintType)
-struct FInputVector
+struct NOXEL_API FTRVector
 {
 	GENERATED_BODY()
 
+	static const FTRVector ZeroVector;
+	static const FTRVector OneVector;
+	
 	UPROPERTY(BlueprintReadWrite)
 	FVector Translation;
 	UPROPERTY(BlueprintReadWrite)
 	FVector Rotation;
 
-	FInputVector()
+	FTRVector()
 		:Translation(FVector::ZeroVector),
 		Rotation(FVector::ZeroVector)
 	{}
 
-	FInputVector(FVector InTranslation, FVector InRotation)
+	FTRVector(FVector InTranslation, FVector InRotation)
 		:Translation(InTranslation), Rotation(InRotation)
+	{}
+
+	FTRVector(float tx, float ty, float tz, float rx, float ry, float rz)
+		:Translation(tx, ty, tz), Rotation( rx, ry, rz)
 	{}
 
 	float& GetComponent(int i);
 
-	FORCEINLINE FInputVector operator+(const FInputVector& V) const;
+	FORCEINLINE FTRVector operator+(const FTRVector& V) const;
 
-	FORCEINLINE FInputVector operator-(const FInputVector& V) const;
+	FORCEINLINE FTRVector operator-(const FTRVector& V) const;
 	
-	FORCEINLINE FInputVector operator*(const float& x) const;
+	FORCEINLINE FTRVector operator*(const float& x) const;
+
+	FORCEINLINE FTRVector operator*(const FTRVector& x) const;
+
+	FORCEINLINE FTRVector operator/(const FTRVector& x) const;
 	
-	FORCEINLINE FInputVector operator+=(const FInputVector& V);
+	FORCEINLINE FTRVector operator+=(const FTRVector& V);
 
 	float GetSizeSquared();
 	
 	float GetSize();
 	
-	FInputVector GetUnsafeNormal();
+	FTRVector GetUnsafeNormal();
 	
-	static float Distance(FInputVector A, FInputVector B);
+	static float Distance(FTRVector A, FTRVector B);
+
+	float Sum() const;
 
 	FString ToString() const;
 };
 
 USTRUCT(BlueprintType)
-struct FForceSource
+struct NOXEL_API FForceSource
 {
 	GENERATED_BODY()
 
 	UPROPERTY(BlueprintReadWrite)
-	FInputVector ForceAndTorque;
+	FTRVector ForceAndTorque;
 
 	UPROPERTY(BlueprintReadWrite)
 	float RangeMin;
@@ -62,12 +80,12 @@ struct FForceSource
 };
 
 USTRUCT(BlueprintType)
-struct FOutputColumn
+struct NOXEL_API FOutputColumn
 {
 	GENERATED_BODY()
 	
 	UPROPERTY(BlueprintReadWrite)
-	FInputVector OptimisedDirection;
+	FTRVector OptimisedDirection;
 	UPROPERTY(BlueprintReadWrite)
 	TArray<float> InputCoefficients;
 
@@ -77,7 +95,7 @@ struct FOutputColumn
 };
 
 USTRUCT(BlueprintType)
-struct FOutputMatrix
+struct NOXEL_API FOutputMatrix
 {
 	GENERATED_BODY()
 	
@@ -86,17 +104,63 @@ struct FOutputMatrix
 
 	TArray<float> GetOutputValues(TArray<float> input) const;
 
-	FInputVector GetInputVector(TArray<float> input) const;
+	FTRVector GetInputVector(TArray<float> input) const;
 
 	FString ToString() const;
 };
 
+class NOXEL_API FBruteForceRunnerBase : public FRunnable
+{
+	
+public:
+	virtual float GetProgress() const = 0;
+	virtual int GetIteration() const = 0;
+	virtual bool IsDone() const = 0;
+	virtual FOutputColumn GetOutput() const = 0;
+};
 
-class FGradientDescentRunner : public FRunnable
+class NOXEL_API FExhaustiveRunner : public FBruteForceRunnerBase
+{
+	TArray<FForceSource> Sources;
+	int Cuts;
+	FTRVector Direction;
+	
+	FOutputColumn BestState;
+	float BestScore;
+	
+	bool done;
+	long i, top;
+
+private:
+	FRunnableThread* Thread;
+	bool StopFlag;
+public:
+	
+	FExhaustiveRunner(const TArray<FForceSource>& InSources, 
+	const FTRVector InDirection, int InCuts);
+
+	TArray<float> GetAlpha(int SliceIndex, int NumSlices);
+
+	virtual ~FExhaustiveRunner() override;
+
+	virtual uint32 Run() override;
+	virtual void Stop() override;
+
+	virtual float GetProgress() const override;
+
+	virtual int GetIteration() const override;
+
+	virtual bool IsDone() const override;
+
+	virtual FOutputColumn GetOutput() const override;
+};
+
+class NOXEL_API FGradientDescentRunner : public FBruteForceRunnerBase
 {
 	TArray<FForceSource> Sources;
 	int MaxIterations;
-	FInputVector Direction;
+	FTRVector Direction;
+	EGradientDescentMethod DescentMethod;
 	
 	FOutputColumn State;
 	TArray<float> Width;
@@ -110,31 +174,29 @@ private:
 public:
 	
 	FGradientDescentRunner(const TArray<FForceSource>& InSources, 
-	const FInputVector InDirection, int InMaxIterations);
+	const FTRVector InDirection, int InMaxIterations, EGradientDescentMethod InDescentMethod);
 
-	~FGradientDescentRunner();
+	virtual ~FGradientDescentRunner() override;
 
-	virtual bool Init() override;
 	virtual uint32 Run() override;
 	virtual void Stop() override;
-	virtual void Exit() override;
 
-	float GetProgress() const;
+	virtual float GetProgress() const override;
 
-	int GetIteration() const;
+	virtual int GetIteration() const override;
 
-	bool IsDone() const;
+	virtual bool IsDone() const override;
 
-	FOutputColumn GetOutput() const;
+	virtual FOutputColumn GetOutput() const override;
 };
 
 UCLASS(BlueprintType)
-class UBruteForceSolver : public UObject
+class NOXEL_API UBruteForceSolver : public UObject
 {
 	GENERATED_BODY()
 	
 private:
-	TArray<FGradientDescentRunner*> Runners;
+	TArray<FBruteForceRunnerBase*> Runners;
 	
 public:
 
@@ -144,11 +206,11 @@ public:
 	static TArray<FForceSource> MakeTestCube(FVector extents);
 
 	UFUNCTION(BlueprintCallable)
-	static FInputVector GetOutputVector(UPARAM(ref) TArray<FForceSource>& sources, UPARAM(ref) FOutputColumn& state, bool WithSaturation);
+	static FTRVector GetOutputVector(UPARAM(ref) TArray<FForceSource>& sources, UPARAM(ref) FOutputColumn& state, bool WithSaturation);
 
 	//Returns a score, where higher is best (not linear AT ALL)
 	UFUNCTION()
-	static float GetScore(UPARAM(ref) FInputVector& input, UPARAM(ref) FInputVector& output);
+	static float GetScore(UPARAM(ref) FTRVector& input, UPARAM(ref) FTRVector& output);
 
 	//Returns an array of score gradients for each source axis
 	UFUNCTION()
@@ -159,8 +221,10 @@ public:
 	static TArray<float> Desaturate(UPARAM(ref) TArray<FForceSource>& sources, TArray<float> inputs);
 
 	UFUNCTION(BlueprintCallable)
-	int StartSolveInputs(UPARAM(ref) TArray<FForceSource>& sources, FInputVector InputToOptimise, int MaxIterations);
+	int StartSolveInputs(UPARAM(ref) TArray<FForceSource>& sources, FTRVector InputToOptimise, int MaxIterations);
 
+	int GetNumRunners() const;
+	
 	int GetRunnerIteration(int RunnerIdx);
 	
 	UFUNCTION(BlueprintCallable)
@@ -171,5 +235,8 @@ public:
 
 	UFUNCTION(BlueprintCallable)
 	FOutputColumn GetOutput(int RunnerIdx);
+
+	UFUNCTION(BlueprintCallable)
+	void ClearRunners();
 	
 };

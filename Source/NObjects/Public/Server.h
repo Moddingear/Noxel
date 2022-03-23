@@ -10,30 +10,7 @@
 class UForceConnector;
 class UGunConnector;
 class UControlScheme;
-
-USTRUCT(BlueprintType)
-struct FTorsorBias
-{
-	GENERATED_BODY()
-
-	UPROPERTY(BlueprintReadWrite)
-	UForceConnector* Source;
-
-	UPROPERTY(BlueprintReadWrite)
-	int Index;
-	
-	UPROPERTY(BlueprintReadWrite)
-	FTRVector Bias;
-
-	FTorsorBias()
-	: Source(nullptr), Index(INDEX_NONE)
-	{
-	}
-
-	FTorsorBias(UForceConnector* InSource, int InIndex, FTRVector InBias)
-		:Source(InSource), Index(InIndex), Bias(InBias)
-	{}
-};
+class UBruteForceSolver;
 /**
  * 
  */
@@ -45,6 +22,10 @@ class NOBJECTS_API AServer : public ANObjectPossessableBase
 public:
 	// Sets default values for this actor's properties
 	AServer();
+
+private:
+	UPROPERTY()
+	UBruteForceSolver* Solver;
 
 protected:
 	// Called when the game starts or when spawned
@@ -64,8 +45,6 @@ public:
 	TSubclassOf<UControlScheme> ControlSchemeClass;
 	UPROPERTY(BlueprintReadOnly)
 	UControlScheme* ControlScheme;
-
-	TArray<FTorsorBias> ForceBiases;
 
 	virtual void OnNObjectEnable_Implementation(UCraftDataHandler* Craft) override;
 	virtual void OnNObjectDisable_Implementation() override;

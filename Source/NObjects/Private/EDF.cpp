@@ -45,7 +45,7 @@ void AEDF::Tick(float DeltaTime)
 		BladesTop->AddRelativeRotation(FRotator::MakeFromEuler(FVector(0.f, 0.f, RotationSpeedTop * DeltaTime)));
 		BladesBottom->AddRelativeRotation(FRotator::MakeFromEuler(FVector(0.f, 0.f, RotationSpeedBottom * DeltaTime)));
 		staticMesh->AddForceAtLocationLocal(FVector(0, 0, 1) * lift * MaxLift, FVector::ZeroVector);
-		UE_LOG(NObjects, Log, TEXT("[AEDF::Tick] Lift : %f"), lift * MaxLift);
+		//UE_LOG(NObjects, Log, TEXT("[AEDF::Tick] Lift : %f"), lift * MaxLift);
 	}
 	else {
 		float TopPropRotationDirection = FMath::Sign(TopPropellerRotationSpeed);

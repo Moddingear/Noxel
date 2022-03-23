@@ -756,9 +756,9 @@ bool UNoxelRMCProvider::GetCollisionMesh(FRuntimeMeshCollisionData& CollisionDat
 	{
 		FNoxelRendererPanelData Panel = TempPanels[PanelIdx];
 		int32 NumNodes = Panel.Nodes.Num();
-		UE_LOG(NoxelRendererLog, Log,
+		/*UE_LOG(NoxelRendererLog, Log,
 		       TEXT("[UNoxelRMCProvider::GetCollisionMesh] Adding to collision map panel index %d with %d sides"),
-		       Panel.PanelIndex, NumNodes*NumTrianglesPerSide);
+		       Panel.PanelIndex, NumNodes*NumTrianglesPerSide);*/
 		for (int32 i = 0; i < NumNodes*NumTrianglesPerSide; i++)
 		{
 			TempCollisionMap.Add(Panel.PanelIndex);
@@ -796,7 +796,7 @@ bool UNoxelRMCProvider::GetCollisionMesh(FRuntimeMeshCollisionData& CollisionDat
 
 void UNoxelRMCProvider::CollisionUpdateCompleted()
 {
-	UE_LOG(NoxelRendererLog, Log, TEXT("[UNoxelRMCProvider::CollisionUpdateCompleted] CollisionMap updated"));
+	//UE_LOG(NoxelRendererLog, Log, TEXT("[UNoxelRMCProvider::CollisionUpdateCompleted] CollisionMap updated"));
 	CollisionMap = NewCollisionMap;
 }
 

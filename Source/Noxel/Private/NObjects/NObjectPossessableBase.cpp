@@ -36,6 +36,9 @@ ANObjectPossessableBase::ANObjectPossessableBase()
 	OrbitDistance = 2000.f;
 	Camera->bUsePawnControlRotation = false;
 	Camera->bUseAttachParentBound = true;
+
+	TranslationInputs = FVector::ZeroVector;
+	RotationInputs = FVector::ZeroVector;
 }
 
 // Called when the game starts or when spawned
@@ -98,15 +101,30 @@ void ANObjectPossessableBase::SetupPlayerInputComponent(UInputComponent * Player
 	InputComponent->BindAction("Ternary mouse button", IE_Released, this, &AEditorCharacter::MiddleClickReleased);
 
 	InputComponent->BindAction("Alternate Mode", IE_Pressed, this, &AEditorCharacter::AlternateModePressed);
-	InputComponent->BindAction("Alternate Mode", IE_Released, this, &AEditorCharacter::AlternateModeReleased);
+	InputComponent->BindAction("Alternate Mode", IE_Released, this, &AEditorCharacter::AlternateModeReleased);*/
 
 	//Axis mappings ----------------------------------------------------------------
 
-	InputComponent->BindAxis("Forwards/Backwards", this, &AEditorCharacter::MoveX);
-	InputComponent->BindAxis("Left/Right", this, &AEditorCharacter::MoveY);
-	InputComponent->BindAxis("Up/Down", this, &AEditorCharacter::MoveZ);*/
+	InputComponent->BindAxis("Forwards/Backwards", this, &ANObjectPossessableBase::MoveX);
+	InputComponent->BindAxis("Left/Right", this, &ANObjectPossessableBase::MoveY);
+	InputComponent->BindAxis("Up/Down", this, &ANObjectPossessableBase::MoveZ);
 	InputComponent->BindAxis("Mouse X Axis", this, &ANObjectPossessableBase::LookYaw);
 	InputComponent->BindAxis("Mouse Y Axis", this, &ANObjectPossessableBase::LookPitch);
+}
+
+void ANObjectPossessableBase::MoveX(float input)
+{
+	TranslationInputs.X = input;
+}
+
+void ANObjectPossessableBase::MoveY(float input)
+{
+	TranslationInputs.Y = input;
+}
+
+void ANObjectPossessableBase::MoveZ(float input)
+{
+	TranslationInputs.Z = input;
 }
 
 void ANObjectPossessableBase::LookPitch(float input)

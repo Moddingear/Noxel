@@ -66,11 +66,16 @@ public:
 	// Called to bind functionality to input
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 
-private:
+protected:
 	float pitch; //Y
 	float yaw; //Z
 	float pitchInput;
 	float yawInput;
+	FVector TranslationInputs, RotationInputs;
+	
+	void MoveX(float input);
+	void MoveY(float input);
+	void MoveZ(float input);
 
 	void LookPitch(float input);
 

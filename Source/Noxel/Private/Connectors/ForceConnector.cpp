@@ -3,11 +3,21 @@
 
 #include "Connectors/ForceConnector.h"
 #include "Noxel.h"
-
+#include "NObjects/BruteForceSolver.h"
 
 AActor * FTorsor::GetOwner()
 {
 	return Source->GetOwner();
+}
+
+FForceSource FTorsor::ToForceSource(FTransform WorldLocation)
+{
+	FTorsor movedTorsor = GetTorsorAt(WorldLocation);
+	FForceSource ForceSource;
+	ForceSource.ForceAndTorque = FTRVector(movedTorsor.Force, movedTorsor.Torque);
+	ForceSource.RangeMax = RangeMax;
+	ForceSource.RangeMin = RangeMin;
+	return ForceSource;
 }
 
 UForceConnector::UForceConnector()

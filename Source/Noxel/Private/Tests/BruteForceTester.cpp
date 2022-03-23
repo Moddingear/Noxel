@@ -22,7 +22,7 @@ void ABruteForceTester::BeginPlay()
 	Solver = NewObject<UBruteForceSolver>();
 	for (int i = 0; i < 6; ++i)
 	{
-		FInputVector vec;
+		FTRVector vec;
 		vec.GetComponent(i) = i>=3 ? 100 : 1;
 		PrintedResults.Add(false);
 		Solver->StartSolveInputs(Sources, vec, 10*1000);
@@ -46,7 +46,7 @@ void ABruteForceTester::Tick(float DeltaTime)
         	FOutputColumn out = Solver->GetOutput(i);
         	UE_LOG(Noxel, Log, TEXT("Runner%d done (after %d iterations)! Matrix :\r\n%s"), i, Solver->GetRunnerIteration(i), *out.ToString());
         	
-        	FInputVector outVec = UBruteForceSolver::GetOutputVector(Sources, out, false);
+        	FTRVector outVec = UBruteForceSolver::GetOutputVector(Sources, out, false);
         	UE_LOG(Noxel, Log, TEXT("Test Runner%d, result %s"), i, *outVec.ToString());
         }
         if (!PrintedResults[i])

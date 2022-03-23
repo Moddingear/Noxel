@@ -30,7 +30,7 @@ public:
 	UStaticMeshComponent* BladesBottom;
 
 	UPROPERTY(BlueprintReadWrite)
-	float MaxLift = 50000000.f;
+	float MaxLift = 5000000.f;
 	UPROPERTY(BlueprintReadWrite)
 	float MaxTorque = 5000.f;
 	UPROPERTY(BlueprintReadWrite)
