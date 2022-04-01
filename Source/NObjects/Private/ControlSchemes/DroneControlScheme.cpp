@@ -19,12 +19,20 @@ FTRVector UDroneControlScheme::ApplyInputMatrix(FTRVector Input, FTransform Loca
                                                 FTRVector Speed, FTRVector Acceleration, FTRVector Mass)
 {
 	FTRVector OutputForce = FTRVector::ZeroVector;
-	float UpForce = Mass.Translation.Z / (Location.GetRotation().GetUpVector() | FVector::UpVector) * (Input.Translation.Z * 0.5 + 1) * -Acceleration.Translation.Z;
+	float scalarUp = Location.GetRotation().GetUpVector() | FVector::UpVector;
+	float UpForce = 0;
+	if (scalarUp > 0.1)
+	{
+		UpForce = Mass.Translation.Z / scalarUp * (Input.Translation.Z * 0.5 + 1) * -Acceleration.Translation.Z;
+	}
 	OutputForce.Translation.Z = UpForce;
-	FVector RotVec(-Input.Translation.Y, Input.Translation.X, Input.Rotation.Z);
+	FRotator camerarot = CameraTransform.Rotator(), craftrot = Location.Rotator();
+	FRotator CameraToCraft = camerarot.GetInverse() + craftrot;
+	float cam2craftplane = CameraToCraft.GetComponentForAxis(EAxis::Type::Z);
+	FVector RotVec(-Input.Translation.Y, Input.Translation.X, Input.Rotation.Z - cam2craftplane*0.1);
 	FVector RestoringMoment = Location.GetRotation().Euler();
 	RestoringMoment.Z = 0;
-	RestoringMoment*=-10;
+	RestoringMoment*=0.0;
 	OutputForce.Rotation = (RotVec*1 + RestoringMoment) * Mass.Rotation;
 	return OutputForce;
 }

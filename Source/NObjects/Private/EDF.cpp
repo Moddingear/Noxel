@@ -112,5 +112,5 @@ void AEDF::OnGetReceived()
 
 void AEDF::OnSetReceived()
 {
-
+	//UE_LOG(NObjects, Log, TEXT("[AEDF::OnSetReceived] Set received"));
 }

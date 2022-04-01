@@ -9,27 +9,14 @@
   <component name="ChangeListManager">
     <list default="true" id="2ed74af6-b6bf-4ba9-87d3-bee0bfad75bf" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/.idea.Noxel.dir/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/.idea.Noxel.dir/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/NObjects/Private/ControlScheme.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/NObjects/Private/ControlScheme.cpp" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Source/NObjects/Private/ControlSchemes/DroneControlScheme.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/NObjects/Private/ControlSchemes/DroneControlScheme.cpp" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Source/NObjects/Private/EDF.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/NObjects/Private/EDF.cpp" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Source/NObjects/Private/Server.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/NObjects/Private/Server.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/NObjects/Public/ControlScheme.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/NObjects/Public/ControlScheme.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/NObjects/Public/ControlSchemes/DroneControlScheme.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/NObjects/Public/ControlSchemes/DroneControlScheme.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/NObjects/Public/EDF.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/NObjects/Public/EDF.h" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Source/NObjects/Public/Server.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/NObjects/Public/Server.h" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Source/Noxel/Private/Connectors/ForceConnector.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/Noxel/Private/Connectors/ForceConnector.cpp" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Source/Noxel/Private/NObjects/BruteForceSolver.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/Noxel/Private/NObjects/BruteForceSolver.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/Noxel/Private/NObjects/NObjectInterface.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/Noxel/Private/NObjects/NObjectInterface.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/Noxel/Private/NObjects/NObjectPossessableBase.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/Noxel/Private/NObjects/NObjectPossessableBase.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/Noxel/Private/NObjects/NoxelPart.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/Noxel/Private/NObjects/NoxelPart.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/Noxel/Private/Noxel/CraftDataHandler.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/Noxel/Private/Noxel/CraftDataHandler.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/Noxel/Private/Tests/BruteForceTester.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/Noxel/Private/Tests/BruteForceTester.cpp" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Source/Noxel/Public/Connectors/ForceConnector.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/Noxel/Public/Connectors/ForceConnector.h" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Source/Noxel/Public/NObjects/BruteForceSolver.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/Noxel/Public/NObjects/BruteForceSolver.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/Noxel/Public/NObjects/NObjectInterface.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/Noxel/Public/NObjects/NObjectInterface.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/Noxel/Public/NObjects/NObjectPossessableBase.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/Noxel/Public/NObjects/NObjectPossessableBase.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/Noxel/Public/NObjects/NoxelPart.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/Noxel/Public/NObjects/NoxelPart.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/NoxelRenderer/Private/NoxelRMCProvider.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/NoxelRenderer/Private/NoxelRMCProvider.cpp" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -64,12 +51,11 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent">
-    <property name="ASKED_ADD_EXTERNAL_FILES" value="true" />
-    <property name="RunOnceActivity.OpenProjectViewOnStart" value="true" />
-    <property name="RunOnceActivity.ShowReadmeOnStart" value="true" />
-    <property name="WebServerToolWindowFactoryState" value="false" />
-  </component>
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;WebServerToolWindowFactoryState&quot;: &quot;false&quot;
+  }
+}</component>
   <component name="RunManager">
     <configuration name="Noxel" type="Uproject" factoryName="rider.uproject">
       <option name="PROJECT_FILE_PATH" value="$PROJECT_DIR$/Noxel.uproject" />
@@ -134,6 +120,10 @@
       <workItem from="1647806744759" duration="11624000" />
       <workItem from="1647967172565" duration="6000000" />
       <workItem from="1648074078030" duration="577000" />
+      <workItem from="1648149012588" duration="2000" />
+      <workItem from="1648764877574" duration="4019000" />
+      <workItem from="1648813849863" duration="137000" />
+      <workItem from="1648836644524" duration="1738000" />
     </task>
     <servers />
   </component>

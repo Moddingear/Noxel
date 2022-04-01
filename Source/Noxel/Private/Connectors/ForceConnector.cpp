@@ -81,18 +81,18 @@ void UForceConnector::SendAllOrders(TArray<FTorsor>& Torsors, TArray<float>& Sca
 	TArray<float> CurrentStack;
 	for (int32 i = 0; i < Torsors.Num(); i++)
 	{
-		if (Torsors[i].Source != CurrentSource)
+		if (Torsors[i].Source != CurrentSource) //Source to send data to changed
 		{
 			if (CurrentSource)
 			{
-				SendOrder(CurrentStack, CurrentSource);
+				SendOrder(CurrentStack, CurrentSource); //Send data that was spooled to source
 			}
-			CurrentStack.Empty();
+			CurrentStack.Empty(); //Reset
 			CurrentSource = Torsors[i].Source;
 		}
-		CurrentStack.Add(Scalars[i]);
+		CurrentStack.Add(Scalars[i]); //Spool data
 	}
-	if (CurrentSource)
+	if (CurrentSource) //Send remaining data
 	{
 		SendOrder(CurrentStack, CurrentSource);
 	}

@@ -75,20 +75,37 @@ void AServer::Tick(float DeltaTime)
 			Source.ForceAndTorque = Source.ForceAndTorque / Inertia;
 			TorsorsConverted.Add(Source);
 		}
-		for (int i = 0; i < TorsorsConverted.Num(); ++i)
+		/*for (int i = 0; i < TorsorsConverted.Num(); ++i)
 		{
 			UE_LOG(NObjects, Log, TEXT("Source %d : %s"), i, *TorsorsConverted[i].ToString());
-		}
+		}*/
 		if (Solver->GetNumRunners() > 0)
 		{
 			FOutputColumn col = Solver->GetOutput(0);
 			//UE_LOG(NObjects, Log, TEXT("Runner done (after %d iterations)! Matrix :\r\n%s"), Solver->GetRunnerIteration(0), *col.ToString());
-			FTRVector outVec = UBruteForceSolver::GetOutputVector(TorsorsConverted, col, false);
-			UE_LOG(NObjects, Log, TEXT("Test Runner, result %s after %d iterations, will ask for %s"), *outVec.ToString(), Solver->GetRunnerIteration(0), *WantedOutput.ToString());
-			ForcesOut->SendAllOrders(Torsors, col.InputCoefficients);
+			FTRVector outVec = UBruteForceSolver::GetOutputVector(LastTorsors, col, false);
+			//UE_LOG(NObjects, Log, TEXT("[AServer::Tick] Test Runner, result %s after %d iterations, will ask for %s"), *outVec.ToString(), Solver->GetRunnerIteration(0), *WantedOutput.ToString());
+			//ForcesOut->SendAllOrders(Torsors, col.InputCoefficients);
+			FTRVector SumAbs = FTRVector::ZeroVector;
+			for (FForceSource Torsor : LastTorsors)
+			{
+				FTRVector rangemax = Torsor.ForceAndTorque * Torsor.RangeMax;
+				FTRVector rangemin = Torsor.ForceAndTorque * Torsor.RangeMin;
+				FTRVector abs = FTRVector::MaxComponents(rangemax.GetAbs(), rangemin.GetAbs());
+				SumAbs += abs;
+			}
+			//FTRVector diff = WantedOutput - outVec;
+			FTRVector diff = WantedOutput;
+			
+			UE_LOG(NObjects, Log, TEXT("[AServer::Tick] Distance to target : %f (%s), SumAbs magnitude normalized : %f (%s)"), FTRVector::Distance(outVec, WantedOutput), *diff.ToString(), SumAbs.GetSize(), *SumAbs.ToString());
+
+			FTRVector diffunscaled = diff * Inertia;
+			staticMesh->AddForce(GetTransform().TransformVector(diffunscaled.Translation));
+			staticMesh->AddTorqueInRadians(GetTransform().TransformVector(diffunscaled.Rotation));
 			Solver->ClearRunners();
 		}
 		Solver->StartSolveInputs(TorsorsConverted, WantedOutput, 10000);
+		LastTorsors = TorsorsConverted;
 		
 		/*FString ResultsString;
 		for (float r : Results)

@@ -75,6 +75,21 @@ float FTRVector::Sum() const
 	return Translation.X + Translation.Y + Translation.Z + Rotation.X + Rotation.Y + Rotation.Z;
 }
 
+FTRVector FTRVector::GetAbs() const
+{
+	return FTRVector(Translation.GetAbs(), Rotation.GetAbs());
+}
+
+FTRVector FTRVector::MaxComponents(FTRVector A, FTRVector B)
+{
+	FTRVector out;
+	for (int i = 0; i < 6; ++i)
+	{
+		out.GetComponent(i) = FMath::Max(A.GetComponent(i), B.GetComponent(i));
+	}
+	return out;
+}
+
 FString FTRVector::ToString() const
 {
 	return TEXT("T:") + Translation.ToString() + TEXT(" / R:") + Rotation.ToString();

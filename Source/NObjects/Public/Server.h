@@ -27,6 +27,8 @@ private:
 	UPROPERTY()
 	UBruteForceSolver* Solver;
 
+	TArray<FForceSource> LastTorsors;
+
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;

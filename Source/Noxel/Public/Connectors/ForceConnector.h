@@ -8,10 +8,10 @@
 #include "Noxel/NoxelCombatLibrary.h"
 
 #include "Connectors/ConnectorBase.h"
+#include "NObjects/BruteForceSolver.h"
 #include "ForceConnector.generated.h"
 
 class UForceConnector;
-struct FForceSource;
 /**
  * 
  */
@@ -145,7 +145,7 @@ struct NOXEL_API FTorsor
 		FTransform cumul = SourceTransform.Inverse() * WorldTransform;
 		FVector newforce = cumul.TransformVector(Force);
 		FVector torquerebased = cumul.TransformVector(Torque);
-		FVector newtorque = torquerebased + newforce ^ cumul.GetTranslation();
+		FVector newtorque = torquerebased - cumul.GetTranslation() ^ newforce;
 		return FTorsor(newforce, newtorque, RangeMin, RangeMax);
 	}
 

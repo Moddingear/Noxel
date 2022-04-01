@@ -60,6 +60,10 @@ struct NOXEL_API FTRVector
 
 	float Sum() const;
 
+	FTRVector GetAbs() const;
+
+	static FTRVector MaxComponents(FTRVector A, FTRVector B);
+
 	FString ToString() const;
 };
 
