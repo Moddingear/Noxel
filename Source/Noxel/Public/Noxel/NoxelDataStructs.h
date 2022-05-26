@@ -29,7 +29,7 @@ struct NOXEL_API FNodeID
 
 	FNodeID()
 		: Object(),
-		Location(FVector(0.0f, 0.0f, 0.0f))
+		Location(FVector::ZeroVector)
 	{}
 
 	FNodeID(UNodesContainer* InObject, const FVector InLocation)

@@ -42,7 +42,9 @@ struct NOXEL_API FTorsor
 	UPROPERTY(BlueprintReadWrite)
 	float RangeMax;
 
-	FTorsor(): Source(nullptr), Index(INDEX_NONE), RangeMin(0), RangeMax(0)
+	FTorsor()
+		:RelativeLocation(FVector::ZeroVector), Force(FVector::ZeroVector), Torque(FVector::ZeroVector),
+		Source(nullptr), Index(INDEX_NONE), RangeMin(0), RangeMax(0)
 	{
 	}
 	;

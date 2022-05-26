@@ -9,14 +9,9 @@
   <component name="ChangeListManager">
     <list default="true" id="2ed74af6-b6bf-4ba9-87d3-bee0bfad75bf" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/.idea.Noxel.dir/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/.idea.Noxel.dir/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/NObjects/Private/ControlSchemes/DroneControlScheme.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/NObjects/Private/ControlSchemes/DroneControlScheme.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/NObjects/Private/EDF.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/NObjects/Private/EDF.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/NObjects/Private/Server.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/NObjects/Private/Server.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/NObjects/Public/Server.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/NObjects/Public/Server.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/Noxel/Private/Connectors/ForceConnector.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/Noxel/Private/Connectors/ForceConnector.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/Noxel/Private/NObjects/BruteForceSolver.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/Noxel/Private/NObjects/BruteForceSolver.cpp" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Source/Noxel/Public/Connectors/ForceConnector.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/Noxel/Public/Connectors/ForceConnector.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/Noxel/Public/NObjects/BruteForceSolver.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/Noxel/Public/NObjects/BruteForceSolver.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/Noxel/Public/Noxel/NoxelDataStructs.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/Noxel/Public/Noxel/NoxelDataStructs.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/NoxelRenderer/Public/NoxelRendererStructs.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/NoxelRenderer/Public/NoxelRendererStructs.h" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -35,7 +30,7 @@
     </file-type-list>
   </component>
   <component name="HighlightingSettingsPerFile">
-    <setting file="file://$PROJECT_DIR$/Intermediate/Build/Win64/UE4Editor/Inc/Noxel/NoxelPart.gen.cpp" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///Dummy.cpp" root0="SKIP_HIGHLIGHTING" />
   </component>
   <component name="IdeDocumentHistory">
     <changedPaths>
@@ -53,7 +48,8 @@
   </component>
   <component name="PropertiesComponent">{
   &quot;keyToString&quot;: {
-    &quot;WebServerToolWindowFactoryState&quot;: &quot;false&quot;
+    &quot;RunOnceActivity.OpenProjectViewOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;
   }
 }</component>
   <component name="RunManager">

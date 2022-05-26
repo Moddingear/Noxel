@@ -17,8 +17,8 @@ struct FNoxelRendererNodeData
 	FColor Color;
 
 	FNoxelRendererNodeData()
-		: RelativeLocation(),
-		Color()
+		: RelativeLocation(FVector::ZeroVector),
+		Color(FColor::Black)
 	{}
 
 	FNoxelRendererNodeData(const FVector InRelativeLocation, const FColor InColor)
