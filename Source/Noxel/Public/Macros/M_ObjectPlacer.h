@@ -26,7 +26,7 @@ protected:
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 
 public:
-	float placementDistance = 100.0f;
+	float placementDistance;
 	FVector BoundsCenter;
 private:
 	bool InventoryDisplayed = false;

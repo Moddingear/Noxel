@@ -520,6 +520,12 @@ void UNoxelNetworkingAgent::AddTempObjectServer_Implementation(TSubclassOf<AActo
 	if (IsValid(Class))
 	{
 		AActor* SpawnedActor = GetWorld()->SpawnActorDeferred<AActor>(Class, Location, GetOwner(), nullptr, ESpawnActorCollisionHandlingMethod::AlwaysSpawn);
+		if (!IsValid(SpawnedActor))
+		{
+			UE_LOG(NoxelDataNetwork, Warning,
+				TEXT("[UNoxelNetworkingAgent::AddTempObjectServer_Implementation] Failed to spawn actor : Location %s"), *Location.ToString());
+			return;
+		}
 		int i;
 		for (i = 0; i < TempObjects.Num(); ++i)
 		{

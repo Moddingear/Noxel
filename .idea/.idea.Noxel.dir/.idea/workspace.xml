@@ -9,9 +9,13 @@
   <component name="ChangeListManager">
     <list default="true" id="2ed74af6-b6bf-4ba9-87d3-bee0bfad75bf" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/.idea.Noxel.dir/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/.idea.Noxel.dir/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/Noxel/Public/Connectors/ForceConnector.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/Noxel/Public/Connectors/ForceConnector.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/Noxel/Public/Noxel/NoxelDataStructs.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/Noxel/Public/Noxel/NoxelDataStructs.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/NoxelRenderer/Public/NoxelRendererStructs.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/NoxelRenderer/Public/NoxelRendererStructs.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Content/NoxelEditor/BuilderSimulation.umap" beforeDir="false" afterPath="$PROJECT_DIR$/Content/NoxelEditor/BuilderSimulation.umap" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Content/NoxelEditor/BuilderSimulation_BuiltData.uasset" beforeDir="false" afterPath="$PROJECT_DIR$/Content/NoxelEditor/BuilderSimulation_BuiltData.uasset" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/Noxel/Private/Macros/M_ObjectPlacer.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/Noxel/Private/Macros/M_ObjectPlacer.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/Noxel/Private/Noxel/NoxelNetworkingAgent.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/Noxel/Private/Noxel/NoxelNetworkingAgent.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/Noxel/Public/Macros/M_ObjectPlacer.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/Noxel/Public/Macros/M_ObjectPlacer.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/NoxelRenderer/Private/NodesRMCProvider.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/NoxelRenderer/Private/NodesRMCProvider.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/NoxelRenderer/Private/NoxelRMCProvider.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/NoxelRenderer/Private/NoxelRMCProvider.cpp" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -49,7 +53,8 @@
   <component name="PropertiesComponent">{
   &quot;keyToString&quot;: {
     &quot;RunOnceActivity.OpenProjectViewOnStart&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;settings.editor.selected.configurable&quot;: &quot;SolutionBuilderGeneralOptionsPage&quot;
   }
 }</component>
   <component name="RunManager">
@@ -136,12 +141,5 @@
   </component>
   <component name="VcsManagerConfiguration">
     <option name="CLEAR_INITIAL_COMMIT_MESSAGE" value="true" />
-  </component>
-  <component name="XDebuggerManager">
-    <watches-manager>
-      <configuration name="Uproject">
-        <watch expression="@ ALREADY PREPROCESSED @Enabled" />
-      </configuration>
-    </watches-manager>
   </component>
 </project>

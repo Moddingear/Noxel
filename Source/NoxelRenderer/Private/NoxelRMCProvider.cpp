@@ -640,6 +640,10 @@ bool UNoxelRMCProvider::GetSectionMeshForLOD(int32 LODIndex, int32 SectionId, FR
 	TArray<FNoxelRendererPanelData> TempPanels;
 	GetShapeParams(TempNodes, TempPanels);
 	int32 NumPanels = TempPanels.Num();
+	if (NumPanels == 0)
+	{
+		return false;
+	}
 	//UE_LOG(NoxelRendererLog, Log, TEXT("[UNoxelRMCProvider::GetSectionMeshForLOD] called with parameters LODIndex = %i and SectionId = %i"), LODIndex, SectionId);
 	TArray<FNoxelRendererBakedIntersectionData> AllPanelsIntersections;
 	if (LODIndex <= 1)
@@ -728,7 +732,7 @@ FRuntimeMeshCollisionSettings UNoxelRMCProvider::GetCollisionSettings()
 
 bool UNoxelRMCProvider::HasCollisionMesh()
 {
-	return true;
+	return Panels.Num() != 0;
 }
 
 #define COLLISIONMESH_LOD 2
@@ -741,7 +745,10 @@ bool UNoxelRMCProvider::GetCollisionMesh(FRuntimeMeshCollisionData& CollisionDat
 	TArray<FNoxelRendererPanelData> TempPanels;
 	GetShapeParams(TempNodes, TempPanels);
 	int32 NumPanels = TempPanels.Num();
-
+	if (NumPanels == 0)
+	{
+		return false;
+	}
 	int32 NumSidesAllPanels = GetNumSides(TempPanels);
 	int32 NumVertsPerSide, NumTrianglesPerSide;
 	GetNumIndicesPerSide(COLLISIONMESH_LOD, NumVertsPerSide, NumTrianglesPerSide);

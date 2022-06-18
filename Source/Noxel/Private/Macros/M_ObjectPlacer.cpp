@@ -8,6 +8,7 @@
 AM_ObjectPlacer::AM_ObjectPlacer()
 {
 	static ConstructorHelpers::FClassFinder<UUserWidget> hudWidgetObj(TEXT("/Game/NoxelEditor/Macros/Inventory/M_UMGObjectInventory"));
+	placementDistance = 100.f;
 	if (hudWidgetObj.Succeeded()) 
 	{
 		wInventory = hudWidgetObj.Class;
@@ -93,7 +94,7 @@ FBox AM_ObjectPlacer::GetDefaultBounds(TSubclassOf<AActor> Class)
 {
 	TArray<UObject*> Sub;
 	Class->GetDefaultObjectSubobjects(Sub);
-	FBox DefBounds = FBox();
+	FBox DefBounds = FBox(FVector::ZeroVector, FVector::ZeroVector);
 	for (UObject* SubObj : Sub)
 	{
 		if (SubObj->IsA<UStaticMeshComponent>())
@@ -116,18 +117,8 @@ void AM_ObjectPlacer::ObjectSelected(FNoxelObjectData Object)
 	if (LoadObjectClassSynchronous(Object.Class, SpawnClass))
 	{
 		FBox DefBounds = GetDefaultBounds(SpawnClass);
-		placementDistance = FMath::Max(DefBounds.GetSize().Size()*1.5f, 100.f);
-		/*AActor* DefObj = GetWorld()->SpawnActorDeferred<AActor>(SpawnClass, FTransform::Identity, this,
-			Cast<APawn>(GetOwningActor()), ESpawnActorCollisionHandlingMethod::AlwaysSpawn);
-		DefObj->SetReplicates(false);
-		DefObj->FinishSpawning(FTransform::Identity, true);
-		if (IsValid(DefObj))
-		{
-			DefObj->GetActorBounds(true, BoundsCenter, BoxExtent);
-			placementDistance = FMath::Max(BoxExtent.Size()*1.5f, 100.f);
-			UE_LOG(NoxelMacro, Log, TEXT("[AM_ObjectPlacer::ObjectSelected] Was able to get default object for placement distance"))
-		}
-		GetWorld()->DestroyActor(DefObj);*/
+		float FoundDistance = DefBounds.GetSize().Size()*1.0f;
+		placementDistance = FMath::Clamp(FoundDistance, 100.f, 1000.f);
 	}
 	GetNoxelNetworkingAgent()->AddTempObject(onObjectDelegate, SpawnClass, FTransform(getObjectLocation()));
 }
@@ -167,9 +158,9 @@ void AM_ObjectPlacer::onObjectCall(AActor* Actor)
 		return;
 	}
 	FVector BoxExtent;
-	Actor->GetActorBounds(false, BoundsCenter, BoxExtent);
-	BoundsCenter-= Actor->GetActorLocation();
-	placementDistance = FMath::Max(BoxExtent.Size()*1.5f, 100.f);
+	Actor->GetActorBounds(true, BoundsCenter, BoxExtent);
+	//BoundsCenter-= Actor->GetActorLocation();
+	//placementDistance = FMath::Max(BoxExtent.Size()*1.5f, 100.f);
 	UE_LOG(NoxelMacro, Log, TEXT("[AM_ObjectPlacer::onObjectCall] Extent = %s; Center = %s "), *BoxExtent.ToString(), *BoundsCenter.ToString());
 }
 

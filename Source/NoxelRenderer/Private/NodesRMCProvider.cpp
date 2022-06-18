@@ -88,6 +88,7 @@ void UNodesRMCProvider::Initialize()
 	Properties.bIsVisible = true;
 	Properties.MaterialSlot = 0;
 	Properties.UpdateFrequency = ERuntimeMeshUpdateFrequency::Frequent;
+	Properties.NumTexCoords = StaticMeshRenderable.TexCoords.NumChannels();
 	CreateSection(0, 0, Properties);
 
 	MarkSectionDirty(0, 0);
@@ -110,6 +111,10 @@ bool UNodesRMCProvider::GetSectionMeshForLOD(int32 LODIndex, int32 SectionId, FR
 	FRuntimeMeshRenderableMeshData TempStaticMeshRenderable; TArray<FNoxelRendererNodeData> TempNodes;
 	GetShapeMeshParams(TempStaticMeshRenderable, TempNodes);
 	const int32 NumNodes = TempNodes.Num();
+	if (NumNodes == 0)
+	{
+		return false;
+	}
 	const int32 NumVerts = TempStaticMeshRenderable.Positions.Num();
 	const int32 NumTris = TempStaticMeshRenderable.Triangles.Num();
 	MeshData.Positions.Reserve(NumNodes * NumVerts);
@@ -118,7 +123,7 @@ bool UNodesRMCProvider::GetSectionMeshForLOD(int32 LODIndex, int32 SectionId, FR
 	MeshData.TexCoords.Reserve(NumNodes * NumVerts);
 	MeshData.Triangles.Reserve(NumNodes * NumTris);
 
-	for (int32 NodeIdx = 0; NodeIdx < TempNodes.Num(); NodeIdx++)
+	for (int32 NodeIdx = 0; NodeIdx < NumNodes; NodeIdx++)
 	{
 		FNoxelRendererNodeData Node = TempNodes[NodeIdx];
 		FVector Nodepos = Node.RelativeLocation;
@@ -189,7 +194,7 @@ FRuntimeMeshCollisionSettings UNodesRMCProvider::GetCollisionSettings()
 
 bool UNodesRMCProvider::HasCollisionMesh()
 {
-	return true;
+	return Nodes.Num() != 0;
 }
 
 bool UNodesRMCProvider::GetCollisionMesh(FRuntimeMeshCollisionData& CollisionData)
@@ -197,6 +202,10 @@ bool UNodesRMCProvider::GetCollisionMesh(FRuntimeMeshCollisionData& CollisionDat
 	FRuntimeMeshCollisionData TempStaticMeshCollidable; TArray<FNoxelRendererNodeData> TempNodes;
 	GetShapeCollisionParams(TempStaticMeshCollidable, TempNodes);
 	int32 NumNodes = TempNodes.Num();
+	if (NumNodes == 0)
+	{
+		return false;
+	}
 	int32 NumVerts = TempStaticMeshCollidable.Vertices.Num();
 	int32 NumTris = TempStaticMeshCollidable.Triangles.Num();
 
