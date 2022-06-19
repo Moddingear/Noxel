@@ -23,16 +23,4 @@ public:
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
 
-	virtual void leftClickPressed_Implementation() override;
-
-	virtual void leftClickReleased_Implementation() override;
-
-	virtual void middleClickPressed_Implementation() override;
-
-	virtual void middleClickReleased_Implementation() override;
-
-	virtual void rightClickPressed_Implementation() override;
-
-	virtual void rightClickReleased_Implementation() override;
-
 };

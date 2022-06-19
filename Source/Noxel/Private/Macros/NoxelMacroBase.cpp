@@ -293,10 +293,7 @@ bool ANoxelMacroBase::TraceNodes(FVector start, FVector end, FNodeID & id)
 {
 	FHitResult hit;
 	if (GetWorld()->LineTraceSingleByChannel(hit, start, end, ECollisionChannel::ECC_GameTraceChannel1, UNoxelLibrary::getCollisionParameters())) { //If something was hit in noxel collision channel
-		FNodeID node; //TODO
-		if (UNodesContainer::GetNodeHit(hit, node)) {
-			id = node;
-			//UE_LOG(NoxelMacro, Warning, TEXT("Node was hit : %s"), *id.Location.ToString());
+		if (UNodesContainer::GetNodeHit(hit, id)) {
 			return true;
 		}
 	}

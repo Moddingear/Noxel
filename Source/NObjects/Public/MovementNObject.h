@@ -27,7 +27,12 @@ public:
 	UPROPERTY(BlueprintReadOnly)
 	UForceConnector* ForceIn;
 
+	UPROPERTY(BlueprintReadOnly)
+	UPrimitiveComponent* AttachParent;
+
 	virtual FJsonObjectWrapper OnReadMetadata_Implementation(const TArray<AActor*>& Components) override;
 	virtual bool OnWriteMetadata_Implementation(const FJsonObjectWrapper& Metadata, const TArray<AActor*>& Components) override;
+
+	virtual bool OnNObjectAttach_Implementation(ANoxelPart* Part) override;
 	
 };

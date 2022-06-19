@@ -294,6 +294,12 @@ uint32 FGradientDescentRunner::Run()
 	int NumSources = Sources.Num();
 	State.OptimisedDirection = Direction;
 	State.InputCoefficients.SetNumZeroed(NumSources); Width.SetNumZeroed(NumSources);
+
+	if (NumSources == 0)
+	{
+		done = true;
+		return 0;
+	}
 	
 	for (int j = 0; j < NumSources; ++j)
 	{

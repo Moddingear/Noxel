@@ -7,7 +7,7 @@
 
 FTRVector UDroneControlScheme::GetUsedForces()
 {
-	return FTRVector(0,0,1,1,1,1);
+	return FTRVector(1,1,1,1,1,1);
 }
 
 FTRVector UDroneControlScheme::GetUsedInputs()

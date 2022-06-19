@@ -4,6 +4,7 @@
 #include "CoreMinimal.h"
 #include "ControlScheme.h"
 #include "ControlSchemes/DroneControlScheme.h"
+#include "ControlSchemes/CarControlScheme.h"
 #include "Noxel/CraftDataHandler.h"
 #include "NObjects.h"
 #include "Connectors/GunConnector.h"
@@ -16,7 +17,7 @@ AServer::AServer()
 	static ConstructorHelpers::FObjectFinder<UStaticMesh> MeshConstructor(TEXT("StaticMesh'/Game/NoxelEditor/NObjects/Meshes/Server.Server'"));
 	staticMesh->SetStaticMesh(MeshConstructor.Object);
 	
-	ControlSchemeClass = UDroneControlScheme::StaticClass();
+	ControlSchemeClass = UCarControlScheme::StaticClass();
 
 	ForcesOut = CreateDefaultSubobject<UForceConnector>("Forces");
 	ForcesOut->SetupAttachment(staticMesh, TEXT("ForceConnector"));
@@ -49,8 +50,12 @@ void AServer::Tick(float DeltaTime)
 	{
 		float Mass; FVector COM, InertiaTensor;
 		ComputeCOMFromComponents(ReplicatedCraft->Components, COM, Mass, InertiaTensor);
+		//Convert inertia tensor to local space:
+		InertiaTensor = GetTransform().InverseTransformVectorNoScale(InertiaTensor);
 
 		const FTRVector Inertia(FVector(Mass), InertiaTensor);
+		FTRVector ForcesScaler = ControlScheme->GetUsedForces() / Inertia; //Vector that only retains the forces to be optimized and their scales
+		ForcesScaler.Translation /= 1000.f;
 
 		const FTRVector WantedForces = ControlScheme->ApplyInputMatrix(
 			FTRVector(TranslationInputs, FVector::ZeroVector), //TODO get inputs from the player
@@ -59,7 +64,7 @@ void AServer::Tick(float DeltaTime)
 			FTRVector(staticMesh->GetPhysicsLinearVelocity(), staticMesh->GetPhysicsAngularVelocityInRadians()),
 			FTRVector(0,0,GetWorld()->GetGravityZ(),0,0,0), Inertia);
 
-		const FTRVector WantedOutput = WantedForces / Inertia;
+		const FTRVector WantedOutput = WantedForces * ForcesScaler;
 		
 		TArray<FTorsor> Torsors = ForcesOut->GetAllTorsors();
 		const int NumTorsors = Torsors.Num();
@@ -72,20 +77,21 @@ void AServer::Tick(float DeltaTime)
 		for (int i = 0; i < NumTorsors; ++i)
 		{
 			FForceSource Source = Torsors[i].ToForceSource(COMTransform);
-			Source.ForceAndTorque = Source.ForceAndTorque / Inertia;
+			//UE_LOG(NObjects, Log, TEXT("Source %d : %s"), i, *Source.ToString());
+			Source.ForceAndTorque = Source.ForceAndTorque * ForcesScaler;
 			TorsorsConverted.Add(Source);
 		}
-		/*for (int i = 0; i < TorsorsConverted.Num(); ++i)
+		for (int i = 0; i < TorsorsConverted.Num(); ++i)
 		{
-			UE_LOG(NObjects, Log, TEXT("Source %d : %s"), i, *TorsorsConverted[i].ToString());
-		}*/
+			//UE_LOG(NObjects, Log, TEXT("Source %d : %s"), i, *TorsorsConverted[i].ToString());
+		}
 		if (Solver->GetNumRunners() > 0)
 		{
 			FOutputColumn col = Solver->GetOutput(0);
-			//UE_LOG(NObjects, Log, TEXT("Runner done (after %d iterations)! Matrix :\r\n%s"), Solver->GetRunnerIteration(0), *col.ToString());
+			UE_LOG(NObjects, Log, TEXT("Runner done (after %d iterations)! Matrix :\r\n%s"), Solver->GetRunnerIteration(0), *col.ToString());
 			FTRVector outVec = UBruteForceSolver::GetOutputVector(LastTorsors, col, false);
-			//UE_LOG(NObjects, Log, TEXT("[AServer::Tick] Test Runner, result %s after %d iterations, will ask for %s"), *outVec.ToString(), Solver->GetRunnerIteration(0), *WantedOutput.ToString());
-			//ForcesOut->SendAllOrders(Torsors, col.InputCoefficients);
+			UE_LOG(NObjects, Log, TEXT("[AServer::Tick] Test Runner, result %s after %d iterations, will ask for %s"), *outVec.ToString(), Solver->GetRunnerIteration(0), *WantedOutput.ToString());
+			ForcesOut->SendAllOrders(Torsors, col.InputCoefficients);
 			FTRVector SumAbs = FTRVector::ZeroVector;
 			for (FForceSource Torsor : LastTorsors)
 			{
@@ -94,14 +100,15 @@ void AServer::Tick(float DeltaTime)
 				FTRVector abs = FTRVector::MaxComponents(rangemax.GetAbs(), rangemin.GetAbs());
 				SumAbs += abs;
 			}
-			//FTRVector diff = WantedOutput - outVec;
-			FTRVector diff = WantedOutput;
+			FTRVector diff = WantedOutput - outVec;
+			//FTRVector diff = WantedOutput;
 			
 			UE_LOG(NObjects, Log, TEXT("[AServer::Tick] Distance to target : %f (%s), SumAbs magnitude normalized : %f (%s)"), FTRVector::Distance(outVec, WantedOutput), *diff.ToString(), SumAbs.GetSize(), *SumAbs.ToString());
 
-			FTRVector diffunscaled = diff * Inertia;
+			/*FTRVector diffunscaled = diff * Inertia;
 			staticMesh->AddForce(GetTransform().TransformVector(diffunscaled.Translation));
-			staticMesh->AddTorqueInRadians(GetTransform().TransformVector(diffunscaled.Rotation));
+			staticMesh->AddTorqueInRadians(GetTransform().TransformVector(diffunscaled.Rotation));*/
+			//staticMesh->AddForce(FVector(0,0, -GetWorld()->GetGravityZ()), NAME_None, true); //remove gravity
 			Solver->ClearRunners();
 		}
 		Solver->StartSolveInputs(TorsorsConverted, WantedOutput, 10000);

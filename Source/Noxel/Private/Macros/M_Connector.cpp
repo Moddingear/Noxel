@@ -59,7 +59,7 @@ void AM_Connector::UpdateDisplayedConnectors()
 		UConnectorBase* Connector = Connectors[i];
 		if (DisplayedConnectors2.Remove(Connector) == 0)
 		{
-			FTransform ConnectorTransform = Connector->GetComponentTransform(); // TODO : Might be the opposite
+			FTransform ConnectorTransform = Connector->GetComponentTransform();
 			//FQuat rotated = ConnectorTransform.GetRotation() * FRotator(0,0,45).Quaternion();
 			//ConnectorTransform.SetRotation(rotated);
 			UStaticMeshComponent* ConnectorMesh = NewObject<UStaticMeshComponent>(this);

@@ -26,30 +26,3 @@ void AM_TryCraft::Tick(float DeltaTime)
 	Destroy();
 	
 }
-
-void AM_TryCraft::leftClickPressed_Implementation()
-{
-	UE_LOG(NoxelMacro, Log, TEXT("Left click"));
-	
-}
-
-void AM_TryCraft::leftClickReleased_Implementation()
-{
-}
-
-void AM_TryCraft::middleClickPressed_Implementation()
-{
-}
-
-void AM_TryCraft::middleClickReleased_Implementation()
-{
-}
-
-void AM_TryCraft::rightClickPressed_Implementation()
-{
-	UE_LOG(NoxelMacro, Log, TEXT("Right click"));
-}
-
-void AM_TryCraft::rightClickReleased_Implementation()
-{
-}

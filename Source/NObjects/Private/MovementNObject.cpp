@@ -4,12 +4,14 @@
 #include "MovementNObject.h"
 
 #include "Connectors/ForceConnector.h"
+#include "NObjects/NoxelPart.h"
 
 AMovementNObject::AMovementNObject()
 {
 	ForceIn = CreateDefaultSubobject<UForceConnector>("Forces");
 	ForceIn->SetupAttachment(staticMesh, TEXT("ForceConnector"));
 	ForceIn->bIsSender = false;
+	AttachParent = staticMesh;
 }
 
 void AMovementNObject::BeginPlay()
@@ -30,4 +32,10 @@ FJsonObjectWrapper AMovementNObject::OnReadMetadata_Implementation(const TArray<
 bool AMovementNObject::OnWriteMetadata_Implementation(const FJsonObjectWrapper& Metadata, const TArray<AActor*>& Components)
 {
 	return Super::OnWriteMetadata_Implementation(Metadata, Components);
+}
+
+bool AMovementNObject::OnNObjectAttach_Implementation(ANoxelPart* Part)
+{
+	AttachParent = Part->GetNoxelContainer();
+	return Super::OnNObjectAttach_Implementation(Part);
 }

@@ -258,7 +258,10 @@ void UCraftDataHandler::destroyCraft()
 		{
 			AActor* comp = Components[i];
 			Components.RemoveAt(i);
-			comp->Destroy();
+			if (IsValid(comp))
+			{
+				comp->Destroy();
+			}
 		}
 	}
 }

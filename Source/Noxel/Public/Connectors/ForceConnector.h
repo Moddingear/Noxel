@@ -69,87 +69,40 @@ struct NOXEL_API FTorsor
 	{
 	}
 
-	bool IsNearlyZero()
-	{
-		return Torque.IsNearlyZero() && Force.IsNearlyZero();
-	}
+	bool IsNearlyZero() const;
 
-	bool IsForceOnly()
-	{
-		return Torque.IsNearlyZero();
-	}
+	bool IsForceOnly() const;
 
-	bool IsTorqueOnly()
-	{
-		return Force.IsNearlyZero();
-	}
+	bool IsTorqueOnly() const;
 
-	AActor * GetOwner();
+	AActor * GetOwner() const;
 
-	FTransform GetOwnerTransform()
-	{
-		return GetOwner()->GetActorTransform();
-	}
+	FTransform GetOwnerTransform();
 
-	FVector GetOwnerLocation()
-	{
-		return GetOwnerTransform().GetLocation();
-	}
+	FVector GetOwnerLocation();
 
-	FVector GetTorsorLocationInWorld()
-	{
-		return GetOwnerTransform().TransformPosition(RelativeLocation);
-	}
+	FVector GetTorsorLocationInWorld();
 
-	FVector GetForceInWorld()
-	{
-		return GetOwnerTransform().TransformVectorNoScale(Force);
-	}
+	FVector GetForceInWorld();
 
-	FVector GetTorqueInWorld()
-	{
-		return GetOwnerTransform().TransformVectorNoScale(Torque);
-	}
+	FVector GetTorqueInWorld();
 
-	FVector GetTorsorLocationRelativeTo(FTransform WorldTransform)
-	{
-		return WorldTransform.InverseTransformPosition(GetTorsorLocationInWorld());
-	}
+	FVector GetTorsorLocationRelativeTo(FTransform WorldTransform);
 
-	FVector GetForceRelativeTo(FTransform WorldTransform)
-	{
-		return WorldTransform.InverseTransformVectorNoScale(GetForceInWorld());
-	}
+	FVector GetForceRelativeTo(FTransform WorldTransform);
 
-	FVector GetTorqueRelativeTo(FTransform WorldTransform)
-	{
-		return WorldTransform.InverseTransformVectorNoScale(GetTorqueInWorld());
-	}
+	FVector GetTorqueRelativeTo(FTransform WorldTransform);
 
-	bool IsSaturatedWith(float Input)
-	{
-		return Input > RangeMax || Input < RangeMin;
-	}
+	bool IsSaturatedWith(float Input) const;
 
-	float ClampToSaturation(float Input)
-	{
-		return FMath::Clamp(Input, RangeMin, RangeMax);
-	}
+	float ClampToSaturation(float Input) const;
 
 	FORCEINLINE bool operator== (const FTorsor& other) const
 	{
 		return (RelativeLocation == other.RelativeLocation && Force == other.Force && Torque == other.Torque && Source == other.Source && RangeMin == other.RangeMin && RangeMax == other.RangeMax);
 	}
 
-	FTorsor GetTorsorAt(FTransform WorldTransform)
-	{
-		FTransform SourceTransform = GetOwnerTransform() * FTransform(RelativeLocation);
-		FTransform cumul = SourceTransform.Inverse() * WorldTransform;
-		FVector newforce = cumul.TransformVector(Force);
-		FVector torquerebased = cumul.TransformVector(Torque);
-		FVector newtorque = torquerebased - cumul.GetTranslation() ^ newforce;
-		return FTorsor(newforce, newtorque, RangeMin, RangeMax);
-	}
+	FTorsor GetTorsorAt(FTransform WorldTransform);
 
 	FForceSource ToForceSource(FTransform WorldLocation);
 

@@ -5,9 +5,86 @@
 #include "Noxel.h"
 #include "NObjects/BruteForceSolver.h"
 
-AActor * FTorsor::GetOwner()
+bool FTorsor::IsNearlyZero() const
+{
+	return Torque.IsNearlyZero() && Force.IsNearlyZero();
+}
+
+bool FTorsor::IsForceOnly() const
+{
+	return Torque.IsNearlyZero();
+}
+
+bool FTorsor::IsTorqueOnly() const
+{
+	return Force.IsNearlyZero();
+}
+
+AActor * FTorsor::GetOwner() const
 {
 	return Source->GetOwner();
+}
+
+FTransform FTorsor::GetOwnerTransform()
+{
+	return GetOwner()->GetActorTransform();
+}
+
+FVector FTorsor::GetOwnerLocation()
+{
+	return GetOwnerTransform().GetLocation();
+}
+
+FVector FTorsor::GetTorsorLocationInWorld()
+{
+	return GetOwnerTransform().TransformPosition(RelativeLocation);
+}
+
+FVector FTorsor::GetForceInWorld()
+{
+	return GetOwnerTransform().TransformVectorNoScale(Force);
+}
+
+FVector FTorsor::GetTorqueInWorld()
+{
+	return GetOwnerTransform().TransformVectorNoScale(Torque);
+}
+
+FVector FTorsor::GetTorsorLocationRelativeTo(FTransform WorldTransform)
+{
+	return WorldTransform.InverseTransformPosition(GetTorsorLocationInWorld());
+}
+
+FVector FTorsor::GetForceRelativeTo(FTransform WorldTransform)
+{
+	return WorldTransform.InverseTransformVectorNoScale(GetForceInWorld());
+}
+
+FVector FTorsor::GetTorqueRelativeTo(FTransform WorldTransform)
+{
+	return WorldTransform.InverseTransformVectorNoScale(GetTorqueInWorld());
+}
+
+bool FTorsor::IsSaturatedWith(float Input) const
+{
+	return Input > RangeMax || Input < RangeMin;
+}
+
+float FTorsor::ClampToSaturation(float Input) const
+{
+	return FMath::Clamp(Input, RangeMin, RangeMax);
+}
+
+FTorsor FTorsor::GetTorsorAt(FTransform WorldTransform)
+{
+	FTransform SourceTransform = GetOwnerTransform() * FTransform(RelativeLocation); //world to source
+	FTransform cumul = SourceTransform.Inverse() * WorldTransform; //Source to new transform
+	FVector transl = WorldTransform.InverseTransformVectorNoScale(cumul.GetTranslation());
+	//UE_LOG(LogTemp, Log, TEXT("cumul = %s"), *cumul.ToString());
+	FVector newforce = cumul.TransformVectorNoScale(Force);
+	FVector torquerebased = cumul.TransformVectorNoScale(Torque);
+	FVector newtorque = torquerebased - (transl ^ newforce);
+	return FTorsor(newforce, newtorque, RangeMin, RangeMax);
 }
 
 FForceSource FTorsor::ToForceSource(FTransform WorldLocation)
