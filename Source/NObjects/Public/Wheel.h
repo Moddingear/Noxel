@@ -24,6 +24,9 @@ protected:
 public:
 	virtual void Tick(float DeltaTime) override;
 
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
+	UStaticMeshComponent* WheelMesh;
+	
 	UPROPERTY(BlueprintReadWrite)
 	float MaxForce = 50000000.f;
 

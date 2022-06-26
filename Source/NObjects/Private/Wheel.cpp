@@ -6,18 +6,13 @@
 
 AWheel::AWheel()
 {
-	static ConstructorHelpers::FObjectFinder<UStaticMesh> MeshConstructor(TEXT("StaticMesh'/Game/NoxelEditor/NObjects/Meshes/EDF/EDF_Body.EDF_Body'"));
+	static ConstructorHelpers::FObjectFinder<UStaticMesh> MeshConstructor(TEXT("StaticMesh'/Game/NoxelEditor/NObjects/Meshes/WheelMount.WheelMount'"));
 	staticMesh->SetStaticMesh(MeshConstructor.Object);
 
-	/*BladesTop = CreateDefaultSubobject<UStaticMeshComponent>("BladesTop");
-	BladesTop->SetupAttachment(staticMesh, TEXT("BladesSocket"));
-	static ConstructorHelpers::FObjectFinder<UStaticMesh> BladesMeshTop(TEXT("StaticMesh'/Game/NoxelEditor/NObjects/Meshes/EDF/EDF_BladesTop.EDF_BladesTop'"));
-	BladesTop->SetStaticMesh(BladesMeshTop.Object);
-
-	BladesBottom = CreateDefaultSubobject<UStaticMeshComponent>("BladesBottom");
-	BladesBottom->SetupAttachment(staticMesh, TEXT("BladesSocket"));
-	static ConstructorHelpers::FObjectFinder<UStaticMesh> BladesMeshBottom(TEXT("StaticMesh'/Game/NoxelEditor/NObjects/Meshes/EDF/EDF_BladesBottom.EDF_BladesBottom'"));
-	BladesBottom->SetStaticMesh(BladesMeshBottom.Object);*/
+	WheelMesh = CreateDefaultSubobject<UStaticMeshComponent>("Wheel mesh");
+	WheelMesh->SetupAttachment(staticMesh, TEXT("WheelSocket"));
+	static ConstructorHelpers::FObjectFinder<UStaticMesh> WheelMeshConstructor(TEXT("StaticMesh'/Game/NoxelEditor/NObjects/Meshes/Wheel.Wheel'"));
+	WheelMesh->SetStaticMesh(WheelMeshConstructor.Object);
 	
 	ForceIn->SetupAttachment(staticMesh, TEXT("ForceConnector"));
 

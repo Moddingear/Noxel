@@ -419,15 +419,17 @@ bool UNoxelContainer::AddPanel(FPanelData data)
 			}
 			if (valid)
 			{
-				return FinishAddPanel(data.PanelIndex);
+				valid = FinishAddPanel(data.PanelIndex);
 			}
-			else
+			if (!valid)
 			{
 				for (int j = i - 1; j >= 0; --j)
 				{
 					DisconnectNodeDiffered(data.PanelIndex, data.Nodes[j]);
 				}
+				RemovePanelDiffered(data.PanelIndex);
 			}
+			return valid;
 		}
 	}
 	return false;
