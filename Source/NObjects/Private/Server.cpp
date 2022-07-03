@@ -88,9 +88,9 @@ void AServer::Tick(float DeltaTime)
 		if (Solver->GetNumRunners() > 0)
 		{
 			FOutputColumn col = Solver->GetOutput(0);
-			UE_LOG(NObjects, Log, TEXT("Runner done (after %d iterations)! Matrix :\r\n%s"), Solver->GetRunnerIteration(0), *col.ToString());
+			//UE_LOG(NObjects, Log, TEXT("Runner done (after %d iterations)! Matrix :\r\n%s"), Solver->GetRunnerIteration(0), *col.ToString());
 			FTRVector outVec = UBruteForceSolver::GetOutputVector(LastTorsors, col, false);
-			UE_LOG(NObjects, Log, TEXT("[AServer::Tick] Test Runner, result %s after %d iterations, will ask for %s"), *outVec.ToString(), Solver->GetRunnerIteration(0), *WantedOutput.ToString());
+			//UE_LOG(NObjects, Log, TEXT("[AServer::Tick] Test Runner, result %s after %d iterations, will ask for %s"), *outVec.ToString(), Solver->GetRunnerIteration(0), *WantedOutput.ToString());
 			ForcesOut->SendAllOrders(Torsors, col.InputCoefficients);
 			FTRVector SumAbs = FTRVector::ZeroVector;
 			for (FForceSource Torsor : LastTorsors)
@@ -103,7 +103,7 @@ void AServer::Tick(float DeltaTime)
 			FTRVector diff = WantedOutput - outVec;
 			//FTRVector diff = WantedOutput;
 			
-			UE_LOG(NObjects, Log, TEXT("[AServer::Tick] Distance to target : %f (%s), SumAbs magnitude normalized : %f (%s)"), FTRVector::Distance(outVec, WantedOutput), *diff.ToString(), SumAbs.GetSize(), *SumAbs.ToString());
+			//UE_LOG(NObjects, Log, TEXT("[AServer::Tick] Distance to target : %f (%s), SumAbs magnitude normalized : %f (%s)"), FTRVector::Distance(outVec, WantedOutput), *diff.ToString(), SumAbs.GetSize(), *SumAbs.ToString());
 
 			/*FTRVector diffunscaled = diff * Inertia;
 			staticMesh->AddForce(GetTransform().TransformVector(diffunscaled.Translation));

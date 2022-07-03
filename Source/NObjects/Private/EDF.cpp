@@ -44,7 +44,8 @@ void AEDF::Tick(float DeltaTime)
 		float RotationSpeedBottom = - TopPropellerRotationSpeed * (lift - torque * addfortop);
 		BladesTop->AddRelativeRotation(FRotator::MakeFromEuler(FVector(0.f, 0.f, RotationSpeedTop * DeltaTime)));
 		BladesBottom->AddRelativeRotation(FRotator::MakeFromEuler(FVector(0.f, 0.f, RotationSpeedBottom * DeltaTime)));
-		staticMesh->AddForceAtLocationLocal(FVector(0, 0, 1) * lift * MaxLift, FVector::ZeroVector);
+		staticMesh->AddForceAtLocation(GetActorUpVector() * lift * MaxLift, GetActorLocation());
+		staticMesh->AddTorqueInRadians(GetActorUpVector() * torque * MaxTorque);
 		//UE_LOG(NObjects, Log, TEXT("[AEDF::Tick] Lift : %f"), lift * MaxLift);
 	}
 	else {

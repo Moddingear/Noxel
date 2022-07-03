@@ -7,6 +7,7 @@
 #include "Connectors/ForceConnector.h"
 #include "Wheel.generated.h"
 
+class UPhysicsConstraintComponent;
 /**
  * 
  */
@@ -25,17 +26,34 @@ public:
 	virtual void Tick(float DeltaTime) override;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
+	UPhysicsConstraintComponent* PhysicsJoint;
+	
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
 	UStaticMeshComponent* WheelMesh;
 	
 	UPROPERTY(BlueprintReadWrite)
-	float MaxForce = 50000000.f;
+	float ForwardFrictionCoefficient = 0.7;
+	float MaxForce = 50000.f * 100.f;//cN
+
+	float LateralFrictionCoefficient = 0.5;
+	float MaxLateralFriction = 50000.f * 100.f; //cn
+	
 
 	UPROPERTY(BlueprintReadWrite)
-	float MaxSpeed = 100.0f;
+	float MaxSpeed = 100.f*100.f;//cm/s
+
+	float WheelRadius;
+	float SuspensionLength = 100.f;//cm
+	float MaxSuspensionWeight = 500;//kg
+	float Damping = 0.5;//s
 
 	TArray<FTorsor> GetMaxTorsor();
 
-	float CurrentThrust = 0.f;
+private:
+	float PreviousExtension;
+	bool IsContactingGround(float& DistanceToGround);
+	float GetSuspensionForce(float NewDistanceToGround, float dt);
+public:
 
 	virtual void OnNObjectEnable_Implementation(UCraftDataHandler* Craft) override;
 	virtual void OnNObjectDisable_Implementation() override;

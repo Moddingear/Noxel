@@ -11,9 +11,12 @@
       <change beforePath="$PROJECT_DIR$/.idea/.idea.Noxel.dir/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/.idea.Noxel.dir/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Content/NoxelEditor/BuilderSimulation.umap" beforeDir="false" afterPath="$PROJECT_DIR$/Content/NoxelEditor/BuilderSimulation.umap" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Content/NoxelEditor/BuilderSimulation_BuiltData.uasset" beforeDir="false" afterPath="$PROJECT_DIR$/Content/NoxelEditor/BuilderSimulation_BuiltData.uasset" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Content/NoxelEditor/NObjects/Meshes/WheelMock.uasset" beforeDir="false" afterPath="$PROJECT_DIR$/Content/NoxelEditor/NObjects/Meshes/WheelMock.uasset" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Content/test/ForceTorqueChecker.uasset" beforeDir="false" afterPath="$PROJECT_DIR$/Content/test/ForceTorqueChecker.uasset" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/NObjects/Private/EDF.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/NObjects/Private/EDF.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/NObjects/Private/Server.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/NObjects/Private/Server.cpp" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Source/NObjects/Private/Wheel.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/NObjects/Private/Wheel.cpp" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Source/NObjects/Public/Wheel.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/NObjects/Public/Wheel.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/Noxel/Private/Noxel/NoxelContainer.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/Noxel/Private/Noxel/NoxelContainer.cpp" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -32,7 +35,6 @@
     </file-type-list>
   </component>
   <component name="HighlightingSettingsPerFile">
-    <setting file="mock:///Dummy.cpp" root0="SKIP_HIGHLIGHTING" />
     <setting file="mock:///Dummy.cpp" root0="SKIP_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/../../Epic/UE_4.26/Engine/Source/ThirdParty/PhysX3/PhysX_3.4/Include/PxRigidBody.h" root0="SKIP_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/../../Epic/UE_4.26/Engine/Source/ThirdParty/PhysX3/PhysX_3.4/Include/extensions/PxRigidBodyExt.h" root0="SKIP_HIGHLIGHTING" />
