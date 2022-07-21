@@ -17,6 +17,7 @@
 #include "Voxel/VoxelComponent.h"
 
 #include "Noxel.h"
+#include "Noxel/CraftDataHandler.h"
 
 DEFINE_LOG_CATEGORY(NoxelMacro);
 
@@ -307,6 +308,24 @@ bool ANoxelMacroBase::TracePanels(FVector start, FVector end, FPanelID & id)
 		UE_LOG(NoxelMacro, Log, TEXT("[ANoxelMacroBase::TracePanels] Trace successful"));
 		return UNoxelContainer::GetPanelHit(hit, id);
 	}
+	return false;
+}
+
+bool ANoxelMacroBase::TraceNObjects(FVector start, FVector end, AActor*& ObjectPointer)
+{
+	FHitResult hit;
+	FCollisionQueryParams params = UNoxelLibrary::getCollisionParameters();
+	params.AddIgnoredActor(this);
+	params.AddIgnoredActor(GetOwningActor());
+	if (GetWorld()->LineTraceSingleByProfile(hit, start, end, TEXT("NObject"), params))
+	{
+		if (GetCraft()->Components.Contains(hit.GetActor()))
+		{
+			ObjectPointer = hit.GetActor();
+			return true;
+		}
+	}
+	ObjectPointer = nullptr;
 	return false;
 }
 

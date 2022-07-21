@@ -16,38 +16,6 @@ float& FTRVector::GetComponent(int i)
 	}
 }
 
-FTRVector FTRVector::operator+(const FTRVector& V) const
-{
-	return FTRVector(Translation + V.Translation, Rotation + V.Rotation);
-}
-
-FTRVector FTRVector::operator-(const FTRVector& V) const
-{
-	return FTRVector(Translation - V.Translation, Rotation - V.Rotation);
-}
-
-FORCEINLINE FTRVector FTRVector::operator*(const float& x) const
-{
-	return FTRVector(Translation * x, Rotation * x);
-}
-
-FTRVector FTRVector::operator*(const FTRVector& V) const
-{
-	return FTRVector(Translation * V.Translation, Rotation * V.Rotation);
-}
-
-FTRVector FTRVector::operator/(const FTRVector& V) const
-{
-	return FTRVector(Translation / V.Translation, Rotation / V.Rotation);
-}
-
-FORCEINLINE FTRVector FTRVector::operator+=(const FTRVector& V)
-{
-	Translation += V.Translation;
-	Rotation += V.Rotation;
-	return *this;
-}
-
 float FTRVector::GetSizeSquared()
 {
 	return Translation.SizeSquared() + Rotation.SizeSquared();

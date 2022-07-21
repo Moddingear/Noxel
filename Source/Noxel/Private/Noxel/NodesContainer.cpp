@@ -41,15 +41,15 @@ void UNodesContainer::OnRegister()
 {
 	Super::OnRegister();
 	DefaultNodeColor = UFunctionLibrary::getColorFromJson(ENoxelColor::NodeInactive);
-	for (int32 NodeIdx = 0; NodeIdx < Nodes.Num(); NodeIdx++)
-	{
-		Nodes[NodeIdx].Color = DefaultNodeColor;
-	}
-	NodesProvider->SetWantedMeshBounds(FBoxSphereBounds(FVector::ZeroVector, FVector::OneVector * NodeSize, NodeSize));
-	NodesProvider->SetStaticMesh(BaseNodeMesh);
-	NodesProvider->SetNodesMaterial(NodeMaterial);
-	UpdateMesh();
-	Initialize(NodesProvider);
+    for (int32 NodeIdx = 0; NodeIdx < Nodes.Num(); NodeIdx++)
+    {
+        Nodes[NodeIdx].Color = DefaultNodeColor;
+    }
+    NodesProvider->SetWantedMeshBounds(FBoxSphereBounds(FVector::ZeroVector, FVector::OneVector * NodeSize, NodeSize));
+    NodesProvider->SetStaticMesh(BaseNodeMesh);
+    NodesProvider->SetNodesMaterial(NodeMaterial);
+    UpdateMesh();
+    Initialize(NodesProvider);
 }
 
 void UNodesContainer::BeginPlay()
@@ -64,6 +64,10 @@ void UNodesContainer::BeginPlay()
 				((ANoxelPlayerController*)GetWorld()->GetFirstPlayerController())->SynchroniseUnconnectedNodes(this);
 			}
 		}
+	}
+	else
+	{
+		UpdateMesh();
 	}
 }
 
@@ -285,13 +289,20 @@ void UNodesContainer::UpdateMesh()
 	Super::UpdateMesh();
 	//UE_LOG(NoxelData, Log, TEXT("[UNodesContainer::UpdateMesh@%p] Called"), this);
 	bIsMeshDirty = false;
-	TArray<FNoxelRendererNodeData> RendererNodes;
-	RendererNodes.Reserve(Nodes.Num());
-	for (int32 NodeIdx = 0; NodeIdx < Nodes.Num(); NodeIdx++)
+	if (SpawnContext != ECraftSpawnContext::Battle)
 	{
-		RendererNodes.EmplaceAt(NodeIdx, Nodes[NodeIdx].Location, Nodes[NodeIdx].Color);
+		TArray<FNoxelRendererNodeData> RendererNodes;
+        RendererNodes.Reserve(Nodes.Num());
+        for (int32 NodeIdx = 0; NodeIdx < Nodes.Num(); NodeIdx++)
+        {
+        	RendererNodes.EmplaceAt(NodeIdx, Nodes[NodeIdx].Location, Nodes[NodeIdx].Color);
+        }
+        NodesProvider->SetNodes(RendererNodes);
 	}
-	NodesProvider->SetNodes(RendererNodes);
+	else
+	{
+		NodesProvider->SetNodes({});
+	}
 }
 
 void UNodesContainer::AttachToNoxelContainer(UNoxelContainer * NoxelContainer)

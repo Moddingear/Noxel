@@ -159,6 +159,9 @@ public:
 	UFUNCTION(BlueprintCallable)
 	bool TracePanels(FVector start, FVector end, FPanelID& id);
 
+	UFUNCTION(BlueprintCallable)
+	bool TraceNObjects(FVector start, FVector end, AActor*& ObjectPointer);
+
 	////////////////////////////////////////////////////////////////
 
 	/*UFUNCTION(BlueprintCallable)

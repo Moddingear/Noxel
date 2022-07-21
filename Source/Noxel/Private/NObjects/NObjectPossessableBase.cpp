@@ -17,6 +17,7 @@ ANObjectPossessableBase::ANObjectPossessableBase()
 	bReplicates = true;
 	SetReplicatingMovement(true);
 	staticMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Static Mesh"));
+	staticMesh->SetCollisionProfileName(TEXT("NObject"));
 	RootComponent = Cast<USceneComponent>(staticMesh);
 	staticMesh->bEditableWhenInherited = true;
 

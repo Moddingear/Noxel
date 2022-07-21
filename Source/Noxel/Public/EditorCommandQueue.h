@@ -257,6 +257,8 @@ struct NOXEL_API FEditorQueue
 	void AddNodeDisconnectOrder(TArray<int32> Nodes, TArray<int32> Panels);
 
 	void AddObjectAddOrder(UCraftDataHandler* Craft, FString ObjectClass, FTransform Location);
+	
+	void AddObjectRemoveOrder(UCraftDataHandler* Craft, AActor* Object);
 
 	void AddConnectorConnectOrder(TArray<UConnectorBase*> A, TArray<UConnectorBase*> B);
 	void AddConnectorDisconnectOrder(TArray<UConnectorBase*> A, TArray<UConnectorBase*> B);

@@ -1,6 +1,8 @@
 //Copyright 2016-2020 Gabriel Zerbib (Moddingear). All rights reserved.
 
 #include "Macros/M_Voxel.h"
+
+#include "NoxelHangarBase.h"
 #include "Noxel/NoxelNetworkingAgent.h"
 #include "Voxel/VoxelComponent.h"
 
@@ -44,9 +46,10 @@ void AM_Voxel::leftClickPressed_Implementation()
 		qp.AddIgnoredActor(GetOwner());
 		if (GetWorld()->LineTraceSingleByChannel(hit, location, end, ECollisionChannel::ECC_WorldStatic, qp))
 		{
-			cube_place = GetVoxel()->worldToVoxel(hit.Location);
+			cube_place = GetVoxel()->worldToVoxel(hit.ImpactPoint);
 		}
 	}
+	GetVoxel()->addCube(cube_place);
 	//GetNoxelNetworkingAgent()->AddBlock(GetVoxel(), cube_place);
 }
 
@@ -67,7 +70,9 @@ void AM_Voxel::rightClickPressed_Implementation()
 	FIntVector cube_hit, direction_hit;
 	if (voxel->trace(location, end, cube_hit, direction_hit)) { //If hit in the voxel
 		UE_LOG(NoxelMacro, Log, TEXT("Cube hit : %s | Direction : %s"), *cube_hit.ToString(), *direction_hit.ToString());
+		voxel->removeCube(cube_hit);
 		//GetNoxelNetworkingAgent()->RemoveBlock(voxel, cube_hit);
 	}
+	voxel->removeCube(voxel->worldToVoxel(GetOwner()->GetTransform().GetLocation()));
 	//GetNoxelNetworkingAgent()->RemoveBlock(voxel, voxel->worldToVoxel(GetOwner()->GetTransform().GetLocation())); //Remove the cube where the player is to avoid getting stuck
 }

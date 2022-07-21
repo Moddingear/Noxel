@@ -46,26 +46,26 @@ void UVoxelComponent::removeCube(FIntVector location)
 
 bool UVoxelComponent::trace(FVector start, FVector end, FIntVector& cube_hit, FIntVector& hit_normal)
 {
-	/*FHitResult hit;
+	FHitResult hit;
 	FCollisionQueryParams Params = FCollisionQueryParams();
 	//Params.bTraceComplex = true;
 	if (LineTraceComponent(hit, start, end, Params)) {
 		FTransform world = GetComponentTransform();
 		FVector locrel = world.InverseTransformPosition(hit.Location), dirrel = world.InverseTransformVector(hit.Normal);
 		hit_normal = Round(dirrel); //Equals rounding the dir
-		cube_hit = Round((locrel / CubeRadius) //Position of the hit inside the voxel
-			- dirrel / 2.0f); //Go into the cube
+		cube_hit = Round((locrel / CubeRadius*0.5f) //Position of the hit inside the voxel
+			- dirrel/2.f); //Go into the cube
 		return true;
-	}*/
+	}
 	return false;
 }
 
 FVector UVoxelComponent::voxelToWorld(FIntVector cube)
 {
-	return GetComponentTransform().TransformPosition((FVector)cube*CubeRadius);
+	return GetComponentTransform().TransformPosition((FVector)cube*CubeRadius*2);
 }
 
 FIntVector UVoxelComponent::worldToVoxel(FVector location)
 {
-	return Round(GetComponentTransform().InverseTransformPosition(location) / CubeRadius);
+	return Round(GetComponentTransform().InverseTransformPosition(location) / CubeRadius*0.5f);
 }

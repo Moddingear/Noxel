@@ -329,6 +329,12 @@ void FEditorQueue::AddObjectAddOrder(UCraftDataHandler* Craft, FString ObjectCla
 	Orders.Add(order);
 }
 
+void FEditorQueue::AddObjectRemoveOrder(UCraftDataHandler* Craft, AActor* Object)
+{
+	FEditorQueueOrderRemoveObject* order = new FEditorQueueOrderRemoveObject(Craft, Object);
+	Orders.Add(order);
+}
+
 void FEditorQueue::AddConnectorConnectOrder(TArray<UConnectorBase*> A, TArray<UConnectorBase*> B)
 {
 	FEditorQueueOrderConnectorDisConnect* order = new FEditorQueueOrderConnectorDisConnect(A, B, true);
@@ -1204,6 +1210,10 @@ bool FEditorQueueOrderRemoveObject::ExecuteOrder(FEditorQueue* Parent)
 {
 	if (IsValid(Craft))
 	{
+		if (!Craft->Components.Contains(ObjectToRemove))
+		{
+			return false;
+		}
 		if (Craft->GetWorld()->IsServer())
 		{
 			ObjectTransform = ObjectToRemove->GetTransform();

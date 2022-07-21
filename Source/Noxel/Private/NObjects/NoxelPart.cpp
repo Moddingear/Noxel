@@ -15,6 +15,7 @@ ANoxelPart::ANoxelPart()
 	SetReplicatingMovement(true);
 	PrimaryActorTick.bCanEverTick = true;
 	noxelContainer = CreateDefaultSubobject<UNoxelContainer>(TEXT("Noxel Container"));
+	noxelContainer->SetCollisionProfileName(TEXT("NObject"));
 	RootComponent = noxelContainer;
 	
 	noxelContainer->SetNotifyRigidBodyCollision(true);

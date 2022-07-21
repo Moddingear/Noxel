@@ -16,6 +16,7 @@ private:
 	TArray<FIntVector> Cubes;
 	float CubeRadius;
 
+	UPROPERTY()
 	UMaterialInterface* Material;
 
 public:

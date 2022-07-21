@@ -9,8 +9,6 @@ AWheel::AWheel()
 {
 	static ConstructorHelpers::FObjectFinder<UStaticMesh> MeshConstructor(TEXT("StaticMesh'/Game/NoxelEditor/NObjects/Meshes/WheelMount.WheelMount'"));
 	staticMesh->SetStaticMesh(MeshConstructor.Object);
-
-	FVector AttachOffset = FVector(0,0, -SuspensionLength/2);
 	
 	WheelMesh = CreateDefaultSubobject<UStaticMeshComponent>("Wheel mesh");
 	WheelMesh->SetupAttachment(staticMesh, TEXT("WheelSocket"));
@@ -45,6 +43,7 @@ AWheel::AWheel()
 void AWheel::BeginPlay()
 {
 	Super::BeginPlay();
+	PreviousWheelSpeed = 0;
 }
 
 void AWheel::Tick(float DeltaTime)
@@ -58,8 +57,11 @@ void AWheel::Tick(float DeltaTime)
 		FVector LocalSpeed = ActorRot.UnrotateVector(staticMesh->GetPhysicsLinearVelocityAtPoint(ActorLoc));
 
 		//forces applied on car/ground
-		float GroundDistance;
-		bool GroundContact = IsContactingGround(GroundDistance);
+		FHitResult GroundCastResult;
+		bool GroundContact = IsContactingGround(GroundCastResult);
+		FVector ForwardForceVector = GetActorRightVector() ^ GroundCastResult.Normal;
+		
+		float GroundDistance = GroundCastResult.Distance;
 		float SuspensionForce = GetSuspensionForce(GroundDistance, DeltaTime);
 		
 		float force = FMath::Clamp(ForceIn->GetLastOrder()[0], -1.f, 1.f) * GroundContact;
@@ -68,13 +70,15 @@ void AWheel::Tick(float DeltaTime)
 		float LateralFriction = -SuspensionForce * LateralSpeed * LateralFrictionCoefficient/100.f * GroundContact;
 		LateralFriction = FMath::Clamp(LateralFriction, -MaxLateralFriction, MaxLateralFriction);
 		
-		FVector forceVector = ActorRot.RotateVector(FVector(force * MaxForce, LateralFriction, SuspensionForce));
+		FVector forceVector = ActorRot.RotateVector(FVector(0, LateralFriction, SuspensionForce)) + ForwardForceVector * force * MaxForce;
 		
-		FVector forceLoc = ActorLoc - LocationWorld.GetUnitAxis(EAxis::Z) * (GroundDistance + WheelRadius);
+		FVector forceLoc = GroundCastResult.ImpactPoint;//ActorLoc - LocationWorld.GetUnitAxis(EAxis::Z) * (GroundDistance + WheelRadius);
 		staticMesh->AddForceAtLocation(forceVector, forceLoc); //TODO: Equal but opposite force on ground
 
 		//wheel animation
-		float ForwardSpeed = LocalSpeed.X;
+		float ForwardSpeed = GroundContact ? LocalSpeed.X : PreviousWheelSpeed
+			-FMath::Sign(PreviousWheelSpeed)*FMath::Min(DeltaTime*100 + DeltaTime*abs(PreviousWheelSpeed), abs(PreviousWheelSpeed));
+		PreviousWheelSpeed = ForwardSpeed;
 		float AddedRotation = ForwardSpeed/WheelRadius*DeltaTime;
 		FVector WheelLocation = staticMesh->GetSocketLocation(TEXT("WheelSocket")) - GetActorUpVector() * GroundDistance;
 		WheelMesh->SetWorldLocation(WheelLocation);
@@ -97,27 +101,45 @@ void AWheel::Tick(float DeltaTime)
 
 TArray<FTorsor> AWheel::GetMaxTorsor()
 {
-	float DistanceToGround;
+	FHitResult DistanceToGround;
 	bool IsOnGround = IsContactingGround(DistanceToGround);
 	FTorsor Force = FTorsor(FVector(MaxForce * IsOnGround, 0, 0), FVector::ZeroVector, -1.f, 1.f);
 	return TArray<FTorsor>({ Force });
 }
 
-bool AWheel::IsContactingGround(float& DistanceToGround)
+bool AWheel::IsContactingGround(FHitResult& OutHit)
 {
-	FHitResult OutHit;
-	FVector startTrace = staticMesh->GetSocketLocation(TEXT("WheelSocket")), endTrace = startTrace + GetActorUpVector() * -(WheelRadius + SuspensionLength);
+	TArray<FHitResult> OutHits;
+	FVector startTrace = staticMesh->GetSocketLocation(TEXT("WheelSocket")), endTrace = startTrace + GetActorUpVector() * -SuspensionLength;
 	
-	bool hit = GetWorld()->LineTraceSingleByChannel(OutHit, startTrace, endTrace, ECollisionChannel::ECC_WorldStatic);//TODO : better trace
-	if (hit)
+	//bool hit = GetWorld()->LineTraceSingleByChannel(OutHit, startTrace, endTrace, ECollisionChannel::ECC_WorldStatic);//TODO : better trace
+	bool hit = UKismetSystemLibrary::SphereTraceMultiByProfile(this,
+		startTrace, endTrace, WheelRadius, TEXT("PhysicsActor"), true, {},
+		EDrawDebugTrace::ForOneFrame, OutHits, true);
+	float MinDistance = FMath::Max(PreviousExtension * SuspensionLength - WheelRadius, 0.f);
+	int ChosenIndex = INDEX_NONE;
+	for (int i = 0; i < OutHits.Num(); ++i)
 	{
-		DistanceToGround = FMath::Clamp(OutHit.Distance - WheelRadius, 0.f, SuspensionLength);
+		if (OutHits[i].Distance > MinDistance)
+		{
+			if (ChosenIndex == INDEX_NONE || OutHits[i].Distance < OutHits[ChosenIndex].Distance)
+			{
+				ChosenIndex = i;
+			}
+		}
+	}
+	if (ChosenIndex != INDEX_NONE)
+	{
+		OutHit = OutHits[ChosenIndex];
 	}
 	else
 	{
-		DistanceToGround = SuspensionLength;
+		OutHit.bBlockingHit = false;
+		OutHit.Distance = SuspensionLength;
+		OutHit.ImpactPoint = endTrace-GetActorUpVector()*WheelRadius;
+		OutHit.ImpactNormal = GetActorUpVector();
 	}
-	return hit;
+	return ChosenIndex != -1;
 }
 
 float AWheel::GetSuspensionForce(float NewDistanceToGround, float dt)

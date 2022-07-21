@@ -38,17 +38,37 @@ struct NOXEL_API FTRVector
 
 	float& GetComponent(int i);
 
-	FORCEINLINE FTRVector operator+(const FTRVector& V) const;
+	FTRVector operator+(const FTRVector& V) const
+	{
+		return FTRVector(Translation + V.Translation, Rotation + V.Rotation);
+	}
 
-	FORCEINLINE FTRVector operator-(const FTRVector& V) const;
-	
-	FORCEINLINE FTRVector operator*(const float& x) const;
+	FTRVector operator-(const FTRVector& V) const
+	{
+		return FTRVector(Translation - V.Translation, Rotation - V.Rotation);
+	}
 
-	FORCEINLINE FTRVector operator*(const FTRVector& x) const;
+	FTRVector operator*(const float& x) const
+	{
+		return FTRVector(Translation * x, Rotation * x);
+	}
 
-	FORCEINLINE FTRVector operator/(const FTRVector& x) const;
-	
-	FORCEINLINE FTRVector operator+=(const FTRVector& V);
+	FTRVector operator*(const FTRVector& V) const
+	{
+		return FTRVector(Translation * V.Translation, Rotation * V.Rotation);
+	}
+
+	FTRVector operator/(const FTRVector& V) const
+	{
+		return FTRVector(Translation / V.Translation, Rotation / V.Rotation);
+	}
+
+	FTRVector operator+=(const FTRVector& V)
+	{
+		Translation += V.Translation;
+		Rotation += V.Rotation;
+		return *this;
+	}
 
 	float GetSizeSquared();
 	

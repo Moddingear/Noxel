@@ -8,6 +8,6 @@ public class NObjects : ModuleRules
     {
         PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "InputCore", "RHI", "RenderCore", "JsonUtilities", "RuntimeMeshComponent", "UMG", "Noxel" });
 
-        PrivateDependencyModuleNames.AddRange(new string[] { "Json", "RuntimeMeshComponent", "Slate", "SlateCore" });
+        PrivateDependencyModuleNames.AddRange(new string[] { "Json", "RuntimeMeshComponent", "Slate", "SlateCore"});
     }
 }

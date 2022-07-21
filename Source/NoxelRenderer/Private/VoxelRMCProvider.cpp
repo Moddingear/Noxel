@@ -18,6 +18,7 @@ void UVoxelRMCProvider::SetCubes(const TArray<FIntVector> InCubes)
 	FScopeLock Lock(&PropertySyncRoot);
 	Cubes = InCubes;
 	MarkAllLODsDirty();
+	MarkCollisionDirty();
 }
 
 float UVoxelRMCProvider::GetCubeRadius() const
@@ -74,7 +75,7 @@ void UVoxelRMCProvider::Initialize()
 
 	MarkAllLODsDirty();
 
-	UE_LOG(NoxelRendererLog, Log, TEXT("[UVoxelRMCProvider::Initialize] Called"));
+	//UE_LOG(NoxelRendererLog, Log, TEXT("[UVoxelRMCProvider::Initialize] Called"));
 }
 
 FBoxSphereBounds UVoxelRMCProvider::GetBounds()
@@ -89,13 +90,13 @@ bool UVoxelRMCProvider::GetSectionMeshForLOD(int32 LODIndex, int32 SectionId, FR
 
 
 
-	UE_LOG(NoxelRendererLog, Log, TEXT("[UVoxelRMCProvider::GetSectionMeshForLOD] Called"));
+	//UE_LOG(NoxelRendererLog, Log, TEXT("[UVoxelRMCProvider::GetSectionMeshForLOD] Called"));
 
 	TArray<FIntVector> TempCubes;
 	float TempRadius;
 	GetMeshData(TempCubes, TempRadius);
 	
-	UE_LOG(NoxelRendererLog, Log, TEXT("[UVoxelRMCProvider::GetSectionMeshForLOD] %i cubes, %f radius"), TempCubes.Num(), TempRadius);
+	//UE_LOG(NoxelRendererLog, Log, TEXT("[UVoxelRMCProvider::GetSectionMeshForLOD] %i cubes, %f radius"), TempCubes.Num(), TempRadius);
 
 	// Generate verts
 	FVector BoxVerts[8];
@@ -111,7 +112,7 @@ bool UVoxelRMCProvider::GetSectionMeshForLOD(int32 LODIndex, int32 SectionId, FR
 
 	for (int32 CubeIdx = 0; CubeIdx < TempCubes.Num(); CubeIdx++)
 	{
-		UE_LOG(NoxelRendererLog, Log, TEXT("[UVoxelRMCProvider::GetSectionMeshForLOD] Cube Index %i"), CubeIdx);
+		//UE_LOG(NoxelRendererLog, Log, TEXT("[UVoxelRMCProvider::GetSectionMeshForLOD] Cube Index %i"), CubeIdx);
 		FIntVector Cube = TempCubes[CubeIdx];
 
 		auto AddVertex = [&](const FVector& InPosition, const FVector& InTangentX, const FVector& InTangentZ, const FVector2D& InTexCoord)
@@ -216,15 +217,18 @@ bool UVoxelRMCProvider::GetSectionMeshForLOD(int32 LODIndex, int32 SectionId, FR
 FRuntimeMeshCollisionSettings UVoxelRMCProvider::GetCollisionSettings()
 {
 	FRuntimeMeshCollisionSettings Settings;
-	Settings.bUseAsyncCooking = true;
+	Settings.bUseAsyncCooking = false;
 	Settings.bUseComplexAsSimple = false;
+	Settings.Boxes.Reserve(Cubes.Num());
 
 	for (int32 CubeIdx = 0; CubeIdx < Cubes.Num(); CubeIdx++)
 	{
 		FIntVector Cube = Cubes[CubeIdx];
 		FVector Cubelocation = FVector(Cube) * 2 * CubeRadius;
-		FRuntimeMeshCollisionBox Box(CubeRadius);
+		FRuntimeMeshCollisionBox Box;
+		Box.Extents = FVector(CubeRadius*2);
 		Box.Center = Cubelocation;
+		Box.Rotation = FRotator::ZeroRotator;
 		Settings.Boxes.Add(Box);
 	}
 
@@ -238,6 +242,10 @@ bool UVoxelRMCProvider::HasCollisionMesh()
 
 bool UVoxelRMCProvider::GetCollisionMesh(FRuntimeMeshCollisionData& CollisionData)
 {
+	if (Cubes.Num() == 0)
+	{
+		return false;
+	}
 	return false;
 }
 

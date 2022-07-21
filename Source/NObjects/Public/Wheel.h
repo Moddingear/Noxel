@@ -45,13 +45,14 @@ public:
 	float WheelRadius;
 	float SuspensionLength = 100.f;//cm
 	float MaxSuspensionWeight = 500;//kg
-	float Damping = 0.5;//s
+	float Damping = 0.4;//s
 
 	TArray<FTorsor> GetMaxTorsor();
 
 private:
 	float PreviousExtension;
-	bool IsContactingGround(float& DistanceToGround);
+	float PreviousWheelSpeed;
+	bool IsContactingGround(FHitResult& OutHit);
 	float GetSuspensionForce(float NewDistanceToGround, float dt);
 public:
 

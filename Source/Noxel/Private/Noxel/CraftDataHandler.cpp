@@ -400,7 +400,6 @@ void UCraftDataHandler::loadCraft(FCraftSave Craft, FTransform transform)
 		TempComp[i]->GetComponents<UNoxelContainer>(containers); 								//Get all noxel container
 		for (int j = 0; j < containers.Num(); j++)
 		{
-			containers[j]->SetSpawnContext(SpawnContext);
 			for (int k = 0; k < comp.SavedNoxels.Num(); k++)
 			{
 				if (comp.SavedNoxels[k].ComponentName == containers[j]->GetName()) {			//Load if name matches the saved
