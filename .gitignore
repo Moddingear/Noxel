@@ -17,8 +17,7 @@ Saved
 *.code-workspace
 Crafts/
 Releases/
-Build
+Build/
 Plugins/
 *_BuiltData.uasset
 .idea/
-.idea/.idea.Noxel.dir/.idea/workspace.xml

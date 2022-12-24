@@ -56,15 +56,15 @@ public:
 
 	UFUNCTION(BlueprintCallable)
 	//PlaneLocation is the centroid
-	static bool PlaneFit(UPARAM(ref) TArray<FVector>& Points, FVector& OutPlaneLocation, FVector& OutPlaneNormal);
+	static bool PlaneFit(UPARAM(ref) const TArray<FVector>& Points, FVector& OutPlaneLocation, FVector& OutPlaneNormal);
 
 	UFUNCTION(BlueprintCallable)
 	//Fit a box around the panel, with all points inside the box, of thickness greater or equal to that of the sides
-	FRuntimeMeshCollisionBox BoxFit(UPARAM(ref) FNoxelRendererPanelData& Panel, UPARAM(ref) TArray<FVector>& TempNodes);
+	FRuntimeMeshCollisionBox BoxFit(UPARAM(ref) const FNoxelRendererPanelData& Panel, UPARAM(ref) const TArray<FVector>& TempNodes);
 
 	//OutNewIndex contains at position [i] the index of the node that should be at position i
 	UFUNCTION(BlueprintCallable)
-	static bool ReorderNodes(UPARAM(ref) TArray<FVector>& Points, FVector PlaneCentroid, FVector PlaneNormal, TArray<int32>& OutNewIndex);
+	static bool ReorderNodes(UPARAM(ref) const TArray<FVector>& Points, FVector PlaneCentroid, FVector PlaneNormal, TArray<int32>& OutNewIndex);
 
 	UFUNCTION(BlueprintCallable)
 	static float ComputeTriangleArea(FVector A, FVector B, FVector C);

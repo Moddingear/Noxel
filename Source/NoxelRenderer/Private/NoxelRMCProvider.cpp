@@ -106,7 +106,7 @@ bool UNoxelRMCProvider::Intersection3Planes(FVector Plane1Normal, FVector Plane1
 	return Intersection3Planes(Plane1Normal, Plane1Point, Plane2.PlaneNormal, Plane2.PlanePosition, Plane3.PlaneNormal, Plane3.PlanePosition, OutIntersection);
 }
 
-bool UNoxelRMCProvider::PlaneFit(UPARAM(ref) TArray<FVector>& Points, FVector & OutPlaneLocation, FVector & OutPlaneNormal)
+bool UNoxelRMCProvider::PlaneFit(const TArray<FVector>& Points, FVector & OutPlaneLocation, FVector & OutPlaneNormal)
 {
 	//https://www.ilikebigbits.com/2017_09_25_plane_from_points_2.html
 	int32 n = Points.Num();
@@ -179,7 +179,7 @@ bool UNoxelRMCProvider::PlaneFit(UPARAM(ref) TArray<FVector>& Points, FVector & 
 	return true;
 }
 
-FRuntimeMeshCollisionBox UNoxelRMCProvider::BoxFit(FNoxelRendererPanelData& Panel, TArray<FVector>& TempNodes)
+FRuntimeMeshCollisionBox UNoxelRMCProvider::BoxFit(const FNoxelRendererPanelData& Panel, const TArray<FVector>& TempNodes)
 {
 	int NumNodes = Panel.Nodes.Num();
 	
@@ -254,7 +254,7 @@ FRuntimeMeshCollisionBox UNoxelRMCProvider::BoxFit(FNoxelRendererPanelData& Pane
 	return FRuntimeMeshCollisionBox(BoxCenter, BoxRotation, BoxExtents);
 }
 
-bool UNoxelRMCProvider::ReorderNodes(UPARAM(ref) TArray<FVector>& Points, FVector PlaneCentroid, FVector PlaneNormal, TArray<int32>& OutNewIndex)
+bool UNoxelRMCProvider::ReorderNodes(const TArray<FVector>& Points, FVector PlaneCentroid, FVector PlaneNormal, TArray<int32>& OutNewIndex)
 {
 	if (Points.Num() < 1)
 	{
@@ -716,16 +716,29 @@ FRuntimeMeshCollisionSettings UNoxelRMCProvider::GetCollisionSettings()
 	TArray<FVector> TempNodes;
 	TArray<FNoxelRendererPanelData> TempPanels;
 	GetShapeParams(TempNodes, TempPanels);
+	int NumPanels = TempPanels.Num();
 	FRuntimeMeshCollisionSettings Settings;
 	Settings.bUseAsyncCooking = true;
 	Settings.bUseComplexAsSimple = false;
 
 	TArray<FRuntimeMeshCollisionBox>& CollisionBoxes = Settings.Boxes;
-	CollisionBoxes.Reserve(TempPanels.Num());
+	CollisionBoxes.Reserve(NumPanels);
+
+	TArray<FRuntimeMeshCollisionConvexMesh>& ConvexElems = Settings.ConvexElements;
+	ConvexElems.Reserve(NumPanels);
 	//FlushPersistentDebugLines(GetWorld());
-	for (int i = 0; i < TempPanels.Num(); ++i)
+	for (int i = 0; i < NumPanels; ++i)
 	{
-		CollisionBoxes.Add(BoxFit(TempPanels[i], TempNodes));
+		FNoxelRendererPanelData& Panel = TempPanels[i];
+		//CollisionBoxes.Add(BoxFit(Panel, TempNodes));
+		TArray<FVector> Points; Points.Reserve(Panel.Nodes.Num()+2);
+		Points.Add(Panel.Center + Panel.Normal*Panel.ThicknessNormal);
+		Points.Add(Panel.Center - Panel.Normal*Panel.ThicknessAntiNormal);
+		for (int j = 0; j < Panel.Nodes.Num(); ++j)
+		{
+			Points.Add(TempNodes[Panel.Nodes[j]]);
+		}
+		ConvexElems.Emplace(Points);
 	}
 	return Settings;
 }

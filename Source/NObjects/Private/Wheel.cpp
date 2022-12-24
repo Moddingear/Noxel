@@ -5,6 +5,8 @@
 #include "NObjects.h"
 #include "PhysicsEngine/PhysicsConstraintComponent.h"
 
+
+
 AWheel::AWheel()
 {
 	static ConstructorHelpers::FObjectFinder<UStaticMesh> MeshConstructor(TEXT("StaticMesh'/Game/NoxelEditor/NObjects/Meshes/WheelMount.WheelMount'"));
@@ -57,42 +59,34 @@ void AWheel::Tick(float DeltaTime)
 		FVector LocalSpeed = ActorRot.UnrotateVector(staticMesh->GetPhysicsLinearVelocityAtPoint(ActorLoc));
 
 		//forces applied on car/ground
-		FHitResult GroundCastResult;
-		bool GroundContact = IsContactingGround(GroundCastResult);
-		FVector ForwardForceVector = GetActorRightVector() ^ GroundCastResult.Normal;
-		
-		float GroundDistance = GroundCastResult.Distance;
-		float SuspensionForce = GetSuspensionForce(GroundDistance, DeltaTime);
-		
-		float force = FMath::Clamp(ForceIn->GetLastOrder()[0], -1.f, 1.f) * GroundContact;
+		WheelFrictionData fd = GetFrictionData(), pfd = GetPreviousFrictionData();
 		
 		float LateralSpeed = LocalSpeed.Y;
-		float LateralFriction = -SuspensionForce * LateralSpeed * LateralFrictionCoefficient/100.f * GroundContact;
+		float LateralFriction = -fd.SuspensionForce * LateralSpeed * LateralFrictionCoefficient/100.f * fd.IsOnGround;
 		LateralFriction = FMath::Clamp(LateralFriction, -MaxLateralFriction, MaxLateralFriction);
 		
-		FVector forceVector = ActorRot.RotateVector(FVector(0, LateralFriction, SuspensionForce)) + ForwardForceVector * force * MaxForce;
+		FVector forceVector = ActorRot.RotateVector(FVector(0, LateralFriction, fd.SuspensionForce));
 		
-		FVector forceLoc = GroundCastResult.ImpactPoint;//ActorLoc - LocationWorld.GetUnitAxis(EAxis::Z) * (GroundDistance + WheelRadius);
+		FVector forceLoc = fd.GroundCast.ImpactPoint;//ActorLoc - LocationWorld.GetUnitAxis(EAxis::Z) * (GroundDistance + WheelRadius);
 		staticMesh->AddForceAtLocation(forceVector, forceLoc); //TODO: Equal but opposite force on ground
 
 		//wheel animation
-		float ForwardSpeed = GroundContact ? LocalSpeed.X : PreviousWheelSpeed
+		float ForwardSpeed = fd.IsOnGround ? LocalSpeed.X : PreviousWheelSpeed
 			-FMath::Sign(PreviousWheelSpeed)*FMath::Min(DeltaTime*100 + DeltaTime*abs(PreviousWheelSpeed), abs(PreviousWheelSpeed));
 		PreviousWheelSpeed = ForwardSpeed;
 		float AddedRotation = ForwardSpeed/WheelRadius*DeltaTime;
-		FVector WheelLocation = staticMesh->GetSocketLocation(TEXT("WheelSocket")) - GetActorUpVector() * GroundDistance;
+		FVector WheelLocation = staticMesh->GetSocketLocation(TEXT("WheelSocket")) - GetActorUpVector() * fd.DistanceToGround;
 		WheelMesh->SetWorldLocation(WheelLocation);
 		WheelMesh->AddLocalRotation(FRotator::MakeFromEuler(FVector(0, -FMath::RadiansToDegrees(AddedRotation), 0)));
 		
 		//force vectors
 		FVector ArrowLoc = forceLoc + GetActorUpVector() * 10;
-		DrawDebugDirectionalArrow(GetWorld(), ArrowLoc,
-			ArrowLoc + GetActorForwardVector() * 1000 * force, 100, FColor::Red, false, 0, 0, 10);
+		
 		DrawDebugDirectionalArrow(GetWorld(), ArrowLoc,
 			ArrowLoc + GetActorRightVector() * LateralFriction / MaxLateralFriction *1000.f,
 			100, FColor::Green, false, 0, 0, 10);
 		DrawDebugDirectionalArrow(GetWorld(), ArrowLoc,
-			ArrowLoc + GetActorUpVector() * SuspensionForce / MaxSuspensionWeight/9.8f,
+			ArrowLoc + GetActorUpVector() * fd.SuspensionForce / MaxSuspensionWeight/9.8f,
 			100, FColor::Blue, false, 0, 0, 10);
 		//UE_LOG(NObjects, Log, TEXT("[AEDF::Tick] Lift : %f"), lift * MaxLift);
 		
@@ -101,9 +95,10 @@ void AWheel::Tick(float DeltaTime)
 
 TArray<FTorsor> AWheel::GetMaxTorsor()
 {
-	FHitResult DistanceToGround;
-	bool IsOnGround = IsContactingGround(DistanceToGround);
-	FTorsor Force = FTorsor(FVector(MaxForce * IsOnGround, 0, 0), FVector::ZeroVector, -1.f, 1.f);
+	WheelFrictionData fd = GetFrictionData();
+	float forceapplied = FMath::Max(fd.SuspensionForce * ForwardFrictionCoefficient * fd.IsOnGround, MaxForce);
+	FVector forcedir = FVector(0,1,0) ^ fd.GroundCast.Normal;
+	FTorsor Force = FTorsor(forcedir * forceapplied, FVector::ZeroVector, -1.f, 1.f);
 	return TArray<FTorsor>({ Force });
 }
 
@@ -152,6 +147,37 @@ float AWheel::GetSuspensionForce(float NewDistanceToGround, float dt)
 	return spring + damper;
 }
 
+AWheel::WheelFrictionData AWheel::GetFrictionData()
+{
+	if (GFrameCounter == ThisFrameFriction.frameNumber)
+	{
+		return ThisFrameFriction;
+	}
+	else
+	{
+		PreviousFrameFriction = ThisFrameFriction;
+		ThisFrameFriction.frameNumber = GFrameCounter;
+		ThisFrameFriction.IsOnGround = IsContactingGround(ThisFrameFriction.GroundCast);
+		ThisFrameFriction.DistanceToGround = ThisFrameFriction.GroundCast.Distance;
+		const float dt = GetWorld()->GetDeltaSeconds();
+		ThisFrameFriction.SuspensionForce = GetSuspensionForce(ThisFrameFriction.DistanceToGround, dt);
+		return ThisFrameFriction;
+	}
+}
+
+AWheel::WheelFrictionData AWheel::GetPreviousFrictionData()
+{
+	if (PreviousFrameFriction.frameNumber +1 != GFrameCounter)
+	{
+		GetFrictionData();
+		if (PreviousFrameFriction.frameNumber +1 != GFrameCounter)
+		{
+			PreviousFrameFriction = ThisFrameFriction;
+		}
+	}
+	return PreviousFrameFriction;
+}
+
 void AWheel::OnNObjectEnable_Implementation(UCraftDataHandler* Craft)
 {
 	Super::OnNObjectEnable_Implementation(Craft);
@@ -187,5 +213,16 @@ void AWheel::OnGetReceived()
 
 void AWheel::OnSetReceived()
 {
+	WheelFrictionData fd = GetFrictionData(), pfd = GetPreviousFrictionData();
+	FVector forceLoc = fd.GroundCast.ImpactPoint;
+	FVector ForwardForceVector = GetActorRightVector() ^ pfd.GroundCast.Normal;
+	float force = FMath::Clamp(ForceIn->GetLastOrder()[0], -1.f, 1.f) * pfd.IsOnGround;
+	float ForwardFriction = pfd.SuspensionForce * force * ForwardFrictionCoefficient;
+	ForwardFriction = FMath::Clamp(ForwardFriction, -MaxForce, MaxForce);
+	FVector forceVector = ForwardForceVector * ForwardFriction;
+	staticMesh->AddForceAtLocation(forceVector, forceLoc);
+	FVector ArrowLoc = forceLoc + GetActorUpVector() * 10;
+	DrawDebugDirectionalArrow(GetWorld(), ArrowLoc,
+			ArrowLoc + GetActorForwardVector() * ForwardFriction / MaxForce * 1000.f, 100, FColor::Red, false, 0, 0, 10);
 	//UE_LOG(NObjects, Log, TEXT("[AEDF::OnSetReceived] Set received"));
 }

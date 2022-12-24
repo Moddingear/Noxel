@@ -53,8 +53,8 @@ void ANObjectPossessableBase::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
-	pitch = FMath::Clamp(pitch - pitchInput * DeltaTime, -90.f, 90.f);
-	yaw = yaw + yawInput * DeltaTime;
+	pitch = FMath::Clamp(pitch - pitchInput, -90.f, 90.f);
+	yaw = yaw + yawInput;
 
 	FRotator rotation = FRotator(0.f, yaw, 0.f).Add(pitch, 0.f, 0.f);
 	FTransform forward = FTransform(rotation);
@@ -130,11 +130,11 @@ void ANObjectPossessableBase::MoveZ(float input)
 
 void ANObjectPossessableBase::LookPitch(float input)
 {
-	pitchInput = input * 360.f;
+	pitchInput = input;
 }
 
 void ANObjectPossessableBase::LookYaw(float input)
 {
-	yawInput = input * 360.f;
+	yawInput = input;
 }
 

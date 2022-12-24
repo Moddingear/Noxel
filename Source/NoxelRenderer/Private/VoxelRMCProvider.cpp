@@ -95,6 +95,11 @@ bool UVoxelRMCProvider::GetSectionMeshForLOD(int32 LODIndex, int32 SectionId, FR
 	TArray<FIntVector> TempCubes;
 	float TempRadius;
 	GetMeshData(TempCubes, TempRadius);
+
+	if (TempCubes.Num() == 0)
+	{
+		return false;
+	}
 	
 	//UE_LOG(NoxelRendererLog, Log, TEXT("[UVoxelRMCProvider::GetSectionMeshForLOD] %i cubes, %f radius"), TempCubes.Num(), TempRadius);
 

@@ -16,6 +16,19 @@ class NOBJECTS_API AWheel : public AMovementNObject
 {
 	GENERATED_BODY()
 
+private:
+	struct WheelFrictionData
+	{
+		uint64_t frameNumber;
+		bool IsOnGround;
+		float DistanceToGround;
+		float SuspensionForce;
+		FHitResult GroundCast;
+	};
+	
+	WheelFrictionData PreviousFrameFriction;
+	WheelFrictionData ThisFrameFriction;
+	
 public:
 	AWheel();
 
@@ -24,25 +37,25 @@ protected:
 
 public:
 	virtual void Tick(float DeltaTime) override;
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
-	UPhysicsConstraintComponent* PhysicsJoint;
 	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
 	UStaticMeshComponent* WheelMesh;
 	
 	UPROPERTY(BlueprintReadWrite)
-	float ForwardFrictionCoefficient = 0.7;
+	float ForwardFrictionCoefficient = 1.5f;
+	UPROPERTY(BlueprintReadWrite)
 	float MaxForce = 50000.f * 100.f;//cN
 
-	float LateralFrictionCoefficient = 0.5;
+	UPROPERTY(BlueprintReadWrite)
+	float LateralFrictionCoefficient = 0.5f;
+	UPROPERTY(BlueprintReadWrite)
 	float MaxLateralFriction = 50000.f * 100.f; //cn
 	
 
 	UPROPERTY(BlueprintReadWrite)
 	float MaxSpeed = 100.f*100.f;//cm/s
 
-	float WheelRadius;
+	float WheelRadius; //cm
 	float SuspensionLength = 100.f;//cm
 	float MaxSuspensionWeight = 500;//kg
 	float Damping = 0.4;//s
@@ -50,10 +63,13 @@ public:
 	TArray<FTorsor> GetMaxTorsor();
 
 private:
-	float PreviousExtension;
-	float PreviousWheelSpeed;
+	float PreviousExtension = 0;
+	float PreviousWheelSpeed = 0;
 	bool IsContactingGround(FHitResult& OutHit);
 	float GetSuspensionForce(float NewDistanceToGround, float dt);
+
+	WheelFrictionData GetFrictionData();
+	WheelFrictionData GetPreviousFrictionData();
 public:
 
 	virtual void OnNObjectEnable_Implementation(UCraftDataHandler* Craft) override;
