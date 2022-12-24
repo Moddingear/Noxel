@@ -87,7 +87,7 @@ void AM_Nodes::Tick(float DeltaTime)
 		{
 			DrawPanel(FPanelData(selectedNodes, 1.0f, false));
 		}
-		else if (!GetOwningActor()->GetInteractionWidget()->IsOverInteractableWidget())
+		else if (!GetOwningActor()->GetInteractionWidget()->IsOverInteractableWidget() && IsValid(GetSelectedNodesContainer()))
 		{
 			FVector LocationRelative = GetNodePlacement(placementDistance, GetSelectedNodesContainer());
 			DrawNode(GetSelectedNodesContainer()->GetComponentTransform().TransformPosition(LocationRelative));
@@ -155,7 +155,7 @@ void AM_Nodes::leftClickPressed_Implementation()
 	else
 	{
 		if (!Alternate) { //Adding nodes or panels
-			if (selectedNodes.Num() < 3) { //If a panel can't be created
+			if (selectedNodes.Num() < 3 && IsValid(GetSelectedNodesContainer())) { //If a panel can't be created
 				FNodeID id; //Add a node
 				id.Location = GetNodePlacement(placementDistance, GetSelectedNodesContainer());
 				id.Object = GetSelectedNodesContainer();
@@ -164,7 +164,7 @@ void AM_Nodes::leftClickPressed_Implementation()
 				queue->AddNodeAddOrder({0});
 				GetNoxelNetworkingAgent()->SendCommandQueue(queue);
 			}
-			else { //Connect a panel
+			else if(IsValid(GetSelectedNoxelContainer())) { //Connect a panel
 				FEditorQueue* queue = GetNoxelNetworkingAgent()->CreateEditorQueue();
 				auto nodeMap = queue->CreateNodeReferenceOrdersFromNodeList(selectedNodes);
 				queue->AddPanelReferenceOrder({GetNoxelNetworkingAgent()->GetReservedPanels(GetSelectedNoxelContainer())[0]}, GetSelectedNoxelContainer());

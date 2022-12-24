@@ -50,6 +50,10 @@ void ANoxelPlayerController::Client_NoxelSync_Implementation(FNoxelNetwork Save)
 	{
 		//Synchronisation success
 	}
+	else
+	{
+		UE_LOG(NoxelDataNetwork, Warning, TEXT("[ANoxelPlayerController::Client_NoxelSync_Implementation] Failed to load panels from network!"));
+	}
 }
 
 void ANoxelPlayerController::Server_NodesSync_Implementation(UNodesContainer * NodesContainer)

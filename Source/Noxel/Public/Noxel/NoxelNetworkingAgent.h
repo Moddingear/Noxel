@@ -107,7 +107,9 @@ private:
 	void RemoveQueueFromBuffer(int32 OrderIndex);
 	bool GetQueueFromBuffer(int32 OrderIndex, FEditorQueue** Queue);
 
+	UFUNCTION()
 	void UndoWaitingQueues();
+	UFUNCTION()
 	void RedoWaitingQueues();
 
 public:

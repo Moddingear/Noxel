@@ -1,6 +1,8 @@
 //Copyright 2016-2020 Gabriel Zerbib (Moddingear). All rights reserved.
 
 #include "Connectors/ConnectorBase.h"
+
+#include "Noxel.h"
 #include "Net/UnrealNetwork.h"
 #include "GameFramework/Actor.h"
 
@@ -25,7 +27,7 @@ void UConnectorBase::GetLifetimeReplicatedProps(TArray< FLifetimeProperty > & Ou
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
-	DOREPLIFETIME(UConnectorBase, Connected);
+	DOREPLIFETIME_CONDITION(UConnectorBase, Connected, COND_InitialOnly);
 }
 
 // Called when the game starts
@@ -33,16 +35,10 @@ void UConnectorBase::BeginPlay()
 {
 	Super::BeginPlay();
 
-	if (bIsSender)
+	if (GetWorld()->IsServer())
 	{
-		AActor* Owner = GetOwner();
-		for (int32 i = 0; i < Connected.Num(); i++)
-		{
-			AActor* OtherOwner = Connected[i]->GetOwner();
-			OtherOwner->AddTickPrerequisiteActor(Owner);
-		}
+		OnConnectedUpdate();
 	}
-	
 }
 
 
@@ -122,6 +118,31 @@ bool UConnectorBase::CanBothConnect(UConnectorBase * A, UConnectorBase * B)
 bool UConnectorBase::AreConnected(UConnectorBase * A, UConnectorBase * B)
 {
 	return A->Connected.Contains(B) && B->Connected.Contains(A);
+}
+
+void UConnectorBase::OnConnectedUpdate()
+{
+	if (bIsSender)
+	{
+		AActor* Owner = GetOwner();
+		for (int32 i = 0; i < Connected.Num(); i++) //Only connect if everything is valid
+		{
+			if (!IsValid(Connected[i]))
+			{
+				checkf(!GetWorld()->IsServer(), TEXT("[UConnectorBase::OnConnectedUpdate] Invalid connector reference on server side !"));
+				return;
+			}
+		}
+		for (int32 i = 0; i < Connected.Num(); i++)
+		{
+			AActor* OtherOwner = Connected[i]->GetOwner();
+			OtherOwner->AddTickPrerequisiteActor(Owner);
+		}
+		if (!GetWorld()->IsServer())
+		{
+			UE_LOG(NoxelDataNetwork, Log, TEXT("[UConnectorBase::OnConnectedUpdate] fired"));
+		}
+	}
 }
 
 FString UConnectorBase::GetConnectorName() const

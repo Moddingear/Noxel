@@ -28,7 +28,7 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 	bool bIsSender;
 
-	UPROPERTY(BlueprintReadOnly, Replicated)
+	UPROPERTY(BlueprintReadOnly, ReplicatedUsing=OnConnectedUpdate)
 	TArray<UConnectorBase*> Connected;
 
 	UPROPERTY(BlueprintAssignable)
@@ -72,6 +72,9 @@ public:
 
 	UFUNCTION(BlueprintPure)
 	static bool AreConnected(UConnectorBase* A, UConnectorBase* B);
+
+	UFUNCTION()
+	void OnConnectedUpdate();
 
 	FString GetConnectorName() const;
 
