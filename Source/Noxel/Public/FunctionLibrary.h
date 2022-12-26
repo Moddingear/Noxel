@@ -30,7 +30,7 @@ struct FNoxelSavedColor
 {
 	GENERATED_BODY()
 
-		UPROPERTY()
+	UPROPERTY()
 		FString Name;
 	UPROPERTY()
 		FString HexColor;
@@ -76,6 +76,9 @@ private:
 	static const FString SaveDirectory;
 	static const FString ColorsFile;
 	static const TMap<ENoxelColor, FColor> DefaultColors;
+
+	
+	static TMap<ENoxelColor, FColor> JsonColorCache;
 
 public:
 	GENERATED_BODY()

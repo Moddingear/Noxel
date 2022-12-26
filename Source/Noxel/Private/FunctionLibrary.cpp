@@ -19,6 +19,7 @@ const TMap<ENoxelColor, FColor> UFunctionLibrary::DefaultColors = {
 	{ENoxelColor::MoveColor1, FColor(0.0 * 255, 0.31 * 255, 1.0 * 255, 0.25 * 255)}, //MoveColor1
 	{ENoxelColor::MoveColor2, FColor(0.0 * 255, 0.80 * 255, 1.0 * 255, 0.4 * 255)} //MoveColor2
 };
+TMap<ENoxelColor, FColor> UFunctionLibrary::JsonColorCache;
 
 FString UFunctionLibrary::GetProjectVersion()
 {
@@ -46,46 +47,46 @@ FColor UFunctionLibrary::getColorFromJson(ENoxelColor color)
 {
 	const FString colorname = GetEnumValueAsString<ENoxelColor>("ENoxelColor", color); //Name of the enum color
 
-	FString AbsoluteFilePath = SaveDirectory + ColorsFile;
-	IPlatformFile& PlatformFile = FPlatformFileManager::Get().GetPlatformFile();
-	if (PlatformFile.CreateDirectoryTree(*SaveDirectory)) //Create or resolve folder
+	if (JsonColorCache.Num()==0)
 	{
-		if (!PlatformFile.FileExists(*AbsoluteFilePath)) //If file doesn't exist
+		FString AbsoluteFilePath = SaveDirectory + ColorsFile;
+		IPlatformFile& PlatformFile = FPlatformFileManager::Get().GetPlatformFile();
+		if (PlatformFile.CreateDirectoryTree(*SaveDirectory)) //Create or resolve folder
 		{
-			TArray<FNoxelSavedColor> Colors;
-			for (auto KeyValuePair : DefaultColors)
+			if (!PlatformFile.FileExists(*AbsoluteFilePath)) //If file doesn't exist
 			{
-				FNoxelSavedColor Color(GetEnumValueAsString<ENoxelColor>("ENoxelColor", KeyValuePair.Key), KeyValuePair.Value);
-				Colors.Add(Color);
+				TArray<FNoxelSavedColor> Colors;
+				for (auto KeyValuePair : DefaultColors)
+				{
+					FNoxelSavedColor Color(GetEnumValueAsString<ENoxelColor>("ENoxelColor", KeyValuePair.Key), KeyValuePair.Value);
+					Colors.Add(Color);
+				}
+				FNoxelSavedColorArray DefaultStruct(Colors);
+				FString DefaultString;
+				FJsonObjectConverter::UStructToJsonObjectString<FNoxelSavedColorArray>(DefaultStruct, DefaultString);
+				FFileHelper::SaveStringToFile(DefaultString, *AbsoluteFilePath);
 			}
-			FNoxelSavedColorArray DefaultStruct(Colors);
-			FString DefaultString;
-			FJsonObjectConverter::UStructToJsonObjectString<FNoxelSavedColorArray>(DefaultStruct, DefaultString);
-			FFileHelper::SaveStringToFile(DefaultString, *AbsoluteFilePath);
 		}
-	}
-	FString SavedFile;
-	FFileHelper::LoadFileToString(SavedFile, *AbsoluteFilePath);
-	FNoxelSavedColorArray SavedColors;
-	FJsonObjectConverter::JsonObjectStringToUStruct<FNoxelSavedColorArray>(SavedFile, &SavedColors, 0, 0);
-
-	for (FNoxelSavedColor SavedColor : SavedColors.Colors)
-	{
-		if (SavedColor.Name == colorname)
+		FString SavedFile;
+		FFileHelper::LoadFileToString(SavedFile, *AbsoluteFilePath);
+		FNoxelSavedColorArray SavedColors;
+		FJsonObjectConverter::JsonObjectStringToUStruct<FNoxelSavedColorArray>(SavedFile, &SavedColors, 0, 0);
+		for (auto KeyValuePair : DefaultColors)
 		{
-			return FColor::FromHex(SavedColor.HexColor);
+			FString keytype = GetEnumValueAsString<ENoxelColor>("ENoxelColor", KeyValuePair.Key);
+			FColor col = KeyValuePair.Value;
+			for (int i = 0; i < SavedColors.Colors.Num(); ++i)
+			{
+				if (SavedColors.Colors[i].Name.ToLower() == keytype.ToLower())
+				{
+					col = FColor::FromHex(SavedColors.Colors[i].HexColor);
+				}
+			}
+			JsonColorCache.Add(KeyValuePair.Key, col);
 		}
 	}
-	const FColor* DefaultColorPtr = DefaultColors.Find(color);
-	if (DefaultColorPtr == nullptr)
-	{
-		return FColor();
-	}
-	const FColor DefaultColor = *DefaultColorPtr;
-	SavedColors.Colors.Emplace(colorname, DefaultColor.ToHex());
-	FJsonObjectConverter::UStructToJsonObjectString<FNoxelSavedColorArray>(SavedColors, SavedFile);
-	FFileHelper::SaveStringToFile(SavedFile, *AbsoluteFilePath);
-	return *DefaultColorPtr;
+	check(JsonColorCache.Contains(color));
+	return JsonColorCache[color];
 }
 
 UActorComponent * UFunctionLibrary::AddActorComponent(AActor* owner, UClass * ActorComponentClass)
