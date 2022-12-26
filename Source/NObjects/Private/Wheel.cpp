@@ -3,6 +3,7 @@
 
 #include "Wheel.h"
 #include "NObjects.h"
+#include "Noxel.h"
 #include "PhysicsEngine/PhysicsConstraintComponent.h"
 
 
@@ -11,6 +12,7 @@ AWheel::AWheel()
 {
 	static ConstructorHelpers::FObjectFinder<UStaticMesh> MeshConstructor(TEXT("StaticMesh'/Game/NoxelEditor/NObjects/Meshes/WheelMount.WheelMount'"));
 	staticMesh->SetStaticMesh(MeshConstructor.Object);
+	staticMesh->Rename(TEXT("Wheel Mount"));
 	
 	WheelMesh = CreateDefaultSubobject<UStaticMeshComponent>("Wheel mesh");
 	WheelMesh->SetupAttachment(staticMesh, TEXT("WheelSocket"));

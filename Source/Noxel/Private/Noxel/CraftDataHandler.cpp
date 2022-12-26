@@ -475,6 +475,8 @@ void UCraftDataHandler::enableCraft()
 	for (ANoxelPart* Part : Parts) //Attach components together
 	{
 		TArray<AActor*> AlreadyConnected = {Part};
+		UNoxelContainer* PartNoxel = Part->GetNoxelContainer();
+		//PartNoxel->SetSimulatePhysics(true); //has to be simulating in order to be weldable
 		for (UNodesContainer* NodeContainer : Part->GetNoxelContainer()->GetConnectedNodesContainers())
 		{
 			AActor* NObject = NodeContainer->GetOwner();
@@ -492,16 +494,16 @@ void UCraftDataHandler::enableCraft()
 				}
 			}
 			//Update the UBodySetup to something valid to allow welding 
-			Part->GetNoxelContainer()->GetRuntimeMesh()->ForceCollisionUpdate();
+			PartNoxel->GetRuntimeMesh()->ForceCollisionUpdate();
 			//NObject->AttachToActor(Part, FAttachmentTransformRules::KeepWorldTransform);
-			FAttachmentTransformRules rules(EAttachmentRule::KeepWorld, true);
-			root->WeldTo(Part->GetNoxelContainer());
+			FAttachmentTransformRules rules(EAttachmentRule::KeepWorld, false);
+			NObject->AttachToComponent(PartNoxel, rules);
 			FString attachedTo = TEXT("nothing");
 			if (root->GetAttachmentRoot())
 			{
 				attachedTo = root->GetAttachmentRoot()->GetName();
 			}
-			UE_LOG(Noxel, Log, TEXT("Attaching %s to %s : IsWelded = %d, attached to %s"), *NObject->GetName(), *Part->GetName(), root->IsWelded(), *attachedTo);
+			UE_LOG(Noxel, Log, TEXT("Attaching %s to %s : IsWelded = %d, IsSimulating = %d, attached to %s"), *root->GetPathName(), *Part->GetName(), root->IsWelded(), root->IsSimulatingPhysics(), *attachedTo);
 			AlreadyConnected.Add(NObject);
 		}
 	}

@@ -9,13 +9,10 @@
 
 void INObjectInterface::OnNObjectEnable_Implementation(UCraftDataHandler* Craft)
 {
-	Enabled = true;
-	ParentCraft = Craft;
 }
 
 void INObjectInterface::OnNObjectDisable_Implementation()
 {
-	Enabled = false;
 }
 
 bool INObjectInterface::OnNObjectAttach_Implementation(ANoxelPart * Part)
@@ -72,12 +69,12 @@ bool INObjectInterface::ComputeCOMFromComponents(TArray<AActor*> &Actors, FVecto
 			UPrimitiveComponent* root = Cast<UPrimitiveComponent>(curr->GetRootComponent());
 			if (!root->IsSimulatingPhysics())
 			{
-				UE_LOG(Noxel, Warning, TEXT("[INObjectInterface::ComputeCOMFromComponents] Component %s is not simulating physics, skipping"), *root->GetName());
+				UE_LOG(Noxel, VeryVerbose, TEXT("[INObjectInterface::ComputeCOMFromComponents] Component %s is not simulating physics, skipping"), *root->GetPathName());
 				continue;
 			}
 			if (root->IsWelded())
 			{
-				//UE_LOG(Noxel, Log, TEXT("[INObjectInterface::ComputeCOMFromComponents] Component %s is welded to another object, skipping"), *root->GetName());
+				UE_LOG(Noxel, VeryVerbose, TEXT("[INObjectInterface::ComputeCOMFromComponents] Component %s is welded to another object, skipping"), *root->GetPathName());
 				continue;
 			}
 			Roots.Add(root);

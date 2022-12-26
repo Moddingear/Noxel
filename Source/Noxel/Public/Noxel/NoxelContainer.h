@@ -24,6 +24,11 @@ protected:
 	// Called when the game starts
 	virtual void BeginPlay() override;
 
+	
+	
+	UFUNCTION()
+	void OnRep_ConnectedNodesContainers();
+
 public:
 
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
@@ -32,6 +37,7 @@ private:
 	//UPROPERTY(BlueprintReadWrite)
 	TArray<FPanelData> Panels;
 
+	UPROPERTY(ReplicatedUsing=OnRep_ConnectedNodesContainers)
 	TArray<UNodesContainer*> ConnectedNodesContainers; //Used for networking, automatically populated by the nodes container, though unlikely to run out
 
 	UNoxelRMCProvider* NoxelProvider;
@@ -119,6 +125,7 @@ public:
 
 private:
 	void UpdateProviderData();
+
 
 public:
 	virtual bool IsConnected() override;

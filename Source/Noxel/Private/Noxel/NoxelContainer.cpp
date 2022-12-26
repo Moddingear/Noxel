@@ -8,7 +8,7 @@
 #include "Kismet/KismetMathLibrary.h"
 
 #include "NoxelPlayerController.h"
-
+#include "Net/UnrealNetwork.h"
 
 
 UNoxelContainer::UNoxelContainer()
@@ -19,6 +19,15 @@ UNoxelContainer::UNoxelContainer()
 	MaxIndex = INT32_MIN;
 
 	NoxelProvider = CreateDefaultSubobject<UNoxelRMCProvider>("NoxelProvider");
+
+	
+}
+
+void UNoxelContainer::GetLifetimeReplicatedProps(TArray< FLifetimeProperty > & OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+	
+	DOREPLIFETIME_CONDITION(UNoxelContainer, ConnectedNodesContainers, COND_InitialOnly);
 }
 
 void UNoxelContainer::OnRegister()
@@ -30,9 +39,7 @@ void UNoxelContainer::OnRegister()
 void UNoxelContainer::BeginPlay()
 {
 	Super::BeginPlay();
-	if (static_cast<ANoxelPlayerController*>(GetWorld()->GetFirstPlayerController()) && !GetWorld()->IsServer()) {
-		static_cast<ANoxelPlayerController*>(GetWorld()->GetFirstPlayerController())->SynchroniseNoxel(this);
-	}
+	
 	switch (SpawnContext)
 	{
 	case ECraftSpawnContext::None:
@@ -47,6 +54,28 @@ void UNoxelContainer::BeginPlay()
 		break;
 	default:
 		break;
+	}
+}
+
+void UNoxelContainer::OnRep_ConnectedNodesContainers()
+{
+	if (GetWorld()->IsServer())
+	{
+		return;
+	}
+	for (int i = 0; i < ConnectedNodesContainers.Num(); ++i)
+	{
+		if (!IsValid(ConnectedNodesContainers[i]))
+		{
+			return;
+		}
+	}
+	if (static_cast<ANoxelPlayerController*>(GetWorld()->GetFirstPlayerController())) {
+		static_cast<ANoxelPlayerController*>(GetWorld()->GetFirstPlayerController())->SynchroniseNoxel(this);
+	}
+	else
+	{
+		UE_LOG(NoxelDataNetwork, Error, TEXT("[UNoxelContainer::OnRep_ConnectedNodesContainers] Failed to get player controller for noxel synchronisation!"))
 	}
 }
 
@@ -189,7 +218,7 @@ void UNoxelContainer::GetAdjacentPanelsFromNodes(FPanelData& data, const TArray<
 		GetIndexOfPanelByPanelIndex(OtherPanelIndex, OtherIdx);
 		Panels[OtherIdx].ConnectedPanels.Remove(data.PanelIndex);
 		data.ConnectedPanels.Remove(Panels[OtherIdx].PanelIndex);
-		UE_LOG(NoxelData, Log, TEXT("[UNoxelContainer::GetAdjacentPanelsFromNodes] Removing connection between panels %i and %i"), data.PanelIndex, OtherPanelIndex);
+		//UE_LOG(NoxelData, Log, TEXT("[UNoxelContainer::GetAdjacentPanelsFromNodes] Removing connection between panels %i and %i"), data.PanelIndex, OtherPanelIndex);
 	}
 
 	//Make new connections
@@ -213,7 +242,7 @@ void UNoxelContainer::GetAdjacentPanelsFromNodes(FPanelData& data, const TArray<
 			const bool Adjacent = (AbsDeltaNodes == 1) || (AbsDeltaNodes == (NumNodes - 1));
 			if (Adjacent && OtherAdjacent) //Panels share an edge
 			{
-				UE_LOG(NoxelData, Log, TEXT("[UNoxelContainer::GetAdjacentPanelsFromNodes] Panel %i shares an edge with another panel %i"), data.PanelIndex, OtherPanelIndex);
+				//UE_LOG(NoxelData, Log, TEXT("[UNoxelContainer::GetAdjacentPanelsFromNodes] Panel %i shares an edge with another panel %i"), data.PanelIndex, OtherPanelIndex);
 				Panels[OtherIdx].ConnectedPanels.AddUnique(data.PanelIndex);
 				data.ConnectedPanels.AddUnique(Panels[OtherIdx].PanelIndex);
 			}
@@ -401,7 +430,7 @@ bool UNoxelContainer::RemovePanelDiffered(int32 Index)
 
 bool UNoxelContainer::AddPanel(FPanelData data)
 {
-	UE_LOG(NoxelData, Log, TEXT("[UNoxelContainer::AddPanel] Adding panel"));
+	//UE_LOG(NoxelData, Log, TEXT("[UNoxelContainer::AddPanel] Adding panel"));
 	data.PanelIndex = GetNewPanelIndex();
 	if(AddPanelDiffered(data.PanelIndex))
 	{
@@ -599,6 +628,6 @@ bool UNoxelContainer::CheckDataValidity()
 
 void UNoxelContainer::UpdateMesh()
 {
-	UE_LOG(NoxelData, Log, TEXT("[UNoxelContainer::UpdateMesh] Called"));
+	//UE_LOG(NoxelData, Log, TEXT("[UNoxelContainer::UpdateMesh] Called"));
 	UpdateProviderData();
 }

@@ -3,12 +3,16 @@
 
 #include "NObjects/NObjectSimpleBase.h"
 
+#include "Noxel.h"
+#include "Net/UnrealNetwork.h"
+
 
 // Sets default values
 ANObjectSimpleBase::ANObjectSimpleBase()
 {
  	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
+	
 
 	bReplicates = true;
 	SetReplicatingMovement(true);
@@ -16,17 +20,25 @@ ANObjectSimpleBase::ANObjectSimpleBase()
 	staticMesh->SetCollisionProfileName(TEXT("NObject"));
 	RootComponent = Cast<USceneComponent>(staticMesh);
 	staticMesh->bEditableWhenInherited = true;
+	staticMesh->SetIsReplicated(true); //need for attachments to work over the network
 
 	nodesContainer = CreateDefaultSubobject<UNodesContainer>(TEXT("Nodes Container"));
 	nodesContainer->SetupAttachment(RootComponent);
 	nodesContainer->bEditableWhenInherited = true;
 }
 
+void ANObjectSimpleBase::GetLifetimeReplicatedProps(TArray<FLifetimeProperty> &OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+	DOREPLIFETIME(ANObjectSimpleBase, Enabled);
+	DOREPLIFETIME(ANObjectSimpleBase, ParentCraft);
+}
+
 // Called when the game starts or when spawned
 void ANObjectSimpleBase::BeginPlay()
 {
 	Super::BeginPlay();
-	
+	CheckNetworkAttachment("ANObjectSimpleBase::BeginPlay");
 }
 
 void ANObjectSimpleBase::OnNObjectEnable_Implementation(UCraftDataHandler* Craft)
@@ -59,6 +71,40 @@ bool ANObjectSimpleBase::OnWriteMetadata_Implementation(const FJsonObjectWrapper
 void ANObjectSimpleBase::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
+	if (Enabled != EnabledPrev)
+	{
+		EnabledPrev = Enabled;
+		CheckNetworkAttachment("ANObjectSimpleBase::Tick/enable");
+	}
+	if (AttachedPrev != IsAttachmentValid())
+	{
+		AttachedPrev = !AttachedPrev;
+		CheckNetworkAttachment("ANObjectSimpleBase::Tick/attachment");
+	}
+	if ((GFrameCounter%60) ==0 && Enabled)
+	{
+		//CheckNetworkAttachment("ANObjectSimpleBase::Tick/frame");
+	}
+}
 
+bool ANObjectSimpleBase::IsAttachmentValid() const
+{
+	auto attrep = RootComponent->GetAttachmentRootActor();
+	return attrep != this && IsValid(attrep) && attrep != RootComponent->GetOwner();
+}
+
+void ANObjectSimpleBase::CheckNetworkAttachment(FString CallContext) const
+{
+	FString role = GetWorld()->IsServer() ? "server" : "client";
+	if (IsAttachmentValid())
+	{
+		UE_LOG(NoxelDataNetwork, Log, TEXT("[%s] Object %s on %s, attached to %s at %s"), *CallContext,
+			*GetPathName(), *role, *RootComponent->GetAttachParent()->GetPathName(), *RootComponent->GetComponentLocation().ToString());
+	}
+	else
+	{
+		UE_LOG(NoxelDataNetwork, Log, TEXT("[%s] Object %s on %s at location %s, not attached"), *CallContext,
+			*GetPathName(), *role, *GetActorLocation().ToString());
+	}
 }
 

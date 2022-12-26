@@ -27,7 +27,12 @@ protected:
 	virtual void BeginPlay() override;
 
 public:	
+	UPROPERTY(Replicated)
+	bool Enabled;
 
+	UPROPERTY(Replicated)
+	UCraftDataHandler* ParentCraft;
+	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
 	UStaticMeshComponent* staticMesh;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
@@ -42,25 +47,15 @@ public:
 	virtual void Tick(float DeltaTime) override;
 
 	//NObject Interface Start
-	UFUNCTION(BlueprintNativeEvent, BlueprintCallable)
-		void OnNObjectEnable(UCraftDataHandler* Craft);
-	virtual void OnNObjectEnable_Implementation(UCraftDataHandler* Craft) /*override*/;
+	virtual void OnNObjectEnable_Implementation(UCraftDataHandler* Craft) override;
 
-	UFUNCTION(BlueprintNativeEvent, BlueprintCallable)
-		void OnNObjectDisable();
-	virtual void OnNObjectDisable_Implementation() /*override*/;
+	virtual void OnNObjectDisable_Implementation() override;
 
-	UFUNCTION(BlueprintNativeEvent, BlueprintCallable)
-		bool OnNObjectAttach(ANoxelPart* Part);
-	virtual bool OnNObjectAttach_Implementation(ANoxelPart* Part) /*override*/;
+	virtual bool OnNObjectAttach_Implementation(ANoxelPart* Part) override;
 
-	UFUNCTION(BlueprintNativeEvent, BlueprintCallable)
-		FJsonObjectWrapper OnReadMetadata(const TArray<AActor*>& Components);
-	virtual FJsonObjectWrapper OnReadMetadata_Implementation(const TArray<AActor*>& Components) /*override*/;
+	virtual FJsonObjectWrapper OnReadMetadata_Implementation(const TArray<AActor*>& Components) override;
 
-	UFUNCTION(BlueprintNativeEvent, BlueprintCallable)
-		bool OnWriteMetadata(const FJsonObjectWrapper& Metadata, const TArray<AActor*>& Components);
-	virtual bool OnWriteMetadata_Implementation(const FJsonObjectWrapper& Metadata, const TArray<AActor*>& Components) /*override*/;
+	virtual bool OnWriteMetadata_Implementation(const FJsonObjectWrapper& Metadata, const TArray<AActor*>& Components) override;
 	//NObject Interface End
 
 	// Called to bind functionality to input

@@ -6,6 +6,7 @@
 #include "Components/ArrowComponent.h"
 #include "Camera/CameraComponent.h"
 #include "Components/InputComponent.h"
+#include "Net/UnrealNetwork.h"
 
 
 // Sets default values
@@ -20,6 +21,7 @@ ANObjectPossessableBase::ANObjectPossessableBase()
 	staticMesh->SetCollisionProfileName(TEXT("NObject"));
 	RootComponent = Cast<USceneComponent>(staticMesh);
 	staticMesh->bEditableWhenInherited = true;
+	staticMesh->SetIsReplicated(true);
 
 	nodesContainer = CreateDefaultSubobject<UNodesContainer>(TEXT("Nodes Container"));
 	nodesContainer->SetupAttachment(RootComponent);
@@ -40,6 +42,13 @@ ANObjectPossessableBase::ANObjectPossessableBase()
 
 	TranslationInputs = FVector::ZeroVector;
 	RotationInputs = FVector::ZeroVector;
+}
+
+void ANObjectPossessableBase::GetLifetimeReplicatedProps(TArray<FLifetimeProperty> &OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+	DOREPLIFETIME(ANObjectPossessableBase, Enabled);
+	DOREPLIFETIME(ANObjectPossessableBase, ParentCraft);
 }
 
 // Called when the game starts or when spawned

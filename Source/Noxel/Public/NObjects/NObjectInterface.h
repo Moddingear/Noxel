@@ -23,9 +23,6 @@ class NOXEL_API INObjectInterface
 
 public:
 
-	bool Enabled = false;
-	UCraftDataHandler* ParentCraft;
-
 	//Called before enabling physics and attaching
 	UFUNCTION(BlueprintCallable, BlueprintNativeEvent)
 		void OnNObjectEnable(UCraftDataHandler* Craft);

@@ -18,8 +18,8 @@ ANoxelPart::ANoxelPart()
 	noxelContainer->SetCollisionProfileName(TEXT("NObject"));
 	RootComponent = noxelContainer;
 	
-	noxelContainer->SetNotifyRigidBodyCollision(true);
-	noxelContainer->OnComponentHit.AddDynamic(this, &ANoxelPart::OnNoxelHit);
+	//noxelContainer->SetNotifyRigidBodyCollision(true);
+	//noxelContainer->OnComponentHit.AddDynamic(this, &ANoxelPart::OnNoxelHit);
 	
 	nodesContainer = CreateDefaultSubobject<UNodesContainer>(TEXT("Nodes Container"));
 	nodesContainer->SetupAttachment(RootComponent);

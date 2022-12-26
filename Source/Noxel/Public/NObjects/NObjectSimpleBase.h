@@ -21,35 +21,35 @@ protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
 
-public:	
+public:
+	UPROPERTY(Replicated)
+	bool Enabled = false;
+private:
+	bool EnabledPrev = false, AttachedPrev = false;
+public:
+	UPROPERTY(Replicated)
+	UCraftDataHandler* ParentCraft = nullptr;
+	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
-	UStaticMeshComponent* staticMesh;
+	UStaticMeshComponent* staticMesh = nullptr;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
-	UNodesContainer* nodesContainer;
+	UNodesContainer* nodesContainer = nullptr;
 
-	//NObject Interface Start
-	UFUNCTION(BlueprintCallable, BlueprintNativeEvent)
-		void OnNObjectEnable(UCraftDataHandler* Craft);
-	virtual void OnNObjectEnable_Implementation(UCraftDataHandler* Craft) /*override*/;
+	virtual void OnNObjectEnable_Implementation(UCraftDataHandler* Craft) override;
 
-	UFUNCTION(BlueprintCallable, BlueprintNativeEvent)
-		void OnNObjectDisable();
-	virtual void OnNObjectDisable_Implementation() /*override*/;
+	virtual void OnNObjectDisable_Implementation() override;
 
-	UFUNCTION(BlueprintCallable, BlueprintNativeEvent)
-		bool OnNObjectAttach(ANoxelPart* Part);
-	virtual bool OnNObjectAttach_Implementation(ANoxelPart* Part) /*override*/;
+	virtual bool OnNObjectAttach_Implementation(ANoxelPart* Part) override;
 
-	UFUNCTION(BlueprintCallable, BlueprintNativeEvent)
-		FJsonObjectWrapper OnReadMetadata(const TArray<AActor*>& Components);
-	virtual FJsonObjectWrapper OnReadMetadata_Implementation(const TArray<AActor*>& Components) /*override*/;
+	virtual FJsonObjectWrapper OnReadMetadata_Implementation(const TArray<AActor*>& Components) override;
 
-	UFUNCTION(BlueprintCallable, BlueprintNativeEvent)
-		bool OnWriteMetadata(const FJsonObjectWrapper& Metadata, const TArray<AActor*>& Components);
-	virtual bool OnWriteMetadata_Implementation(const FJsonObjectWrapper& Metadata, const TArray<AActor*>& Components) /*override*/;
+	virtual bool OnWriteMetadata_Implementation(const FJsonObjectWrapper& Metadata, const TArray<AActor*>& Components) override;
 	//NObject Interface End
 
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
-
+	
+private :
+	bool IsAttachmentValid() const;
+	void CheckNetworkAttachment(FString CallContext) const;
 };
