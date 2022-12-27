@@ -27,7 +27,7 @@ enum class EEditorQueueOrderType : uint8
 	PanelRemove 		UMETA(DisplayName = "Remove Panel"),
 	PanelProperties 	UMETA(DisplayName = "Change Panel Properties"),
 	ObjectAdd			UMETA(DisplayName = "Add Object"),
-	ObjectMove			UMETA(DisplayName = "Add Object"),
+	ObjectMove			UMETA(DisplayName = "Move Object"),
 	ObjectRemove		UMETA(DisplayName = "Remove Object"), //TODO
 	ConnectorConnect	UMETA(DisplayName = "Connect Connector"),
 	ConnectorDisconnect	UMETA(DisplayName = "Disconnect Connector")
@@ -68,43 +68,87 @@ struct NOXEL_API FEditorQueueOrderNetworkable
 		Args(InArgs)
 	{}
 
-	static constexpr int32 GetFloatSize()
+	template<class T>
+	static constexpr int32 GetTemplatedSize()
 	{
+		return sizeof(T)/sizeof(int32) + (sizeof(T)%sizeof(int32)!=0);
+	}
+
+	template<class T>
+	void AddTemplated(T object)
+	{
+		size_t objsize = GetTemplatedSize<T>();
+		const int index = Args.Num();
+		Args.SetNum(index + objsize);
+		FMemory::Memcpy(&Args[index], &object, sizeof(T));
+	}
+
+	template<class T>
+	T GetTemplated(int32 index)
+	{
+		check(index >= 0 && index+GetTemplatedSize<T>()-1<Args.Num());
+		T object;
+		FMemory::Memcpy(&object, &Args[index], sizeof(T));
+		return object;
+	}
+
+	template<class T>
+	T PopTemplated()
+	{
+		
+		size_t objsize = GetTemplatedSize<T>();
+		const int index = Args.Num() - objsize;
+		T object = GetTemplated<T>(index);
+		Args.SetNum(index);
+		return object;
+	}
+
+	FORCEINLINE static int32 GetFloatSize()
+	{
+		return GetTemplatedSize<float>();
 		return 1;
 	}
 
-	void AddFloat(float InFloat)
+	FORCEINLINE void AddFloat(float InFloat)
 	{
+		AddTemplated(InFloat);
+		return;
 		int32 i = *reinterpret_cast<int32*>(&InFloat);
 		Args.Add(i);
 	}
 
-	float GetFloat(int32 index)
+	FORCEINLINE float GetFloat(int32 index)
 	{
+		return GetTemplated<float>(index);
 		int32 i = Args[index];
 		return *reinterpret_cast<float*>(&i);
 	}
 
-	float PopFloat()
+	FORCEINLINE float PopFloat()
 	{
+		return PopTemplated<float>();
 		int32 i = Args.Pop();
 		return *reinterpret_cast<float*>(&i);
 	}
 
-	static constexpr int32 GetVectorSize()
+	FORCEINLINE static int32 GetVectorSize()
 	{
+		return GetTemplatedSize<FVector>();
 		return 3*GetFloatSize();
 	}
 
-	void AddVector(FVector InVector)
+	FORCEINLINE void AddVector(FVector InVector)
 	{
+		AddTemplated(InVector);
+		return;
 		AddFloat(InVector.X);
 		AddFloat(InVector.Y);
 		AddFloat(InVector.Z);
 	}
 
-	FVector GetVector(int32 index)
+	FORCEINLINE FVector GetVector(int32 index)
 	{
+		return GetTemplated<FVector>(index);
 		FVector vec;
 		vec.X = GetFloat(index);
 		vec.Y = GetFloat(index+1*GetFloatSize());
@@ -112,8 +156,9 @@ struct NOXEL_API FEditorQueueOrderNetworkable
 		return vec;
 	}
 
-	FVector PopVector()
+	FORCEINLINE FVector PopVector()
 	{
+		return PopTemplated<FVector>();
 		FVector vec;
 		vec.Z = PopFloat();
 		vec.Y = PopFloat();
@@ -121,21 +166,25 @@ struct NOXEL_API FEditorQueueOrderNetworkable
 		return vec;
 	}
 
-	static constexpr int32 GetQuatSize()
+	FORCEINLINE static int32 GetQuatSize()
 	{
+		return GetTemplatedSize<FQuat>();
 		return 4*GetFloatSize();
 	}
 
-	void AddQuat(FQuat InQuat)
+	FORCEINLINE void AddQuat(FQuat InQuat)
 	{
+		AddTemplated(InQuat);
+		return;
 		AddFloat(InQuat.W);
 		AddFloat(InQuat.X);
 		AddFloat(InQuat.Y);
 		AddFloat(InQuat.Z);
 	}
 
-	FQuat GetQuat(int32 index)
+	FORCEINLINE FQuat GetQuat(int32 index)
 	{
+		return GetTemplated<FQuat>(index);
 		FQuat OutQuat;
 		OutQuat.W = GetFloat(index);
 		OutQuat.X = GetFloat(index+GetFloatSize());
@@ -144,20 +193,24 @@ struct NOXEL_API FEditorQueueOrderNetworkable
 		return OutQuat;
 	}
 
-	static constexpr int32 GetTransformSize()
+	FORCEINLINE static int32 GetTransformSize()
 	{
+		return GetTemplatedSize<FTransform>();
 		return 2*GetVectorSize()+GetQuatSize();
 	}
 
-	void AddTransform(FTransform InTransform)
+	FORCEINLINE void AddTransform(FTransform InTransform)
 	{
+		AddTemplated(InTransform);
+		return;
 		AddQuat(InTransform.GetRotation());
 		AddVector(InTransform.GetTranslation());
 		AddVector(InTransform.GetScale3D());
 	}
 
-	FTransform GetTransform(int32 index)
+	FORCEINLINE FTransform GetTransform(int32 index)
 	{
+		return GetTemplated<FTransform>(index);
 		FTransform OutTransform;
 		OutTransform.SetRotation(GetQuat(index));
 		OutTransform.SetTranslation(GetVector(index + GetQuatSize()));
@@ -165,17 +218,25 @@ struct NOXEL_API FEditorQueueOrderNetworkable
 		return  OutTransform;
 	}
 
-	void AddNode(FVector Location, int32 ObjectPtrIdx)
+	FORCEINLINE void AddNode(FVector Location, int32 ObjectPtrIdx)
 	{
+		AddTemplated(Location);
+		AddTemplated(ObjectPtrIdx);
+		return;
 		AddVector(Location);
 		Args.Add(ObjectPtrIdx);
 	}
 
-	void PopNode(FVector& Location, int32& ObjectPtrIdx)
+	FORCEINLINE void PopNode(FVector& Location, int32& ObjectPtrIdx)
 	{
+		ObjectPtrIdx = PopTemplated<int32>();
+		Location = PopTemplated<FVector>();
+		return;
 		ObjectPtrIdx = Args.Pop();
 		Location = PopVector();
 	}
+
+	
 
 	FString ToString() const
 	{

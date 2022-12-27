@@ -159,7 +159,10 @@ void AM_ObjectPlacer::onObjectCall(AActor* Actor)
 	}
 	FVector BoxExtent;
 	Actor->GetActorBounds(true, BoundsCenter, BoxExtent);
-	//BoundsCenter-= Actor->GetActorLocation();
+	if (!GetWorld()->IsServer()) //uh weird fix to get position working on clients but it's not need on server ? idk
+	{
+		BoundsCenter-= Actor->GetActorLocation();
+	}
 	//placementDistance = FMath::Max(BoxExtent.Size()*1.5f, 100.f);
 	UE_LOG(NoxelMacro, Log, TEXT("[AM_ObjectPlacer::onObjectCall] Extent = %s; Center = %s "), *BoxExtent.ToString(), *BoundsCenter.ToString());
 }
