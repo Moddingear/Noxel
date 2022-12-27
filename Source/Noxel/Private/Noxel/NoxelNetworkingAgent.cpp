@@ -20,13 +20,15 @@ bool FWaitingQueue::operator==(const int32 rhs) const
 	return QueueIndex == rhs;
 }
 
+unsigned long UNoxelNetworkingAgent::QueuesBufferSize = 0;
+TArray<FEditorQueue*> UNoxelNetworkingAgent::QueuesBuffer;
+
 // Sets default values for this component's properties
 UNoxelNetworkingAgent::UNoxelNetworkingAgent()
 {
 	// Set this component to be initialized when the game starts, and to be ticked every frame.  You can turn these features
 	// off to improve performance if you don't need them.
 	SetIsReplicatedByDefault(true);
-	QueuesBufferSize = 0;
 	UndoIndex = -1;
 	PrimaryComponentTick.bCanEverTick = true;
 	PrimaryComponentTick.TickInterval = 1;
@@ -285,18 +287,18 @@ void UNoxelNetworkingAgent::SendCommandQueue(FEditorQueue* Queue)
 }
 
 
-bool UNoxelNetworkingAgent::CanUndoRedo(bool Redo)
+bool UNoxelNetworkingAgent::CanUndoRedo(bool Redo) const
 {
 	if (!Redo)
 	{
-		if (UndoIndex >= 0)
+		if (UndoIndex >= 0) //if there's an action before
 		{
 			return true;
 		}
 	}
 	else
 	{
-		if (UndoIndex < UndoOrder.Num() - 1)
+		if (UndoIndex < UndoOrder.Num() - 1) //if there's an action after
 		{
 			return true;
 		}

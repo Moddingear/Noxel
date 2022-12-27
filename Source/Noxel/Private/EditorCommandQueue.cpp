@@ -264,7 +264,7 @@ TMap<FNodeID, int32> FEditorQueue::CreateNodeReferenceOrdersFromNodeList(TArray<
 	return NodeMap;
 }
 
-TArray<int32> FEditorQueue::NodeListToNodeReferences(TArray<FNodeID> Nodes, TMap<FNodeID, int32> NodeMap)
+TArray<int32> FEditorQueue::NodeListToNodeReferences(TArray<FNodeID> Nodes, const TMap<FNodeID, int32> &NodeMap)
 {
 	TArray<int32> NodeRef;
 	for (FNodeID Node : Nodes)
@@ -274,50 +274,50 @@ TArray<int32> FEditorQueue::NodeListToNodeReferences(TArray<FNodeID> Nodes, TMap
 	return NodeRef;
 }
 
-void FEditorQueue::AddNodeAddOrder(TArray<int32> NodeToAdd)
+void FEditorQueue::AddNodeAddOrder(const TArray<int32> &NodeToAdd)
 {
 	FEditorQueueOrderNodeAddRemove* order = new FEditorQueueOrderNodeAddRemove(NodeToAdd, true);
 	Orders.Add(order);
 }
 
-void FEditorQueue::AddNodeRemoveOrder(TArray<int32> NodeToRemove)
+void FEditorQueue::AddNodeRemoveOrder(const TArray<int32> &NodeToRemove)
 {
 	FEditorQueueOrderNodeAddRemove* order = new FEditorQueueOrderNodeAddRemove(NodeToRemove, false);
 	Orders.Add(order);
 }
 
-void FEditorQueue::AddPanelReferenceOrder(TArray<int32> PanelIndices, UNoxelContainer* Container)
+void FEditorQueue::AddPanelReferenceOrder(const TArray<int32> &PanelIndices, UNoxelContainer* Container)
 {
 	FEditorQueueOrderPanelReference* order = new FEditorQueueOrderPanelReference(PanelIndices, Container);
 	Orders.Add(order);
 }
 
-void FEditorQueue::AddPanelAddOrder(TArray<int32> PanelIndexRef)
+void FEditorQueue::AddPanelAddOrder(const TArray<int32> &PanelIndexRef)
 {
 	FEditorQueueOrderPanelAddRemove* order = new FEditorQueueOrderPanelAddRemove(PanelIndexRef, true);
 	Orders.Add(order);
 }
 
-void FEditorQueue::AddPanelRemoveOrder(TArray<int32> PanelIndexRef)
+void FEditorQueue::AddPanelRemoveOrder(const TArray<int32> &PanelIndexRef)
 {
 	FEditorQueueOrderPanelAddRemove* order = new FEditorQueueOrderPanelAddRemove(PanelIndexRef, false);
 	Orders.Add(order);
 }
 
-void FEditorQueue::AddPanelPropertiesOrder(TArray<int32> PanelIndexRef, float ThicknessNormal,
+void FEditorQueue::AddPanelPropertiesOrder(const TArray<int32> &PanelIndexRef, float ThicknessNormal,
 	float ThicknessAntiNormal, bool Virtual)
 {
 	FEditorQueueOrderPanelProperties* order = new FEditorQueueOrderPanelProperties(PanelIndexRef, ThicknessNormal, ThicknessAntiNormal, Virtual);
 	Orders.Add(order);
 }
 
-void FEditorQueue::AddNodeConnectOrder(TArray<int32> Nodes, TArray<int32> Panels)
+void FEditorQueue::AddNodeConnectOrder(const TArray<int32> &Nodes, const TArray<int32> &Panels)
 {
 	FEditorQueueOrderNodeDisConnect* order = new FEditorQueueOrderNodeDisConnect(Nodes, Panels, true);
 	Orders.Add(order);
 }
 
-void FEditorQueue::AddNodeDisconnectOrder(TArray<int32> Nodes, TArray<int32> Panels)
+void FEditorQueue::AddNodeDisconnectOrder(const TArray<int32> &Nodes, const TArray<int32> &Panels)
 {
 	FEditorQueueOrderNodeDisConnect* order = new FEditorQueueOrderNodeDisConnect(Nodes, Panels, false);
 	Orders.Add(order);

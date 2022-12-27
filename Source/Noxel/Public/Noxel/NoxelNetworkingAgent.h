@@ -90,13 +90,16 @@ public:
 	UPROPERTY(ReplicatedUsing= OnRep_TempObjects)
 	TArray<AActor*> TempObjects;
 private:
-	unsigned long QueuesBufferSize;
-	TArray<FEditorQueue*> QueuesBuffer;
+	static unsigned long QueuesBufferSize; //Size in bytes used by the buffer, used to limit the number of saved operations
+	static TArray<FEditorQueue*> QueuesBuffer;
 
-	TArray<int32> UndoOrder; //added from first to last action done, when undoing should undo the last
+	//Order of actions done by this client
+	//added from first to last action done, when undoing should undo the last
+	TArray<int32> UndoOrder;
+	//Where are we located in the UndoOrder
 	int32 UndoIndex;
 	
-	int32 NextQueueIndex = 0;
+	int32 NextQueueIndex;
 
 public:	
 	// Called every frame
@@ -131,7 +134,7 @@ public:
 	//client executes the queue, if valid sends it 
 	void SendCommandQueue(FEditorQueue* Queue);
 
-	bool CanUndoRedo(bool Redo);
+	bool CanUndoRedo(bool Redo) const;
 	
 	bool UndoRedo(bool Redo);
 

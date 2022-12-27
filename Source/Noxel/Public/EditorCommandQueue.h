@@ -52,7 +52,7 @@ struct NOXEL_API FEditorQueueOrderNetworkable
 	EEditorQueueOrderType OrderType;
 
 	UPROPERTY()
-	TArray<int32> Args;
+	TArray<int32> Args; //Array of raw data, it's probably not ints
 
 	FEditorQueueOrderNetworkable()
 		:OrderType(EEditorQueueOrderType::None),
@@ -68,7 +68,7 @@ struct NOXEL_API FEditorQueueOrderNetworkable
 		Args(InArgs)
 	{}
 
-	static int32 GetFloatSize()
+	static constexpr int32 GetFloatSize()
 	{
 		return 1;
 	}
@@ -91,7 +91,7 @@ struct NOXEL_API FEditorQueueOrderNetworkable
 		return *reinterpret_cast<float*>(&i);
 	}
 
-	static int32 GetVectorSize()
+	static constexpr int32 GetVectorSize()
 	{
 		return 3*GetFloatSize();
 	}
@@ -121,7 +121,7 @@ struct NOXEL_API FEditorQueueOrderNetworkable
 		return vec;
 	}
 
-	static int32 GetQuatSize()
+	static constexpr int32 GetQuatSize()
 	{
 		return 4*GetFloatSize();
 	}
@@ -144,7 +144,7 @@ struct NOXEL_API FEditorQueueOrderNetworkable
 		return OutQuat;
 	}
 
-	static int32 GetTransformSize()
+	static constexpr int32 GetTransformSize()
 	{
 		return 2*GetVectorSize()+GetQuatSize();
 	}
@@ -177,7 +177,7 @@ struct NOXEL_API FEditorQueueOrderNetworkable
 		Location = PopVector();
 	}
 
-	FString ToString()
+	FString ToString() const
 	{
 		FString ArgsString;
 		for (int32 Arg : ArgsString)
@@ -242,19 +242,19 @@ struct NOXEL_API FEditorQueue
 
 	TMap<FNodeID, int32> CreateNodeReferenceOrdersFromNodeList(TArray<FNodeID> Nodes);
 
-	static TArray<int32> NodeListToNodeReferences(TArray<FNodeID> Nodes, TMap<FNodeID, int32> NodeMap);
+	static TArray<int32> NodeListToNodeReferences(TArray<FNodeID> Nodes, const TMap<FNodeID, int32> &NodeMap);
 
-	void AddNodeAddOrder(TArray<int32> NodeToAdd);
-	void AddNodeRemoveOrder(TArray<int32> NodeToRemove);
+	void AddNodeAddOrder(const TArray<int32> &NodeToAdd);
+	void AddNodeRemoveOrder(const TArray<int32> &NodeToRemove);
 
-	void AddPanelReferenceOrder(TArray<int32> PanelIndices, UNoxelContainer* Container);
+	void AddPanelReferenceOrder(const TArray<int32> &PanelIndices, UNoxelContainer* Container);
 
-	void AddPanelAddOrder(TArray<int32> PanelIndexRef);
-	void AddPanelRemoveOrder(TArray<int32> PanelIndexRef);
-	void AddPanelPropertiesOrder(TArray<int32> PanelIndexRef, float ThicknessNormal, float ThicknessAntiNormal, bool Virtual);
+	void AddPanelAddOrder(const TArray<int32> &PanelIndexRef);
+	void AddPanelRemoveOrder(const TArray<int32> &PanelIndexRef);
+	void AddPanelPropertiesOrder(const TArray<int32> &PanelIndexRef, float ThicknessNormal, float ThicknessAntiNormal, bool Virtual);
 
-	void AddNodeConnectOrder(TArray<int32> Nodes, TArray<int32> Panels);
-	void AddNodeDisconnectOrder(TArray<int32> Nodes, TArray<int32> Panels);
+	void AddNodeConnectOrder(const TArray<int32> &Nodes, const TArray<int32> &Panels);
+	void AddNodeDisconnectOrder(const TArray<int32> &Nodes, const TArray<int32> &Panels);
 
 	void AddObjectAddOrder(UCraftDataHandler* Craft, FString ObjectClass, FTransform Location);
 	
