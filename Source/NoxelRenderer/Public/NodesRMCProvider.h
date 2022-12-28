@@ -53,7 +53,7 @@ public:
 	UMaterialInterface* GetNodesMaterial() const;
 	void SetNodesMaterial(UMaterialInterface* InNodesMaterial);
 
-	bool GetHitNodeIndex(int32 faceIndex, int32& HitNode);
+	bool GetHitNodeIndex(int32 faceIndex, int32& HitNode) const;
 	
 protected:
 	void Initialize() override;

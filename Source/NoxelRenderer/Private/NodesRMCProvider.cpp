@@ -45,7 +45,8 @@ TArray<FNoxelRendererNodeData> UNodesRMCProvider::GetNodes() const
 void UNodesRMCProvider::SetNodes(const TArray<FNoxelRendererNodeData>& InNodes)
 {
 	FScopeLock Lock(&PropertySyncRoot);
-	BakedNodeBounds = FBoxSphereBounds(TArray<FVector>(InNodes), InNodes.Num());
+	TArray<FVector> nodespos(InNodes);
+	BakedNodeBounds = FBoxSphereBounds(nodespos.GetData(), nodespos.Num());
 	Nodes = InNodes;
 	MarkCollisionDirty();
 	MarkSectionDirty(0, 0);
@@ -64,7 +65,7 @@ void UNodesRMCProvider::SetNodesMaterial(UMaterialInterface* InNodesMaterial)
 	SetupMaterialSlot(0, FName("Nodes"), NodesMaterial);
 }
 
-bool UNodesRMCProvider::GetHitNodeIndex(int32 faceIndex, int32 & HitNode)
+bool UNodesRMCProvider::GetHitNodeIndex(int32 faceIndex, int32 & HitNode) const
 {
 	FScopeLock Lock(&PropertySyncRoot);
 	HitNode = faceIndex / (StaticMeshCollidable.Triangles.Num());
