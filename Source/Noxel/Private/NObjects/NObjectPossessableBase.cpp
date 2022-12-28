@@ -55,6 +55,7 @@ void ANObjectPossessableBase::GetLifetimeReplicatedProps(TArray<FLifetimePropert
 void ANObjectPossessableBase::BeginPlay()
 {
 	Super::BeginPlay();
+	CheckNetworkAttachment("ANObjectPossessableBase::BeginPlay");
 }
 
 // Called every frame
@@ -69,6 +70,12 @@ void ANObjectPossessableBase::Tick(float DeltaTime)
 	FTransform forward = FTransform(rotation);
 	Camera->SetWorldRotation(rotation);
 	Camera->SetWorldLocation(CameraRotationPoint->GetComponentLocation() - forward.GetUnitAxis(EAxis::X) * OrbitDistance);
+
+	if (AttachedPrev != IsAttachmentValid())
+	{
+		AttachedPrev = !AttachedPrev;
+		CheckNetworkAttachment("ANObjectPossessableBase::Tick/attachment");
+	}
 }
 
 void ANObjectPossessableBase::OnNObjectEnable_Implementation(UCraftDataHandler* Craft)

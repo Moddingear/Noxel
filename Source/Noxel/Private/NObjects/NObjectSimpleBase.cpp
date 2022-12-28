@@ -74,7 +74,7 @@ void ANObjectSimpleBase::Tick(float DeltaTime)
 	if (Enabled != EnabledPrev)
 	{
 		EnabledPrev = Enabled;
-		CheckNetworkAttachment("ANObjectSimpleBase::Tick/enable");
+		//CheckNetworkAttachment("ANObjectSimpleBase::Tick/enable");
 	}
 	if (AttachedPrev != IsAttachmentValid())
 	{
@@ -84,27 +84,6 @@ void ANObjectSimpleBase::Tick(float DeltaTime)
 	if ((GFrameCounter%60) ==0 && Enabled)
 	{
 		//CheckNetworkAttachment("ANObjectSimpleBase::Tick/frame");
-	}
-}
-
-bool ANObjectSimpleBase::IsAttachmentValid() const
-{
-	auto attrep = RootComponent->GetAttachmentRootActor();
-	return attrep != this && IsValid(attrep) && attrep != RootComponent->GetOwner();
-}
-
-void ANObjectSimpleBase::CheckNetworkAttachment(FString CallContext) const
-{
-	FString role = GetWorld()->IsServer() ? "server" : "client";
-	if (IsAttachmentValid())
-	{
-		UE_LOG(NoxelDataNetwork, Log, TEXT("[%s] Object %s on %s, attached to %s at %s"), *CallContext,
-			*GetPathName(), *role, *RootComponent->GetAttachParent()->GetPathName(), *RootComponent->GetComponentLocation().ToString());
-	}
-	else
-	{
-		UE_LOG(NoxelDataNetwork, Log, TEXT("[%s] Object %s on %s at location %s, not attached"), *CallContext,
-			*GetPathName(), *role, *GetActorLocation().ToString());
 	}
 }
 

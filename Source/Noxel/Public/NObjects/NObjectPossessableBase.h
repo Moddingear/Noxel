@@ -29,6 +29,9 @@ protected:
 public:	
 	UPROPERTY(Replicated)
 	bool Enabled;
+private:
+	bool EnabledPrev = false, AttachedPrev = false;
+public:
 
 	UPROPERTY(Replicated)
 	UCraftDataHandler* ParentCraft;

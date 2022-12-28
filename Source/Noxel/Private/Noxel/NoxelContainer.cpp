@@ -40,7 +40,7 @@ void UNoxelContainer::BeginPlay()
 {
 	Super::BeginPlay();
 	
-	switch (SpawnContext)
+	/*switch (SpawnContext)
 	{
 	case ECraftSpawnContext::None:
 		UE_LOG(Noxel, Log, TEXT("[UNoxelContainer::BeginPlay] None"));
@@ -54,7 +54,7 @@ void UNoxelContainer::BeginPlay()
 		break;
 	default:
 		break;
-	}
+	}*/
 }
 
 void UNoxelContainer::OnRep_ConnectedNodesContainers()
@@ -628,6 +628,6 @@ bool UNoxelContainer::CheckDataValidity()
 
 void UNoxelContainer::UpdateMesh()
 {
-	//UE_LOG(NoxelData, Log, TEXT("[UNoxelContainer::UpdateMesh] Called"));
+	UE_LOG(NoxelData, Log, TEXT("[UNodesContainer::UpdateMesh@%s] Called on %s, SpawnContext=%d"), *GetPathName(), GetWorld()->IsServer() ? TEXT("server") : TEXT("client"), SpawnContext);
 	UpdateProviderData();
 }

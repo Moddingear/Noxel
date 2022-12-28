@@ -59,19 +59,19 @@ private:
 
 public:
 	UFUNCTION(BlueprintPure)
-	UNoxelNetworkingAgent* GetNetworkingAgent();
+	UNoxelNetworkingAgent* GetNetworkingAgent() const;
 	UFUNCTION(BlueprintPure)
-	ANoxelHangarBase* GetHangar();
+	ANoxelHangarBase* GetHangar() const;
 	UFUNCTION(BlueprintPure)
-	UCraftDataHandler* GetCraft();
+	UCraftDataHandler* GetCraft() const;
 	UFUNCTION(BlueprintPure)
-	ANoxelPart* GetCurrentPart();
+	ANoxelPart* GetCurrentPart() const;
 	UFUNCTION(BlueprintCallable)
 	void SetCurrentPart(ANoxelPart* InCurrentPart);
 	UFUNCTION(BlueprintPure)
-	ANoxelMacroBase* GetCurrentMacro();
+	ANoxelMacroBase* GetCurrentMacro() const;
 	UFUNCTION(BlueprintPure)
-	UWidgetInteractionComponent* GetInteractionWidget();
+	UWidgetInteractionComponent* GetInteractionWidget() const;
 
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;

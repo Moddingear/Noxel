@@ -476,10 +476,13 @@ void UCraftDataHandler::enableCraft()
 	{
 		TArray<AActor*> AlreadyConnected = {Part};
 		UNoxelContainer* PartNoxel = Part->GetNoxelContainer();
+		FTransform NoxelTransform = PartNoxel->GetComponentTransform();
 		//PartNoxel->SetSimulatePhysics(true); //has to be simulating in order to be weldable
 		for (UNodesContainer* NodeContainer : Part->GetNoxelContainer()->GetConnectedNodesContainers())
 		{
 			AActor* NObject = NodeContainer->GetOwner();
+			FTransform ComTransform = NObject->GetTransform();
+			FTransform DeltaTransform(NoxelTransform.ToMatrixWithScale().Inverse() * ComTransform.ToMatrixWithScale());
 			UPrimitiveComponent* root = Cast<UPrimitiveComponent>(NObject->GetRootComponent());
 			if (AlreadyConnected.Contains(NObject))
 			{
@@ -496,8 +499,9 @@ void UCraftDataHandler::enableCraft()
 			//Update the UBodySetup to something valid to allow welding 
 			PartNoxel->GetRuntimeMesh()->ForceCollisionUpdate();
 			//NObject->AttachToActor(Part, FAttachmentTransformRules::KeepWorldTransform);
-			FAttachmentTransformRules rules(EAttachmentRule::KeepWorld, false);
+			FAttachmentTransformRules rules(EAttachmentRule::SnapToTarget, false);
 			NObject->AttachToComponent(PartNoxel, rules);
+			NObject->SetActorRelativeTransform(DeltaTransform);
 			FString attachedTo = TEXT("nothing");
 			if (root->GetAttachmentRoot())
 			{

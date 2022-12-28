@@ -65,17 +65,17 @@ void AEditorCharacter::BeginPlay()
 	}
 }
 
-UNoxelNetworkingAgent * AEditorCharacter::GetNetworkingAgent()
+UNoxelNetworkingAgent * AEditorCharacter::GetNetworkingAgent() const
 {
 	return NetworkingAgent;
 }
 
-ANoxelHangarBase * AEditorCharacter::GetHangar()
+ANoxelHangarBase * AEditorCharacter::GetHangar() const
 {
 	return Hangar;
 }
 
-UCraftDataHandler * AEditorCharacter::GetCraft()
+UCraftDataHandler * AEditorCharacter::GetCraft() const
 {
 	ANoxelHangarBase* tempHangar = GetHangar();
 	if (tempHangar)
@@ -85,7 +85,7 @@ UCraftDataHandler * AEditorCharacter::GetCraft()
 	return nullptr;
 }
 
-ANoxelPart * AEditorCharacter::GetCurrentPart()
+ANoxelPart * AEditorCharacter::GetCurrentPart() const
 {
 	return CurrentPart;
 }
@@ -95,12 +95,12 @@ void AEditorCharacter::SetCurrentPart(ANoxelPart * InCurrentPart)
 	CurrentPart = InCurrentPart;
 }
 
-ANoxelMacroBase * AEditorCharacter::GetCurrentMacro()
+ANoxelMacroBase * AEditorCharacter::GetCurrentMacro() const
 {
 	return CurrentMacro;
 }
 
-UWidgetInteractionComponent * AEditorCharacter::GetInteractionWidget()
+UWidgetInteractionComponent * AEditorCharacter::GetInteractionWidget() const
 {
 	return WidgetInteraction;
 }
@@ -167,7 +167,7 @@ void AEditorCharacter::Possessed_Implementation()
 		else
 		{
 			GetCraft()->OnComponentsReplicatedEvent.AddDynamic(this, &AEditorCharacter::ComponentsReplicated);
-			UE_LOG(Noxel, Warning, TEXT("[(%s)AEditorCharacter::Possessed_Implementation] Craft hasn't finished loading, delaying part spawn"), *GetName());
+			UE_LOG(Noxel, Warning, TEXT("[(%s)AEditorCharacter::Possessed_Implementation] Craft hasn't finished loading, delaying part spawn on %s"), *GetName(), GetWorld()->IsServer() ? TEXT("server") : TEXT("client"));
 		}
 		GetCraft()->OnCraftLoadedEvent.AddDynamic(this, &AEditorCharacter::CraftLoaded);
 		UE_LOG(Noxel, Log, TEXT("[(%s)AEditorCharacter::Possessed_Implementation] OnCraftLoaded bound"), *GetName());

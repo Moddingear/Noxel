@@ -51,6 +51,9 @@ public:
 
 	//Everything is in world space
 	bool ComputeCOMFromComponents(TArray<AActor*> &Actors, FVector &COM, float &Mass, FVector& InertiaTensor);
+protected:
+	bool IsAttachmentValid() const;
+	void CheckNetworkAttachment(FString CallContext) const;
 };
 
 /*

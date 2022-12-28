@@ -287,7 +287,7 @@ void UNodesContainer::MarkMeshDirty()
 void UNodesContainer::UpdateMesh()
 {
 	Super::UpdateMesh();
-	//UE_LOG(NoxelData, Log, TEXT("[UNodesContainer::UpdateMesh@%p] Called"), this);
+	UE_LOG(NoxelData, Log, TEXT("[UNodesContainer::UpdateMesh@%s] Called on %s, SpawnContext=%d"), *GetPathName(), GetWorld()->IsServer() ? TEXT("server") : TEXT("client"), SpawnContext);
 	bIsMeshDirty = false;
 	if (SpawnContext != ECraftSpawnContext::Battle)
 	{

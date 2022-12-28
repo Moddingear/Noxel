@@ -48,8 +48,4 @@ public:
 
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
-	
-private :
-	bool IsAttachmentValid() const;
-	void CheckNetworkAttachment(FString CallContext) const;
 };

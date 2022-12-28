@@ -58,11 +58,11 @@ void ANoxelPart::OnNoxelHit(UPrimitiveComponent* HitComponent, AActor* OtherActo
 {
 	if (OtherActor)
 	{
-		UE_LOG(Noxel, Log, TEXT("Component %s/%s has been hit by %s/%s : Impulse %s"), *GetName(), *noxelContainer->GetName(), *OtherActor->GetName(), *OtherComp->GetName(), *NormalImpulse.ToString());
+		UE_LOG(Noxel, Log, TEXT("[ANoxelPart::OnNoxelHit] Component %s/%s has been hit by %s/%s : Impulse %s"), *GetName(), *noxelContainer->GetName(), *OtherActor->GetName(), *OtherComp->GetName(), *NormalImpulse.ToString());
 	}
 	else
 	{
-		UE_LOG(Noxel, Log, TEXT("Component %s/%s has been hit by %s : Impulse %s"), *GetName(), *noxelContainer->GetName(), *OtherComp->GetName(), *NormalImpulse.ToString());
+		UE_LOG(Noxel, Log, TEXT("[ANoxelPart::OnNoxelHit] Component %s/%s has been hit by %s : Impulse %s"), *GetName(), *noxelContainer->GetName(), *OtherComp->GetName(), *NormalImpulse.ToString());
 	}
 }
 

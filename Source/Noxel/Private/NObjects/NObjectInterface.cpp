@@ -101,3 +101,26 @@ bool INObjectInterface::ComputeCOMFromComponents(TArray<AActor*> &Actors, FVecto
 	
 	return true;
 }
+
+bool INObjectInterface::IsAttachmentValid() const
+{
+	const AActor* self = CastChecked<AActor>(this);
+	auto attrep = self->GetRootComponent()->GetAttachmentRootActor();
+	return attrep != self && IsValid(attrep) && attrep != self->GetRootComponent()->GetOwner();
+}
+
+void INObjectInterface::CheckNetworkAttachment(FString CallContext) const
+{
+	const AActor* self = CastChecked<AActor>(this);
+	FString role = self->GetWorld()->IsServer() ? "server" : "client";
+	if (IsAttachmentValid())
+	{
+		UE_LOG(NoxelDataNetwork, Log, TEXT("[%s] Object %s on %s, attached to %s at %s"), *CallContext,
+			*self->GetPathName(), *role, *self->GetRootComponent()->GetAttachParent()->GetPathName(), *self->GetRootComponent()->GetComponentLocation().ToString());
+	}
+	else
+	{
+		UE_LOG(NoxelDataNetwork, Log, TEXT("[%s] Object %s on %s at location %s, not attached"), *CallContext,
+			*self->GetPathName(), *role, *self->GetActorLocation().ToString());
+	}
+}
