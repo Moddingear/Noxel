@@ -35,6 +35,8 @@ public:
 
 	UPROPERTY(Replicated)
 	UCraftDataHandler* ParentCraft;
+	UPROPERTY(ReplicatedUsing=OnRep_NoxelAttachment)
+	FNoxelReplicatedAttachmentData AttachmentData;
 	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
 	UStaticMeshComponent* staticMesh;
@@ -59,7 +61,14 @@ public:
 	virtual FJsonObjectWrapper OnReadMetadata_Implementation(const TArray<AActor*>& Components) override;
 
 	virtual bool OnWriteMetadata_Implementation(const FJsonObjectWrapper& Metadata, const TArray<AActor*>& Components) override;
+
+	virtual void SetReplicatedAttachmentData_Implementation(FNoxelReplicatedAttachmentData data) override;
+
+	virtual bool IsAttachedAtFinalLocation_Implementation() override;
 	//NObject Interface End
+
+	UFUNCTION()
+	void OnRep_NoxelAttachment();
 
 	// Called to bind functionality to input
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;

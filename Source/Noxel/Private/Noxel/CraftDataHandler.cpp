@@ -424,7 +424,7 @@ void UCraftDataHandler::loadCraft(FCraftSave Craft, FTransform transform)
 			}
 		}
 
-		if (TempComp[i]->IsA<UNObjectInterface>())
+		if (TempComp[i]->GetClass()->ImplementsInterface(UNObjectInterface::StaticClass()))
 		{
 			INObjectInterface::Execute_OnWriteMetadata(TempComp[i], comp.SavedMetadata, TempComp);
 		}
@@ -500,8 +500,21 @@ void UCraftDataHandler::enableCraft()
 			PartNoxel->GetRuntimeMesh()->ForceCollisionUpdate();
 			//NObject->AttachToActor(Part, FAttachmentTransformRules::KeepWorldTransform);
 			FAttachmentTransformRules rules(EAttachmentRule::SnapToTarget, false);
-			NObject->AttachToComponent(PartNoxel, rules);
-			NObject->SetActorRelativeTransform(DeltaTransform);
+			if (NObject->GetClass()->ImplementsInterface(UNObjectInterface::StaticClass()))
+			{
+				INObjectInterface* noxelcast = Cast<INObjectInterface>(NObject);
+				FNoxelReplicatedAttachmentData repdata;
+				repdata.valid = true;
+				repdata.AttachOffset = DeltaTransform;
+				repdata.ParentComponent = PartNoxel;
+				INObjectInterface::Execute_SetReplicatedAttachmentData(NObject, repdata);
+			}
+			else
+			{
+				NObject->AttachToComponent(PartNoxel, rules);
+                NObject->SetActorRelativeTransform(DeltaTransform);
+			}
+			
 			FString attachedTo = TEXT("nothing");
 			if (root->GetAttachmentRoot())
 			{

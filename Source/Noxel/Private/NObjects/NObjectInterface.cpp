@@ -30,6 +30,16 @@ bool INObjectInterface::OnWriteMetadata_Implementation(const FJsonObjectWrapper&
 	return false;
 }
 
+void INObjectInterface::SetReplicatedAttachmentData_Implementation(FNoxelReplicatedAttachmentData data)
+{
+	
+}
+
+bool INObjectInterface::IsAttachedAtFinalLocation_Implementation()
+{
+	return false;
+}
+
 void INObjectInterface::SetupNodeContainerBySocket(UStaticMeshComponent * Mesh, FString SocketRegex, UNodesContainer * Target)
 {
 	TArray<FName> Sockets = Mesh->GetAllSocketNames();

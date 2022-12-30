@@ -8,6 +8,19 @@
 
 class ANoxelPart;
 class UCraftDataHandler;
+
+USTRUCT(BlueprintType)
+struct FNoxelReplicatedAttachmentData
+{
+	GENERATED_BODY()
+
+	UPROPERTY(BlueprintReadWrite)
+	FTransform AttachOffset;
+	UPROPERTY(BlueprintReadWrite)
+	USceneComponent* ParentComponent = nullptr;
+	UPROPERTY(BlueprintReadWrite)
+	bool valid = false;
+};
 /**
  * 
  */
@@ -46,6 +59,16 @@ public:
 	UFUNCTION(BlueprintCallable, BlueprintNativeEvent)
 		bool OnWriteMetadata(const FJsonObjectWrapper& Metadata, const TArray<AActor*>& Components);
 	virtual bool OnWriteMetadata_Implementation(const FJsonObjectWrapper& Metadata, const TArray<AActor*>& Components);
+
+	//Used to set replicated data used for clients when they attach the components to the noxel
+	UFUNCTION(BlueprintCallable, BlueprintNativeEvent)
+		void SetReplicatedAttachmentData(FNoxelReplicatedAttachmentData data);
+	virtual void SetReplicatedAttachmentData_Implementation(FNoxelReplicatedAttachmentData data);
+
+	//As a client, check if the component has received valid attachment data yet. May be used to enable noxel refreshing on first load
+	UFUNCTION(BlueprintCallable, BlueprintNativeEvent)
+		bool IsAttachedAtFinalLocation();
+	virtual bool IsAttachedAtFinalLocation_Implementation();
 
 	void SetupNodeContainerBySocket(class UStaticMeshComponent* Mesh, FString SocketRegex, class UNodesContainer* Target);
 

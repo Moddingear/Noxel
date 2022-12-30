@@ -15,12 +15,12 @@ ANObjectSimpleBase::ANObjectSimpleBase()
 	
 
 	bReplicates = true;
-	SetReplicatingMovement(true);
+	SetReplicatingMovement(false);
 	staticMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Static Mesh"));
 	staticMesh->SetCollisionProfileName(TEXT("NObject"));
 	RootComponent = Cast<USceneComponent>(staticMesh);
 	staticMesh->bEditableWhenInherited = true;
-	staticMesh->SetIsReplicated(true); //need for attachments to work over the network
+	staticMesh->SetIsReplicated(false); //need for attachments to work over the network
 
 	nodesContainer = CreateDefaultSubobject<UNodesContainer>(TEXT("Nodes Container"));
 	nodesContainer->SetupAttachment(RootComponent);
@@ -32,6 +32,7 @@ void ANObjectSimpleBase::GetLifetimeReplicatedProps(TArray<FLifetimeProperty> &O
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 	DOREPLIFETIME(ANObjectSimpleBase, Enabled);
 	DOREPLIFETIME(ANObjectSimpleBase, ParentCraft);
+	DOREPLIFETIME(ANObjectSimpleBase, AttachmentData);
 }
 
 // Called when the game starts or when spawned
@@ -65,6 +66,29 @@ FJsonObjectWrapper ANObjectSimpleBase::OnReadMetadata_Implementation(const TArra
 bool ANObjectSimpleBase::OnWriteMetadata_Implementation(const FJsonObjectWrapper & Metadata, const TArray<AActor*>& Components)
 {
 	return false;
+}
+
+void ANObjectSimpleBase::SetReplicatedAttachmentData_Implementation(FNoxelReplicatedAttachmentData data)
+{
+	check(GetWorld()->IsServer());
+	AttachmentData = data;
+	OnRep_NoxelAttachment();
+}
+
+bool ANObjectSimpleBase::IsAttachedAtFinalLocation_Implementation()
+{
+	return AttachmentData.valid && IsValid(AttachmentData.ParentComponent);
+}
+
+void ANObjectSimpleBase::OnRep_NoxelAttachment()
+{
+	UE_LOG(NoxelDataNetwork, Log, TEXT("[ANObjectSimpleBase::OnRep_NoxelAttachment] Called on %s"), GetWorld()->IsServer() ? TEXT("Server") : TEXT("Client"));
+	if (AttachmentData.valid && IsValid(AttachmentData.ParentComponent))
+	{
+		FAttachmentTransformRules rules(EAttachmentRule::SnapToTarget, false);
+		AttachToComponent(AttachmentData.ParentComponent, rules);
+		SetActorRelativeTransform(AttachmentData.AttachOffset);
+	}
 }
 
 // Called every frame

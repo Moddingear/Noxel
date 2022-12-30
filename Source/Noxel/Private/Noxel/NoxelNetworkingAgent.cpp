@@ -538,7 +538,7 @@ void UNoxelNetworkingAgent::AddTempObjectServer_Implementation(TSubclassOf<AActo
 			}
 		}
 		SpawnedActor->SetActorEnableCollision(false);
-		SpawnedActor->SetReplicateMovement(false);
+		SpawnedActor->SetReplicateMovement(true);
 		//TODO : enable some sort of hologram effect
 		SpawnedActor->FinishSpawning(Location);
 		NotifyClientCallback(CallbackIdx, i);

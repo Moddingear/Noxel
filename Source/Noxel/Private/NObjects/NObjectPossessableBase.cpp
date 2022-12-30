@@ -16,12 +16,12 @@ ANObjectPossessableBase::ANObjectPossessableBase()
 	PrimaryActorTick.bCanEverTick = true;
 
 	bReplicates = true;
-	SetReplicatingMovement(true);
+	SetReplicatingMovement(false);
 	staticMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Static Mesh"));
 	staticMesh->SetCollisionProfileName(TEXT("NObject"));
 	RootComponent = Cast<USceneComponent>(staticMesh);
 	staticMesh->bEditableWhenInherited = true;
-	staticMesh->SetIsReplicated(true);
+	staticMesh->SetIsReplicated(false);
 
 	nodesContainer = CreateDefaultSubobject<UNodesContainer>(TEXT("Nodes Container"));
 	nodesContainer->SetupAttachment(RootComponent);
@@ -49,6 +49,7 @@ void ANObjectPossessableBase::GetLifetimeReplicatedProps(TArray<FLifetimePropert
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 	DOREPLIFETIME(ANObjectPossessableBase, Enabled);
 	DOREPLIFETIME(ANObjectPossessableBase, ParentCraft);
+	DOREPLIFETIME(ANObjectPossessableBase, AttachmentData);
 }
 
 // Called when the game starts or when spawned
@@ -102,6 +103,28 @@ FJsonObjectWrapper ANObjectPossessableBase::OnReadMetadata_Implementation(const 
 bool ANObjectPossessableBase::OnWriteMetadata_Implementation(const FJsonObjectWrapper & Metadata, const TArray<AActor*>& Components)
 {
 	return false;
+}
+
+void ANObjectPossessableBase::SetReplicatedAttachmentData_Implementation(FNoxelReplicatedAttachmentData data)
+{
+	check(GetWorld()->IsServer());
+	AttachmentData = data;
+	OnRep_NoxelAttachment();
+}
+
+bool ANObjectPossessableBase::IsAttachedAtFinalLocation_Implementation()
+{
+	return AttachmentData.valid && IsValid(AttachmentData.ParentComponent);
+}
+
+void ANObjectPossessableBase::OnRep_NoxelAttachment()
+{
+	if (AttachmentData.valid && IsValid(AttachmentData.ParentComponent))
+	{
+		FAttachmentTransformRules rules(EAttachmentRule::SnapToTarget, false);
+		AttachToComponent(AttachmentData.ParentComponent, rules);
+		SetActorRelativeTransform(AttachmentData.AttachOffset);
+	}
 }
 
 void ANObjectPossessableBase::SetupPlayerInputComponent(UInputComponent * PlayerInputComponent)
