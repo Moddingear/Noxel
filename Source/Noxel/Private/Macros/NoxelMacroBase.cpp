@@ -248,7 +248,7 @@ UNodesContainer* ANoxelMacroBase::GetSelectedNodesContainer()
 	if (part) {
 		return part->GetNodesContainer();
 	}
-	UE_LOG(NoxelMacro, Warning, TEXT("[ANoxelMacroBase::GetSelectedNodesContainer] Part not found"));
+	//UE_LOG(NoxelMacro, Warning, TEXT("[ANoxelMacroBase::GetSelectedNodesContainer] Part not found"));
 	return nullptr;
 }
 
@@ -272,7 +272,7 @@ UVoxelComponent * ANoxelMacroBase::GetVoxel()
 	if (tempHangar) {
 		return tempHangar->GetVoxel();
 	}
-	UE_LOG(NoxelMacro, Warning, TEXT("[ANoxelMacroBase::GetVoxel] Hangar not found"));
+	//UE_LOG(NoxelMacro, Warning, TEXT("[ANoxelMacroBase::GetVoxel] Hangar not found"));
 	return nullptr;
 }
 

@@ -126,7 +126,8 @@ public:
 private:
 	void UpdateProviderData();
 
-
+	virtual UBodySetup* GetBodySetup() override;
+	
 public:
 	virtual bool IsConnected() override;
 

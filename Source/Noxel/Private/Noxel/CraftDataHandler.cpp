@@ -508,7 +508,7 @@ void UCraftDataHandler::enableCraft()
 			{
 				attachedTo = root->GetAttachmentRoot()->GetName();
 			}
-			UE_LOG(Noxel, Log, TEXT("Attaching %s to %s : IsWelded = %d, IsSimulating = %d, attached to %s"), *root->GetPathName(), *Part->GetName(), root->IsWelded(), root->IsSimulatingPhysics(), *attachedTo);
+			UE_LOG(Noxel, Log, TEXT("[UCraftDataHandler::enableCraft] Attaching %s to %s : IsWelded = %d, IsSimulating = %d, attached to %s"), *root->GetPathName(), *Part->GetName(), root->IsWelded(), root->IsSimulatingPhysics(), *attachedTo);
 			AlreadyConnected.Add(NObject);
 		}
 		Part->NoxelSave = saveNoxelNetwork(PartNoxel);

@@ -53,7 +53,7 @@ void AWheel::BeginPlay()
 void AWheel::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
-	if (Enabled && ForceIn->GetLastOrder().Num() >= 1)
+	if (Enabled && staticMesh->IsSimulatingPhysics())
 	{
 		FTransform LocationWorld = GetActorTransform();
 		FVector ActorLoc = LocationWorld.GetLocation();
@@ -144,7 +144,7 @@ float AWheel::GetSuspensionForce(float NewDistanceToGround, float dt)
 	//Positive force : Push stuff outwards
 	float extension = FMath::Clamp(NewDistanceToGround/SuspensionLength, 0.f, 1.f);
 	float spring = (1-extension) * MaxSuspensionWeight*9800.f;
-	float damper = -(extension - PreviousExtension)/dt * Damping * MaxSuspensionWeight*9800.f;
+	float damper = -FMath::Min(extension - PreviousExtension, 0.f)/dt * Damping * MaxSuspensionWeight*9800.f;
 	PreviousExtension = extension;
 	return spring + damper;
 }

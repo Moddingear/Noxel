@@ -48,7 +48,7 @@ void INObjectInterface::SetupNodeContainerBySocket(UStaticMeshComponent * Mesh, 
 		}
 	}
 	Target->SetNodesDefault(Nodes, false);
-	UE_LOG(Noxel, Log, TEXT("[%s::SetupNodeContainerBySocket] Found %d nodes"), *Mesh->GetOwner()->GetClass()->GetFName().ToString(), NodesFound);
+	UE_LOG(Noxel, Verbose, TEXT("[%s::SetupNodeContainerBySocket] Found %d nodes"), *Mesh->GetOwner()->GetClass()->GetFName().ToString(), NodesFound);
 }
 
 bool INObjectInterface::ComputeCOMFromComponents(TArray<AActor*> &Actors, FVector &COM, float &Mass, FVector& InertiaTensor)

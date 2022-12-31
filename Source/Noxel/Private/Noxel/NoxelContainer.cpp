@@ -608,6 +608,32 @@ void UNoxelContainer::UpdateProviderData()
 	NoxelProvider->SetPanels(PanelsData);
 }
 
+UBodySetup* UNoxelContainer::GetBodySetup()
+{
+	if (GetRuntimeMesh())
+	{
+		UBodySetup* setup = GetRuntimeMesh()->GetBodySetup();
+		TArray<FText> validityErrors;
+		if (!setup)
+		{
+			UE_LOG(NoxelData, Warning, TEXT("[%s/%s::GetBodySetup] Body setup is invalid on %s"), *GetOwner()->GetName(), *GetName(), GetWorld()->IsServer() ? TEXT("server") : TEXT("client"))
+		}
+		else
+		{
+			if (setup->IsDataValid(validityErrors) != EDataValidationResult::Valid)
+			{
+				UE_LOG(NoxelData, Warning, TEXT("[UNoxelContainer::GetBodySetup] Body setup has invalid data"));
+			}
+			if (setup->AggGeom.GetElementCount() == 0)
+			{
+				UE_LOG(NoxelData, Warning, TEXT("[UNoxelContainer::GetBodySetup] Body setup has no colliders"))
+			}
+		}
+		return setup;
+	}
+	return nullptr;
+}
+
 bool UNoxelContainer::IsConnected()
 {
 	return ConnectedNodesContainers.Num() >0;
@@ -628,6 +654,6 @@ bool UNoxelContainer::CheckDataValidity()
 
 void UNoxelContainer::UpdateMesh()
 {
-	UE_LOG(NoxelData, Log, TEXT("[UNodesContainer::UpdateMesh@%s] Called on %s, SpawnContext=%d"), *GetPathName(), GetWorld()->IsServer() ? TEXT("server") : TEXT("client"), SpawnContext);
+	//UE_LOG(NoxelData, Log, TEXT("[UNodesContainer::UpdateMesh@%s] Called on %s, SpawnContext=%d"), *GetPathName(), GetWorld()->IsServer() ? TEXT("server") : TEXT("client"), SpawnContext);
 	UpdateProviderData();
 }

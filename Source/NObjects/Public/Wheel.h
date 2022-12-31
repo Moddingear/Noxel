@@ -26,8 +26,8 @@ private:
 		FHitResult GroundCast;
 	};
 	
-	WheelFrictionData PreviousFrameFriction;
-	WheelFrictionData ThisFrameFriction;
+	WheelFrictionData PreviousFrameFriction = {0};
+	WheelFrictionData ThisFrameFriction = {0};
 	
 public:
 	AWheel();

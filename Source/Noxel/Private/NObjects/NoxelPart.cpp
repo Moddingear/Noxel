@@ -98,11 +98,18 @@ void ANoxelPart::OnRep_NoxelSave()
 			}
 			UCraftDataHandler::loadNoxelNetwork(NoxelSave);
 			noxelContainer->GetRuntimeMesh()->ForceCollisionUpdate();
+			check(noxelContainer)
 			for (int i = 0; i < connectednodes.Num(); ++i)
 			{
 				AActor* owner = connectednodes[i]->GetOwner();
-				FAttachmentTransformRules rules(EAttachmentRule::KeepWorld, false);
+				if (owner == this)
+				{
+					continue;
+				}
+				FAttachmentTransformRules rules(EAttachmentRule::KeepWorld, true);
 				owner->AttachToComponent(noxelContainer, rules);
+				owner->SetActorRelativeTransform(NoxelSave.RelativeTransforms[i]);
+				//owner->SetActorEnableCollision(false);
 			}
 		}
 	}
