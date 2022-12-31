@@ -6,6 +6,10 @@
 #include "Noxel/NoxelContainer.h"
 #include "..\..\Public\NObjects\NoxelPart.h"
 
+#include "Net/UnrealNetwork.h"
+#include "NObjects/NObjectInterface.h"
+#include "Noxel/CraftDataHandler.h"
+
 
 // Sets default values
 ANoxelPart::ANoxelPart()
@@ -26,6 +30,12 @@ ANoxelPart::ANoxelPart()
 	nodesContainer->SetNodesDefault(TArray<FVector>(), true);
 	
 
+}
+
+void ANoxelPart::GetLifetimeReplicatedProps(TArray<FLifetimeProperty> &OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+	DOREPLIFETIME(ANoxelPart, NoxelSave);
 }
 
 // Called when the game starts or when spawned
@@ -50,7 +60,6 @@ UNodesContainer * ANoxelPart::GetNodesContainer()
 void ANoxelPart::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
-
 }
 
 void ANoxelPart::OnNoxelHit(UPrimitiveComponent* HitComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp,
@@ -66,3 +75,35 @@ void ANoxelPart::OnNoxelHit(UPrimitiveComponent* HitComponent, AActor* OtherActo
 	}
 }
 
+void ANoxelPart::OnRep_NoxelSave()
+{
+	if (IsValid(NoxelSave.Noxel))
+	{
+		auto connectednodes = NoxelSave.NodesConnected;
+		bool HasInvalid = connectednodes.Num() == 0;
+		for (int i = 0; i < connectednodes.Num(); ++i)
+		{
+			if (!IsValid(connectednodes[i]))
+			{
+				HasInvalid = true;
+			}
+		}
+		if (!HasInvalid)
+		{
+			for (int i = 0; i < connectednodes.Num(); ++i)//Everything is valid : Position the NObjects, load the noxel, then force collision cook and attach components
+			{
+				AActor* owner = connectednodes[i]->GetOwner();
+				FTransform worldtransform(GetActorTransform().ToMatrixWithScale() * NoxelSave.RelativeTransforms[i].ToMatrixWithScale());
+				owner->SetActorTransform(worldtransform);
+			}
+			UCraftDataHandler::loadNoxelNetwork(NoxelSave);
+			noxelContainer->GetRuntimeMesh()->ForceCollisionUpdate();
+			for (int i = 0; i < connectednodes.Num(); ++i)
+			{
+				AActor* owner = connectednodes[i]->GetOwner();
+				FAttachmentTransformRules rules(EAttachmentRule::KeepWorld, false);
+				owner->AttachToComponent(noxelContainer, rules);
+			}
+		}
+	}
+}

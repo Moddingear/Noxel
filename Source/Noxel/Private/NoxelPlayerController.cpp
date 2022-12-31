@@ -6,6 +6,8 @@
 #include "Noxel.h"
 
 #include "Noxel/CraftDataHandler.h"
+#include "Noxel/NodesContainer.h"
+#include "Noxel/NoxelContainer.h"
 
 ANoxelPlayerController::ANoxelPlayerController()
 {
@@ -36,6 +38,11 @@ void ANoxelPlayerController::Server_NoxelSync_Implementation(UNoxelContainer * N
 		UE_LOG(NoxelDataNetwork, Warning, TEXT("{Server_NoxelSync_Implementation} UNoxelContainerReference is null"));
 		return;
 	}
+	if (NoxelContainer->GetSpawnContext() != ECraftSpawnContext::Editor)
+	{
+		UE_LOG(NoxelDataNetwork, Log, TEXT("[ANoxelPlayerController::Server_NoxelSync_Implementation] Dropping call because spawned not for editor"));
+		return;
+	}
 	Client_NoxelSync(UCraftDataHandler::saveNoxelNetwork(NoxelContainer));
 }
 
@@ -60,6 +67,11 @@ void ANoxelPlayerController::Server_NodesSync_Implementation(UNodesContainer * N
 {
 	if (!NodesContainer) {
 		UE_LOG(NoxelDataNetwork, Warning, TEXT("{Server_NodesSync_Implementation} UNoxelContainerReference is null"));
+		return;
+	}
+	if (NodesContainer->GetSpawnContext() != ECraftSpawnContext::Editor)
+	{
+		UE_LOG(NoxelDataNetwork, Log, TEXT("[ANoxelPlayerController::Server_NodesSync_Implementation] Dropping call because spawned not for editor"));
 		return;
 	}
 	Client_NodesSync(UCraftDataHandler::saveNodesNetwork(NodesContainer));

@@ -27,6 +27,11 @@ void UNoxelDataComponent::SetSpawnContext(ECraftSpawnContext Context)
 	}
 }
 
+ECraftSpawnContext UNoxelDataComponent::GetSpawnContext()
+{
+	return SpawnContext;
+}
+
 bool UNoxelDataComponent::IsConnected()
 {
 	return false;

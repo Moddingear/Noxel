@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
+#include "Noxel/NoxelDataStructs.h"
 #include "NoxelPart.generated.h"
 
 class UNoxelContainer;
@@ -28,7 +29,11 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, BlueprintGetter = GetNodesContainer)
 	UNodesContainer* nodesContainer;
 
+
 public:
+	UPROPERTY(ReplicatedUsing=OnRep_NoxelSave)
+	FNoxelNetwork NoxelSave;
+	
 	UFUNCTION(BlueprintPure)
 	UNoxelContainer* GetNoxelContainer();
 
@@ -36,6 +41,9 @@ public:
 	UNodesContainer* GetNodesContainer();
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
+
+	UFUNCTION()
+	void OnRep_NoxelSave();
 
 	UFUNCTION()
 	void OnNoxelHit(UPrimitiveComponent* HitComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& Hit );

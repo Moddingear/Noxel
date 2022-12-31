@@ -387,6 +387,8 @@ struct NOXEL_API FNoxelNetwork {
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	TArray<UNodesContainer*> NodesConnected;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	TArray<FTransform> RelativeTransforms;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	TArray<FNodesContainerSave> NodesSave;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)

@@ -32,6 +32,8 @@ public:
 	*/
 	virtual void SetSpawnContext(ECraftSpawnContext Context);
 
+	virtual ECraftSpawnContext GetSpawnContext();
+
 	virtual bool IsConnected();
 
 	virtual bool CheckDataValidity();

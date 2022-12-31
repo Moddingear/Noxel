@@ -438,7 +438,7 @@ void UCraftDataHandler::loadCraft(FCraftSave Craft, FTransform transform)
 			if (NObject != Part)
 			{
 				NObject->bNetUseOwnerRelevancy = true;
-				NObject->SetOwner(Part);
+				NObject->SetOwner(Part);//TODO: should be the controller (server) instead
 			}
 		}
 	}
@@ -500,20 +500,8 @@ void UCraftDataHandler::enableCraft()
 			PartNoxel->GetRuntimeMesh()->ForceCollisionUpdate();
 			//NObject->AttachToActor(Part, FAttachmentTransformRules::KeepWorldTransform);
 			FAttachmentTransformRules rules(EAttachmentRule::SnapToTarget, false);
-			if (NObject->GetClass()->ImplementsInterface(UNObjectInterface::StaticClass()))
-			{
-				INObjectInterface* noxelcast = Cast<INObjectInterface>(NObject);
-				FNoxelReplicatedAttachmentData repdata;
-				repdata.valid = true;
-				repdata.AttachOffset = DeltaTransform;
-				repdata.ParentComponent = PartNoxel;
-				INObjectInterface::Execute_SetReplicatedAttachmentData(NObject, repdata);
-			}
-			else
-			{
-				NObject->AttachToComponent(PartNoxel, rules);
-                NObject->SetActorRelativeTransform(DeltaTransform);
-			}
+			NObject->AttachToComponent(PartNoxel, rules);
+            NObject->SetActorRelativeTransform(DeltaTransform);
 			
 			FString attachedTo = TEXT("nothing");
 			if (root->GetAttachmentRoot())
@@ -523,6 +511,7 @@ void UCraftDataHandler::enableCraft()
 			UE_LOG(Noxel, Log, TEXT("Attaching %s to %s : IsWelded = %d, IsSimulating = %d, attached to %s"), *root->GetPathName(), *Part->GetName(), root->IsWelded(), root->IsSimulatingPhysics(), *attachedTo);
 			AlreadyConnected.Add(NObject);
 		}
+		Part->NoxelSave = saveNoxelNetwork(PartNoxel);
 	}
 	for (AActor* NObject : Components)
 	{
@@ -554,10 +543,13 @@ FNoxelNetwork UCraftDataHandler::saveNoxelNetwork(UNoxelContainer * noxel)
 	save.Noxel = noxel; //Store ref to noxel
 	save.NodesConnected = noxel->GetConnectedNodesContainers(); //Store ref to nodes connected to the noxel
 	save.NodesSave.SetNum(save.NodesConnected.Num());
+	save.RelativeTransforms.SetNum(save.NodesConnected.Num());
 	TMap <FNodeID, FNodeSavedRedirector> redirmap;
 	for (int i = 0; i < save.NodesConnected.Num(); i++)
 	{
+		AActor* owner = save.NodesConnected[i]->GetOwner();
 		saveNodesContainer(save.NodesConnected[i], 0, i, save.NodesSave[i], redirmap); //Save nodes
+		save.RelativeTransforms[i] = FTransform(noxel->GetOwner()->GetActorTransform().ToMatrixWithScale().Inverse() * owner->GetActorTransform().ToMatrixWithScale());
 	}
 	saveNoxelContainer(noxel, redirmap, save.NoxelSave); //Save noxel
 	return save;
@@ -685,7 +677,10 @@ void UCraftDataHandler::saveNodesContainer(UNodesContainer * NodesContainer, int
 	TArray<FNodeID> Nodes = NodesContainer->GenerateNodesKeyArray();
 	for (int i = 0; i < Nodes.Num(); i++)
 	{
-		SavedData.Nodes.Add(Nodes[i].Location);
+		if (NodesContainer->IsPlayerEditable())
+		{
+			SavedData.Nodes.Add(Nodes[i].Location);
+		}
 		FNodeSavedRedirector Redir = FNodeSavedRedirector(parentIndex, nodesContainerIndex, i);
 		RedirectorMap.Add(Nodes[i], Redir);
 	}
@@ -716,12 +711,20 @@ bool UCraftDataHandler::loadNodesContainer(UNodesContainer * NodesContainer, int
 	}
 	else {
 		//Build redirector map by finding the nodes
-		for (int i = 0; i < SavedData.Nodes.Num(); i++)
+		/*for (int i = 0; i < SavedData.Nodes.Num(); i++)
 		{
 			FNodeID NewNode;
+			
 			if (NodesContainer->FindNode(SavedData.Nodes[i], NewNode)) {
 				RedirectorMap.Add(FNodeSavedRedirector(parentIndex, nodesContainerIndex, i), NewNode);
 			}
+		}*/
+		//assume stability in order of nodes across clients for non editable objects
+		TArray<FNodeID> Nodes = NodesContainer->GenerateNodesKeyArray();
+		for (int i = 0; i < Nodes.Num(); i++)
+		{
+			FNodeSavedRedirector Redir = FNodeSavedRedirector(parentIndex, nodesContainerIndex, i);
+			RedirectorMap.Add(Redir, Nodes[i]);
 		}
 	}
 	return true;
