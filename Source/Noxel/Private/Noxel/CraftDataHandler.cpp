@@ -519,10 +519,6 @@ void UCraftDataHandler::enableCraft()
 		{
 			if (UPrimitiveComponent* rootPrimitive = Cast<UPrimitiveComponent>(NObject->GetRootComponent()))
 			{
-				if (URuntimeMeshComponent* RootRuntime = Cast<URuntimeMeshComponent>(rootPrimitive))
-				{
-					
-				}
 				rootPrimitive->SetSimulatePhysics(true);
 			}
 			/*else

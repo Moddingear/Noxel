@@ -33,6 +33,7 @@ protected:
 public:
 	UPROPERTY(ReplicatedUsing=OnRep_NoxelSave)
 	FNoxelNetwork NoxelSave;
+	bool hasLoadedFromNetworkSave = false;
 	
 	UFUNCTION(BlueprintPure)
 	UNoxelContainer* GetNoxelContainer();
@@ -47,5 +48,9 @@ public:
 
 	UFUNCTION()
 	void OnNoxelHit(UPrimitiveComponent* HitComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& Hit );
+
+	virtual void OnRep_AttachmentReplication() override;
+
+	virtual void GatherCurrentMovement() override;
 	
 };

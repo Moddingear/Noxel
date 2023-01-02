@@ -42,6 +42,7 @@ void ANoxelPart::GetLifetimeReplicatedProps(TArray<FLifetimeProperty> &OutLifeti
 void ANoxelPart::BeginPlay()
 {
 	Super::BeginPlay();
+	OnRep_NoxelSave();
 	UE_LOG(Noxel, Log, TEXT("[(%s)ANoxelPart::BeginPlay] Server : %s; Part location : %s"), *GetName(), GetWorld()->IsServer() ? TEXT("True") : TEXT("False"), *GetActorLocation().ToString());
 	
 }
@@ -60,6 +61,10 @@ UNodesContainer * ANoxelPart::GetNodesContainer()
 void ANoxelPart::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
+	if (!hasLoadedFromNetworkSave)
+	{
+		OnRep_NoxelSave();
+	}
 }
 
 void ANoxelPart::OnNoxelHit(UPrimitiveComponent* HitComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp,
@@ -75,9 +80,23 @@ void ANoxelPart::OnNoxelHit(UPrimitiveComponent* HitComponent, AActor* OtherActo
 	}
 }
 
+void ANoxelPart::OnRep_AttachmentReplication()
+{
+	
+}
+
+void ANoxelPart::GatherCurrentMovement()
+{
+	
+}
+
 void ANoxelPart::OnRep_NoxelSave()
 {
-	if (IsValid(NoxelSave.Noxel))
+	if (!IsValid(NoxelSave.Noxel))
+	{
+		hasLoadedFromNetworkSave = true;
+	}
+	else
 	{
 		auto connectednodes = NoxelSave.NodesConnected;
 		bool HasInvalid = connectednodes.Num() == 0;
@@ -86,13 +105,30 @@ void ANoxelPart::OnRep_NoxelSave()
 			if (!IsValid(connectednodes[i]))
 			{
 				HasInvalid = true;
+				break;
 			}
 		}
-		if (!HasInvalid)
+		if (HasInvalid)
 		{
+			hasLoadedFromNetworkSave = false;
+		}
+		else
+		{
+			hasLoadedFromNetworkSave = true;
+			UE_LOG(NoxelDataNetwork, Log, TEXT("[%s::OnRep_NoxelSave] Loading noxel for battle"), *GetName())
 			for (int i = 0; i < connectednodes.Num(); ++i)//Everything is valid : Position the NObjects, load the noxel, then force collision cook and attach components
 			{
 				AActor* owner = connectednodes[i]->GetOwner();
+				if (owner == this)
+				{
+					continue;
+				}
+				UPrimitiveComponent* rootPrimitive = CastChecked<UPrimitiveComponent>(owner->GetRootComponent());
+				if (rootPrimitive->GetAttachmentRootActor() != owner)
+				{
+					UE_LOG(NoxelDataNetwork, Log, TEXT("[ANoxelPart::OnRep_NoxelSave] Component %s/%s was attached (to %s/%s) before noxel load."), *owner->GetName(), *rootPrimitive->GetName(), *rootPrimitive->GetAttachmentRootActor()->GetName(), *rootPrimitive->GetAttachParent()->GetName())
+				}
+				rootPrimitive->DetachFromComponent(FDetachmentTransformRules::KeepWorldTransform);
 				FTransform worldtransform(GetActorTransform().ToMatrixWithScale() * NoxelSave.RelativeTransforms[i].ToMatrixWithScale());
 				owner->SetActorTransform(worldtransform);
 			}
@@ -102,13 +138,15 @@ void ANoxelPart::OnRep_NoxelSave()
 			for (int i = 0; i < connectednodes.Num(); ++i)
 			{
 				AActor* owner = connectednodes[i]->GetOwner();
-				if (owner == this)
-				{
-					continue;
-				}
-				FAttachmentTransformRules rules(EAttachmentRule::KeepWorld, true);
+				UPrimitiveComponent* rootPrimitive = CastChecked<UPrimitiveComponent>(owner->GetRootComponent());
+				FAttachmentTransformRules rules(EAttachmentRule::KeepWorld, false);
 				owner->AttachToComponent(noxelContainer, rules);
 				owner->SetActorRelativeTransform(NoxelSave.RelativeTransforms[i]);
+				if (owner->GetAttachParentActor() == nullptr)
+				{
+					rootPrimitive->SetSimulatePhysics(true);
+				}
+				rootPrimitive->UpdateComponentToWorld();
 				//owner->SetActorEnableCollision(false);
 			}
 		}

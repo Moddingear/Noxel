@@ -53,7 +53,7 @@ void AWheel::BeginPlay()
 void AWheel::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
-	if (Enabled && staticMesh->IsSimulatingPhysics())
+	if (Enabled && staticMesh->IsAnySimulatingPhysics())
 	{
 		FTransform LocationWorld = GetActorTransform();
 		FVector ActorLoc = LocationWorld.GetLocation();
