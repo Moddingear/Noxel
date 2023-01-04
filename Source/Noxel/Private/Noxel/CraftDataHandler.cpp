@@ -119,7 +119,7 @@ AActor* UCraftDataHandler::AddComponent(TSubclassOf<AActor> Class, FTransform Lo
 	//UE_LOG(Noxel, Log, TEXT("[UCraftDataHandler::AddComponent] Spawning actor"));
 	AActor* Spawned = GetWorld()->SpawnActorDeferred<AActor>(Class, Location, SpawnParameters.Owner, GetOwner()->GetInstigator(), SpawnParameters.SpawnCollisionHandlingOverride);
 #ifdef WITH_EDITOR
-	if (!Spawned->GetIsReplicated() || !Spawned->IsReplicatingMovement())
+	if (!Spawned->GetIsReplicated())
 	{
 		UE_LOG(Noxel, Error, TEXT("[UCraftDataHandler::AddComponent] Class %s is not set to replicate correctly"), *Class->GetName());
 	}
@@ -512,6 +512,7 @@ void UCraftDataHandler::enableCraft()
 			AlreadyConnected.Add(NObject);
 		}
 		Part->NoxelSave = saveNoxelNetwork(PartNoxel);
+		
 	}
 	for (AActor* NObject : Components)
 	{
@@ -520,6 +521,7 @@ void UCraftDataHandler::enableCraft()
 			if (UPrimitiveComponent* rootPrimitive = Cast<UPrimitiveComponent>(NObject->GetRootComponent()))
 			{
 				rootPrimitive->SetSimulatePhysics(true);
+				UE_LOG(NoxelData, Log, TEXT("[UCraftDataHandler::enableCraft] Object %s has mass %f"), *NObject->GetName(), rootPrimitive->GetMass());
 			}
 			/*else
 			{
@@ -537,15 +539,19 @@ FNoxelNetwork UCraftDataHandler::saveNoxelNetwork(UNoxelContainer * noxel)
 {
 	FNoxelNetwork save;
 	save.Noxel = noxel; //Store ref to noxel
-	save.NodesConnected = noxel->GetConnectedNodesContainers(); //Store ref to nodes connected to the noxel
-	save.NodesSave.SetNum(save.NodesConnected.Num());
-	save.RelativeTransforms.SetNum(save.NodesConnected.Num());
+	TArray<UNodesContainer*> Connected = noxel->GetConnectedNodesContainers();//Store ref to nodes connected to the noxel
+	int NumConnected = Connected.Num();
+	save.NodesConnected.SetNum(NumConnected);
+	save.NodesSave.SetNum(NumConnected);
+	save.RelativeTransforms.SetNum(NumConnected);
 	TMap <FNodeID, FNodeSavedRedirector> redirmap;
-	for (int i = 0; i < save.NodesConnected.Num(); i++)
+	for (int i = 0; i < NumConnected; i++)
 	{
-		AActor* owner = save.NodesConnected[i]->GetOwner();
-		saveNodesContainer(save.NodesConnected[i], 0, i, save.NodesSave[i], redirmap); //Save nodes
-		save.RelativeTransforms[i] = FTransform(noxel->GetOwner()->GetActorTransform().ToMatrixWithScale().Inverse() * owner->GetActorTransform().ToMatrixWithScale());
+		save.NodesConnected[i] = Connected[i];
+		AActor* owner = Connected[i]->GetOwner();
+		saveNodesContainer(Connected[i], 0, i, save.NodesSave[i], redirmap); //Save nodes
+		save.RelativeTransforms[i] = noxel->GetComponentTransform().GetRelativeTransformReverse(owner->GetActorTransform());
+		UE_LOG(NoxelDataNetwork, Verbose, TEXT("[UCraftDataHandler::saveNoxelNetwork] Relative transform for %d is \n%s"), i, *save.RelativeTransforms[i].ToHumanReadableString())
 	}
 	saveNoxelContainer(noxel, redirmap, save.NoxelSave); //Save noxel
 	return save;
@@ -554,9 +560,9 @@ FNoxelNetwork UCraftDataHandler::saveNoxelNetwork(UNoxelContainer * noxel)
 bool UCraftDataHandler::loadNoxelNetwork(FNoxelNetwork save)
 {
 	TMap<FNodeSavedRedirector, FNodeID> redirmap;
-	for (UNodesContainer* Container : save.NodesConnected)
+	for (auto Container : save.NodesConnected)
 	{
-		if (Container == nullptr)
+		if (!IsValid(Container))
 		{
 			return false;
 		}

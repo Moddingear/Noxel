@@ -23,6 +23,12 @@ void ANoxelPlayerController::SynchroniseNoxel(UNoxelContainer * NoxelContainer)
 	Server_NoxelSync(NoxelContainer);
 }
 
+void ANoxelPlayerController::GetConnectedNodesContainers(UNoxelContainer* NoxelContainer)
+{
+	check(IsValid(NoxelContainer));
+	Server_ConnectedNodesContainers(NoxelContainer);
+}
+
 void ANoxelPlayerController::SynchroniseUnconnectedNodes(UNodesContainer* NodesContainer)
 {
 	if (!NodesContainer) {
@@ -60,6 +66,29 @@ void ANoxelPlayerController::Client_NoxelSync_Implementation(FNoxelNetwork Save)
 	else
 	{
 		UE_LOG(NoxelDataNetwork, Warning, TEXT("[ANoxelPlayerController::Client_NoxelSync_Implementation] Failed to load panels from network!"));
+	}
+}
+
+void ANoxelPlayerController::Server_ConnectedNodesContainers_Implementation(UNoxelContainer* NoxelContainer)
+{
+	if (IsValid(NoxelContainer))
+	{
+		Client_ConnectedNodesContainers(NoxelContainer, NoxelContainer->ConnectedNodesContainers);
+	}
+}
+
+bool ANoxelPlayerController::Server_ConnectedNodesContainers_Validate(UNoxelContainer* NoxelContainer)
+{
+	return true;
+}
+
+void ANoxelPlayerController::Client_ConnectedNodesContainers_Implementation(UNoxelContainer* Target,
+	const TArray<UNodesContainer*> &Containers)
+{
+	if (IsValid(Target))
+	{
+		Target->ConnectedNodesContainers = Containers;
+		Target->OnRep_ConnectedNodesContainers();
 	}
 }
 

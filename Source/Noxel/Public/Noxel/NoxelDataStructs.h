@@ -384,16 +384,16 @@ struct NOXEL_API FNoxelNetwork {
 
 	GENERATED_BODY()
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	UPROPERTY()
 	TArray<UNodesContainer*> NodesConnected;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	UPROPERTY()
 	TArray<FTransform> RelativeTransforms;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	UPROPERTY()
 	TArray<FNodesContainerSave> NodesSave;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	UPROPERTY()
 	UNoxelContainer* Noxel;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	UPROPERTY()
 	FNoxelContainerSave NoxelSave;
 };
 

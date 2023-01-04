@@ -7,6 +7,7 @@
 #include "Camera/CameraComponent.h"
 #include "Components/InputComponent.h"
 #include "Net/UnrealNetwork.h"
+#include "Noxel/CraftDataHandler.h"
 
 
 // Sets default values
@@ -62,6 +63,17 @@ void ANObjectPossessableBase::BeginPlay()
 void ANObjectPossessableBase::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
+	if (Enabled != EnabledPrev)
+	{
+		if (Enabled)
+		{
+			INObjectInterface::Execute_OnNObjectEnable(this, ParentCraft);
+		}
+		else
+		{
+			INObjectInterface::Execute_OnNObjectDisable(this);
+		}
+	}
 
 	pitch = FMath::Clamp(pitch - pitchInput, -90.f, 90.f);
 	yaw = yaw + yawInput;
@@ -70,23 +82,19 @@ void ANObjectPossessableBase::Tick(float DeltaTime)
 	FTransform forward = FTransform(rotation);
 	Camera->SetWorldRotation(rotation);
 	Camera->SetWorldLocation(CameraRotationPoint->GetComponentLocation() - forward.GetUnitAxis(EAxis::X) * OrbitDistance);
-
-	if (AttachedPrev != IsAttachmentValid())
-	{
-		AttachedPrev = !AttachedPrev;
-		CheckNetworkAttachment("ANObjectPossessableBase::Tick/attachment");
-	}
 }
 
 void ANObjectPossessableBase::OnNObjectEnable_Implementation(UCraftDataHandler* Craft)
 {
 	Enabled = true;
+	EnabledPrev = Enabled;
 	ParentCraft = Craft;
 }
 
 void ANObjectPossessableBase::OnNObjectDisable_Implementation()
 {
 	Enabled = false;
+	EnabledPrev = Enabled;
 }
 
 bool ANObjectPossessableBase::OnNObjectAttach_Implementation(ANoxelPart* Part)

@@ -6,6 +6,7 @@
 #include "Noxel/NoxelContainer.h"
 #include "..\..\Public\NObjects\NoxelPart.h"
 
+#include "Kismet/KismetMathLibrary.h"
 #include "Net/UnrealNetwork.h"
 #include "NObjects/NObjectInterface.h"
 #include "Noxel/CraftDataHandler.h"
@@ -43,7 +44,7 @@ void ANoxelPart::BeginPlay()
 {
 	Super::BeginPlay();
 	OnRep_NoxelSave();
-	UE_LOG(Noxel, Log, TEXT("[(%s)ANoxelPart::BeginPlay] Server : %s; Part location : %s"), *GetName(), GetWorld()->IsServer() ? TEXT("True") : TEXT("False"), *GetActorLocation().ToString());
+	//UE_LOG(Noxel, Log, TEXT("[(%s)ANoxelPart::BeginPlay] Server : %s; Part location : %s"), *GetName(), GetWorld()->IsServer() ? TEXT("True") : TEXT("False"), *GetActorLocation().ToString());
 	
 }
 
@@ -65,6 +66,10 @@ void ANoxelPart::Tick(float DeltaTime)
 	{
 		OnRep_NoxelSave();
 	}
+	if (IsValid(NoxelSave.Noxel) && GFrameCounter % 60 == 0)
+	{
+		UE_LOG(Noxel, Log, TEXT("[ANoxelPart::Tick]%d Part %s has mass %f, angular %s"), GetWorld()->IsServer(), *GetName(), noxelContainer->GetMass(), *noxelContainer->GetInertiaTensor().ToString());
+	}
 }
 
 void ANoxelPart::OnNoxelHit(UPrimitiveComponent* HitComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp,
@@ -72,11 +77,11 @@ void ANoxelPart::OnNoxelHit(UPrimitiveComponent* HitComponent, AActor* OtherActo
 {
 	if (OtherActor)
 	{
-		UE_LOG(Noxel, Log, TEXT("[ANoxelPart::OnNoxelHit] Component %s/%s has been hit by %s/%s : Impulse %s"), *GetName(), *noxelContainer->GetName(), *OtherActor->GetName(), *OtherComp->GetName(), *NormalImpulse.ToString());
+		UE_LOG(Noxel, Log, TEXT("[ANoxelPart::OnNoxelHit]%d Component %s/%s has been hit by %s/%s : Impulse %s"), GetWorld()->IsServer(), *GetName(), *noxelContainer->GetName(), *OtherActor->GetName(), *OtherComp->GetName(), *NormalImpulse.ToString());
 	}
 	else
 	{
-		UE_LOG(Noxel, Log, TEXT("[ANoxelPart::OnNoxelHit] Component %s/%s has been hit by %s : Impulse %s"), *GetName(), *noxelContainer->GetName(), *OtherComp->GetName(), *NormalImpulse.ToString());
+		UE_LOG(Noxel, Log, TEXT("[ANoxelPart::OnNoxelHit]%d Component %s/%s has been hit by %s : Impulse %s"), GetWorld()->IsServer(), *GetName(), *noxelContainer->GetName(), *OtherComp->GetName(), *NormalImpulse.ToString());
 	}
 }
 
@@ -85,20 +90,20 @@ void ANoxelPart::OnRep_AttachmentReplication()
 	
 }
 
-void ANoxelPart::GatherCurrentMovement()
+/*void ANoxelPart::GatherCurrentMovement()
 {
 	
-}
+}*/
 
 void ANoxelPart::OnRep_NoxelSave()
 {
-	if (!IsValid(NoxelSave.Noxel))
+	if (!IsValid(NoxelSave.Noxel) || GetWorld()->IsServer() || NoxelSave.Noxel != noxelContainer) //if invalid or server
 	{
 		hasLoadedFromNetworkSave = true;
 	}
 	else
 	{
-		auto connectednodes = NoxelSave.NodesConnected;
+		auto connectednodes = NoxelSave.Noxel->GetConnectedNodesContainers();
 		bool HasInvalid = connectednodes.Num() == 0;
 		for (int i = 0; i < connectednodes.Num(); ++i)
 		{
@@ -114,8 +119,11 @@ void ANoxelPart::OnRep_NoxelSave()
 		}
 		else
 		{
+			NoxelSave.NodesConnected = connectednodes;
 			hasLoadedFromNetworkSave = true;
+			noxelContainer->SetSimulatePhysics(false);
 			UE_LOG(NoxelDataNetwork, Log, TEXT("[%s::OnRep_NoxelSave] Loading noxel for battle"), *GetName())
+			UE_LOG(NoxelDataNetwork, Verbose, TEXT("[ANoxelPart::OnRep_NoxelSave] Relative transform for part is \n%s"), *noxelContainer->GetComponentTransform().ToHumanReadableString())
 			for (int i = 0; i < connectednodes.Num(); ++i)//Everything is valid : Position the NObjects, load the noxel, then force collision cook and attach components
 			{
 				AActor* owner = connectednodes[i]->GetOwner();
@@ -126,29 +134,34 @@ void ANoxelPart::OnRep_NoxelSave()
 				UPrimitiveComponent* rootPrimitive = CastChecked<UPrimitiveComponent>(owner->GetRootComponent());
 				if (rootPrimitive->GetAttachmentRootActor() != owner)
 				{
-					UE_LOG(NoxelDataNetwork, Log, TEXT("[ANoxelPart::OnRep_NoxelSave] Component %s/%s was attached (to %s/%s) before noxel load."), *owner->GetName(), *rootPrimitive->GetName(), *rootPrimitive->GetAttachmentRootActor()->GetName(), *rootPrimitive->GetAttachParent()->GetName())
+					UE_LOG(NoxelDataNetwork, Verbose, TEXT("[ANoxelPart::OnRep_NoxelSave] Component %s/%s was attached (to %s/%s) before noxel load."), *owner->GetName(), *rootPrimitive->GetName(), *rootPrimitive->GetAttachmentRootActor()->GetName(), *rootPrimitive->GetAttachParent()->GetName())
 				}
-				rootPrimitive->DetachFromComponent(FDetachmentTransformRules::KeepWorldTransform);
-				FTransform worldtransform(GetActorTransform().ToMatrixWithScale() * NoxelSave.RelativeTransforms[i].ToMatrixWithScale());
+				//rootPrimitive->DetachFromComponent(FDetachmentTransformRules::KeepWorldTransform);
+				
+				FTransform worldtransform = NoxelSave.RelativeTransforms[i] * noxelContainer->GetComponentTransform();
 				owner->SetActorTransform(worldtransform);
+				UE_LOG(NoxelDataNetwork, Verbose, TEXT("[ANoxelPart::OnRep_NoxelSave] World transform for %d is \n%s"), i, *worldtransform.ToHumanReadableString());
+			
 			}
 			UCraftDataHandler::loadNoxelNetwork(NoxelSave);
 			noxelContainer->GetRuntimeMesh()->ForceCollisionUpdate();
-			check(noxelContainer)
 			for (int i = 0; i < connectednodes.Num(); ++i)
 			{
 				AActor* owner = connectednodes[i]->GetOwner();
 				UPrimitiveComponent* rootPrimitive = CastChecked<UPrimitiveComponent>(owner->GetRootComponent());
-				FAttachmentTransformRules rules(EAttachmentRule::KeepWorld, false);
-				owner->AttachToComponent(noxelContainer, rules);
-				owner->SetActorRelativeTransform(NoxelSave.RelativeTransforms[i]);
-				if (owner->GetAttachParentActor() == nullptr)
+				if (owner != this) //skip attaching self to self
 				{
-					rootPrimitive->SetSimulatePhysics(true);
+					FAttachmentTransformRules rules(EAttachmentRule::KeepWorld, false);
+                    owner->AttachToComponent(noxelContainer, rules);
+					UE_LOG(NoxelDataNetwork, Verbose, TEXT("[ANoxelPart::OnRep_NoxelSave] After attach, world transform for %d is \n%s"), i, *owner->GetActorTransform().ToHumanReadableString());
 				}
-				rootPrimitive->UpdateComponentToWorld();
+				
+				//owner->SetActorRelativeTransform(NoxelSave.RelativeTransforms[i]);
+				//rootPrimitive->UpdateComponentToWorld();
 				//owner->SetActorEnableCollision(false);
 			}
+			noxelContainer->SetSimulatePhysics(true);
+			
 		}
 	}
 }

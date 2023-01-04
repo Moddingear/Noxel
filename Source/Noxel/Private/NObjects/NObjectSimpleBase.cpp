@@ -5,6 +5,7 @@
 
 #include "Noxel.h"
 #include "Net/UnrealNetwork.h"
+#include "Noxel/CraftDataHandler.h"
 
 
 // Sets default values
@@ -38,18 +39,20 @@ void ANObjectSimpleBase::GetLifetimeReplicatedProps(TArray<FLifetimeProperty> &O
 void ANObjectSimpleBase::BeginPlay()
 {
 	Super::BeginPlay();
-	CheckNetworkAttachment("ANObjectSimpleBase::BeginPlay");
+	//CheckNetworkAttachment("ANObjectSimpleBase::BeginPlay");
 }
 
 void ANObjectSimpleBase::OnNObjectEnable_Implementation(UCraftDataHandler* Craft)
 {
 	Enabled = true;
+	EnabledPrev = Enabled;
 	ParentCraft = Craft;
 }
 
 void ANObjectSimpleBase::OnNObjectDisable_Implementation()
 {
 	Enabled = false;
+	EnabledPrev = Enabled;
 }
 
 bool ANObjectSimpleBase::OnNObjectAttach_Implementation(ANoxelPart * Part)
@@ -73,17 +76,14 @@ void ANObjectSimpleBase::Tick(float DeltaTime)
 	Super::Tick(DeltaTime);
 	if (Enabled != EnabledPrev)
 	{
-		EnabledPrev = Enabled;
-		//CheckNetworkAttachment("ANObjectSimpleBase::Tick/enable");
-	}
-	if (AttachedPrev != IsAttachmentValid())
-	{
-		AttachedPrev = !AttachedPrev;
-		CheckNetworkAttachment("ANObjectSimpleBase::Tick/attachment");
-	}
-	if ((GFrameCounter%60) ==0 && Enabled)
-	{
-		//CheckNetworkAttachment("ANObjectSimpleBase::Tick/frame");
+		if (Enabled)
+		{
+			INObjectInterface::Execute_OnNObjectEnable(this, ParentCraft);
+		}
+		else
+		{
+			INObjectInterface::Execute_OnNObjectDisable(this);
+		}
 	}
 }
 

@@ -25,6 +25,9 @@ public:
 		void SynchroniseNoxel(UNoxelContainer* NoxelContainer);
 
 	UFUNCTION(BlueprintCallable)
+		void GetConnectedNodesContainers(UNoxelContainer* NoxelContainer);
+
+	UFUNCTION(BlueprintCallable)
 		void SynchroniseUnconnectedNodes(UNodesContainer* NodesContainer);
 
 private:
@@ -34,6 +37,12 @@ private:
 
 	UFUNCTION(Client, Reliable)
 		void Client_NoxelSync(FNoxelNetwork Save);
+
+	UFUNCTION(Server, Reliable, WithValidation)
+		void Server_ConnectedNodesContainers(UNoxelContainer* NoxelContainer);
+
+	UFUNCTION(Client, Reliable)
+		void Client_ConnectedNodesContainers(UNoxelContainer* Target, const TArray<UNodesContainer*> &Containers);
 
 	UFUNCTION(Server, Reliable, WithValidation)
 		void Server_NodesSync(UNodesContainer* NodesContainer);

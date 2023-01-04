@@ -63,15 +63,25 @@ void UNoxelContainer::OnRep_ConnectedNodesContainers()
 	{
 		return;
 	}
+	bool InvalidCNC = false;
 	for (int i = 0; i < ConnectedNodesContainers.Num(); ++i)
 	{
 		if (!IsValid(ConnectedNodesContainers[i]))
 		{
-			return;
+			InvalidCNC = true;
+			break;
 		}
 	}
-	if (static_cast<ANoxelPlayerController*>(GetWorld()->GetFirstPlayerController())) {
-		static_cast<ANoxelPlayerController*>(GetWorld()->GetFirstPlayerController())->SynchroniseNoxel(this);
+	ANoxelPlayerController* controller = Cast<ANoxelPlayerController>(GetWorld()->GetFirstPlayerController());
+	if (IsValid(controller)) {
+		if (InvalidCNC)
+		{
+			controller->GetConnectedNodesContainers(this);
+		}
+		else if (SpawnContext != ECraftSpawnContext::Battle)
+		{
+			controller->SynchroniseNoxel(this);
+		}
 	}
 	else
 	{
@@ -608,7 +618,7 @@ void UNoxelContainer::UpdateProviderData()
 	NoxelProvider->SetPanels(PanelsData);
 }
 
-UBodySetup* UNoxelContainer::GetBodySetup()
+/*UBodySetup* UNoxelContainer::GetBodySetup()
 {
 	if (GetRuntimeMesh())
 	{
@@ -632,7 +642,7 @@ UBodySetup* UNoxelContainer::GetBodySetup()
 		return setup;
 	}
 	return nullptr;
-}
+}*/
 
 bool UNoxelContainer::IsConnected()
 {

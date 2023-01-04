@@ -30,7 +30,7 @@ public:
 	UPROPERTY(Replicated)
 	bool Enabled;
 private:
-	bool EnabledPrev = false, AttachedPrev = false;
+	bool EnabledPrev = false;
 public:
 
 	UPROPERTY(Replicated)

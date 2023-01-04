@@ -51,6 +51,6 @@ public:
 
 	virtual void OnRep_AttachmentReplication() override;
 
-	virtual void GatherCurrentMovement() override;
+	/*virtual void GatherCurrentMovement() override;*/
 	
 };

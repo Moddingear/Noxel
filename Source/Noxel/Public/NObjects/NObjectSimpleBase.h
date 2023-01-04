@@ -25,7 +25,7 @@ public:
 	UPROPERTY(Replicated)
 	bool Enabled = false;
 private:
-	bool EnabledPrev = false, AttachedPrev = false;
+	bool EnabledPrev = false;
 public:
 	UPROPERTY(Replicated)
 	UCraftDataHandler* ParentCraft = nullptr;

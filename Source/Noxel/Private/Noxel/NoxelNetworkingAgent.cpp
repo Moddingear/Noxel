@@ -374,7 +374,7 @@ void UNoxelNetworkingAgent::ClientsReceiveCommandQueue_Implementation(FEditorQue
 	}
 	else
 	{
-		if (!GetWorld()->IsServer())
+		if (!GetWorld()->IsServer() && IsValid(Craft))
 		{
 			Craft->OnReceiveQueueStart.Broadcast();
 		}
@@ -385,7 +385,7 @@ void UNoxelNetworkingAgent::ClientsReceiveCommandQueue_Implementation(FEditorQue
 			AddQueueToBuffer(Queue);
 			Queue->ExecuteQueue();
 		}
-		if (!GetWorld()->IsServer())
+		if (!GetWorld()->IsServer() && IsValid(Craft))
 		{
 			Craft->OnReceiveQueueEnd.Broadcast();
 		}

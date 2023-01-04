@@ -126,7 +126,7 @@ public:
 private:
 	void UpdateProviderData();
 
-	virtual UBodySetup* GetBodySetup() override;
+	//virtual UBodySetup* GetBodySetup() override;
 	
 public:
 	virtual bool IsConnected() override;
@@ -136,4 +136,5 @@ public:
 	virtual void UpdateMesh() override;
 	
 	friend class UNodesContainer;
+	friend class ANoxelPlayerController;
 };
