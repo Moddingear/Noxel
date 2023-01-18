@@ -94,7 +94,7 @@ void ANoxelPlayerController::Client_ConnectedNodesContainers_Implementation(UNox
 
 void ANoxelPlayerController::Server_NodesSync_Implementation(UNodesContainer * NodesContainer)
 {
-	if (!NodesContainer) {
+	if (!IsValid(NodesContainer)) {
 		UE_LOG(NoxelDataNetwork, Warning, TEXT("{Server_NodesSync_Implementation} UNoxelContainerReference is null"));
 		return;
 	}

@@ -34,8 +34,6 @@ public:
 
 protected:
 	virtual void BeginPlay() override;
-	
-	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 
 public:
 	virtual void Tick(float DeltaTime) override;
@@ -70,7 +68,6 @@ private:
 	bool IsContactingGround(FHitResult& OutHit);
 	float GetSuspensionForce(float NewDistanceToGround, float dt);
 
-	static AWheel* debugactor;
 	WheelFrictionData GetFrictionData();
 	WheelFrictionData GetPreviousFrictionData();
 public:

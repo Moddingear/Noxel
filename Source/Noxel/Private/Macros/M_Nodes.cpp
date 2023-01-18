@@ -7,7 +7,7 @@
 #include "Noxel/NoxelNetworkingAgent.h"
 #include "Components/WidgetInteractionComponent.h"
 
-AM_Nodes::AM_Nodes() 
+AM_Nodes::AM_Nodes()
 {
 	AlternationMethod = EAlternateType::Hold;
 }
@@ -23,8 +23,12 @@ void AM_Nodes::BeginPlay()
 void AM_Nodes::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
+	if (!IsValid(GetOwningActor()))
+	{
+		return;
+	}
 	//UE_LOG(NoxelMacro, Log, TEXT("[AM_Nodes::leftClickPressed_Implementation] Macro is at transform %s"), *GetTransform().ToString());
-	if (false/*TransformGizmo*/) 
+	if (false/*TransformGizmo*/)
 	{
 		FVector Position, Direction;
 		GetRayFromFollow(Position, Direction);
@@ -45,12 +49,12 @@ void AM_Nodes::Tick(float DeltaTime)
 			break;
 		}*/
 
-		if (!Alternate) 
+		if (!Alternate)
 		{
 			LeftClickHint = NSLOCTEXT(MACROS_NAMESPACE, "GizmoMove", "Move axis");
 			RightClickHint = NSLOCTEXT(MACROS_NAMESPACE, "GizmoConfirm", "Confirm");
 		}
-		else 
+		else
 		{
 			/*switch (TransformGizmo->GetRelativeMode())
 			{
@@ -81,44 +85,53 @@ void AM_Nodes::Tick(float DeltaTime)
 			}*/
 		}
 	}
-	else 
+	else
 	{
-		if (selectedNodes.Num() >= 3) 
+		if (selectedNodes.Num() >= 3)
 		{
 			DrawPanel(FPanelData(selectedNodes, 1.0f, false));
 		}
-		else if (!GetOwningActor()->GetInteractionWidget()->IsOverInteractableWidget() && IsValid(GetSelectedNodesContainer()))
+		else if (!GetOwningActor()->GetInteractionWidget()->IsOverInteractableWidget() && IsValid(
+			GetSelectedNodesContainer()))
 		{
 			FVector LocationRelative = GetNodePlacement(placementDistance, GetSelectedNodesContainer());
 			DrawNode(GetSelectedNodesContainer()->GetComponentTransform().TransformPosition(LocationRelative));
 		}
 
-		if (Alternate) {
+		if (Alternate)
+		{
 			LeftClickHint = NSLOCTEXT(MACROS_NAMESPACE, "SelectNodes", "Select Nodes");
-			if (selectedNodes.Num() > 0) {
+			if (selectedNodes.Num() > 0)
+			{
 				RightClickHint = NSLOCTEXT(MACROS_NAMESPACE, "MoveNodes", "Move nodes");
 			}
-			else {
+			else
+			{
 				RightClickHint = FText();
 			}
 		}
-		else {
-			if (selectedNodes.Num() >= 3) { //If a panel can be added
+		else
+		{
+			if (selectedNodes.Num() >= 3) //If a panel can be added
+			{
+				
 				LeftClickHint = NSLOCTEXT(MACROS_NAMESPACE, "AddPanel", "Add panel");
 			}
-			else {
+			else
+			{
 				LeftClickHint = NSLOCTEXT(MACROS_NAMESPACE, "AddNode", "Add node");
 			}
 
-			if (selectedNodes.Num() >= 1) { //If nodes are selected
+			if (selectedNodes.Num() >= 1) //If nodes are selected
+			{
 				RightClickHint = NSLOCTEXT(MACROS_NAMESPACE, "RemoveSelected", "Remove selected");
 			}
-			else {
+			else
+			{
 				RightClickHint = NSLOCTEXT(MACROS_NAMESPACE, "RemoveTargeted", "Remove targeted");
 			}
 		}
 	}
-	
 }
 
 void AM_Nodes::leftClickPressed_Implementation()
@@ -154,8 +167,12 @@ void AM_Nodes::leftClickPressed_Implementation()
 	}
 	else
 	{
-		if (!Alternate) { //Adding nodes or panels
-			if (selectedNodes.Num() < 3 && IsValid(GetSelectedNodesContainer())) { //If a panel can't be created
+		if (!Alternate)
+		{
+			//Adding nodes or panels
+			if (selectedNodes.Num() < 3 && IsValid(GetSelectedNodesContainer()))
+			{
+				//If a panel can't be created
 				FNodeID id; //Add a node
 				id.Location = GetNodePlacement(placementDistance, GetSelectedNodesContainer());
 				id.Object = GetSelectedNodesContainer();
@@ -164,32 +181,44 @@ void AM_Nodes::leftClickPressed_Implementation()
 				queue->AddNodeAddOrder({0});
 				GetNoxelNetworkingAgent()->SendCommandQueue(queue);
 			}
-			else if(IsValid(GetSelectedNoxelContainer())) { //Connect a panel
+			else if (IsValid(GetSelectedNoxelContainer()))
+			{
+				//Connect a panel
 				FEditorQueue* queue = GetNoxelNetworkingAgent()->CreateEditorQueue();
 				auto nodeMap = queue->CreateNodeReferenceOrdersFromNodeList(selectedNodes);
-				queue->AddPanelReferenceOrder({GetNoxelNetworkingAgent()->GetReservedPanels(GetSelectedNoxelContainer())[0]}, GetSelectedNoxelContainer());
+				queue->AddPanelReferenceOrder({
+					                              GetNoxelNetworkingAgent()->GetReservedPanels(
+						                              GetSelectedNoxelContainer())[0]
+				                              }, GetSelectedNoxelContainer());
 				queue->AddPanelAddOrder({0});
 				queue->AddPanelPropertiesOrder({0}, 5, 5, false);
 				TArray<int32> noderefs = queue->NodeListToNodeReferences(selectedNodes, nodeMap);
-				TArray<int32> panelrefs; panelrefs.Init(0, selectedNodes.Num());
+				TArray<int32> panelrefs;
+				panelrefs.Init(0, selectedNodes.Num());
 				queue->AddNodeConnectOrder(noderefs, panelrefs);
 				GetNoxelNetworkingAgent()->SendCommandQueue(queue);
 			}
 			ResetNodesColor(); //Clear all selected node
 			selectedNodes.Empty();
 		}
-		else { //Selecting
+		else
+		{
+			//Selecting
 			FVector location, direction, end;
 			GetRayFromFollow(location, direction);
 			end = location + direction * ray_length;
 			FNodeID id;
-			if (TraceNodes(location, end, id)) {
+			if (TraceNodes(location, end, id))
+			{
 				//UE_LOG(NoxelMacro, Warning, TEXT("[AM_Nodes::leftClickPressed_Implementation]Trace sucessful"));
-				if (!selectedNodes.Contains(id)) { //If the node wasn't already selected
+				if (!selectedNodes.Contains(id))
+				{
+					//If the node wasn't already selected
 					SetNodeColor(id, ENoxelColor::NodeSelected1); //Set the color of the node
 					selectedNodes.Add(id);
 				}
-				else {
+				else
+				{
 					SetNodeColor(id, ENoxelColor::NodeInactive); //Set the color of the node
 					selectedNodes.Remove(id);
 				}
@@ -216,7 +245,7 @@ void AM_Nodes::rightClickPressed_Implementation()
 {
 	UE_LOG(NoxelMacro, Log, TEXT("Right click"));
 
-	if (false/*TransformGizmo*/) 
+	if (false/*TransformGizmo*/)
 	{
 		/*if (Alternate)
 		{
@@ -235,15 +264,18 @@ void AM_Nodes::rightClickPressed_Implementation()
 			DestroyTransformGizmo();
 		}*/
 	}
-	else 
+	else
 	{
-		if (!Alternate) { //Remove nodes or panels
+		if (!Alternate)
+		{
+			//Remove nodes or panels
 			FNodeID node;
 			FPanelID panel;
 			FVector location, direction, end;
 			GetRayFromFollow(location, direction);
 			end = location + direction * ray_length;
-			if (selectedNodes.Num() > 0) {
+			if (selectedNodes.Num() > 0)
+			{
 				ResetNodesColor();
 				FEditorQueue* queue = GetNoxelNetworkingAgent()->CreateEditorQueue();
 				auto nodeMap = queue->CreateNodeReferenceOrdersFromNodeList(selectedNodes);
@@ -264,7 +296,7 @@ void AM_Nodes::rightClickPressed_Implementation()
 			{
 				UE_LOG(NoxelMacro, Warning, TEXT("Asking to remove panel, id %d"), panel);
 				FPanelData pdata;
-				if(panel.Object->GetPanelByPanelIndex(panel.PanelIndex, pdata))
+				if (panel.Object->GetPanelByPanelIndex(panel.PanelIndex, pdata))
 				{
 					FEditorQueue* queue = GetNoxelNetworkingAgent()->CreateEditorQueue();
 					auto nodemap = queue->CreateNodeReferenceOrdersFromNodeList(pdata.Nodes);
@@ -278,8 +310,11 @@ void AM_Nodes::rightClickPressed_Implementation()
 				}
 			}
 		}
-		else { //Move nodes
-			if (selectedNodes.Num() > 0) {
+		else
+		{
+			//Move nodes
+			if (selectedNodes.Num() > 0)
+			{
 				FVector Center = FVector::ZeroVector;
 				for (FNodeID node : selectedNodes)
 				{

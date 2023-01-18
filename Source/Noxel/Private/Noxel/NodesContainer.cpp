@@ -21,9 +21,11 @@ UNodesContainer::UNodesContainer()
 	bPlayerEditable = false;
 	bIsMeshDirty = false;
 
-	static ConstructorHelpers::FObjectFinder<UStaticMesh>MeshConstructor(TEXT("StaticMesh'/Game/Meshes/Nodes/Octahedron.Octahedron'"));
+	static ConstructorHelpers::FObjectFinder<UStaticMesh> MeshConstructor(
+		TEXT("StaticMesh'/Game/Meshes/Nodes/Octahedron.Octahedron'"));
 	BaseNodeMesh = MeshConstructor.Object;
-	static ConstructorHelpers::FObjectFinder<UMaterialInterface>MaterialConstructor(TEXT("Material'/Game/Materials/Noxel/Plastic.Plastic'"));
+	static ConstructorHelpers::FObjectFinder<UMaterialInterface> MaterialConstructor(
+		TEXT("Material'/Game/Materials/Noxel/Plastic.Plastic'"));
 	NodeMaterial = MaterialConstructor.Object;
 
 	SetCollisionProfileName(TEXT("Node"));
@@ -31,7 +33,8 @@ UNodesContainer::UNodesContainer()
 	NodesProvider = CreateDefaultSubobject<UNodesRMCProvider>("NodesProvider");
 }
 
-void UNodesContainer::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const {
+void UNodesContainer::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 	// Here we list the variables we want to replicate + a condition if wanted
 	DOREPLIFETIME(UNodesContainer, AttachedNoxel);
@@ -41,33 +44,37 @@ void UNodesContainer::OnRegister()
 {
 	Super::OnRegister();
 	DefaultNodeColor = UFunctionLibrary::getColorFromJson(ENoxelColor::NodeInactive);
-    for (int32 NodeIdx = 0; NodeIdx < Nodes.Num(); NodeIdx++)
-    {
-        Nodes[NodeIdx].Color = DefaultNodeColor;
-    }
-    NodesProvider->SetWantedMeshBounds(FBoxSphereBounds(FVector::ZeroVector, FVector::OneVector * NodeSize, NodeSize));
-    NodesProvider->SetStaticMesh(BaseNodeMesh);
-    NodesProvider->SetNodesMaterial(NodeMaterial);
-    UpdateMesh();
-    Initialize(NodesProvider);
+	for (int32 NodeIdx = 0; NodeIdx < Nodes.Num(); NodeIdx++)
+	{
+		Nodes[NodeIdx].Color = DefaultNodeColor;
+	}
+	NodesProvider->SetWantedMeshBounds(FBoxSphereBounds(FVector::ZeroVector, FVector::OneVector * NodeSize, NodeSize));
+	NodesProvider->SetStaticMesh(BaseNodeMesh);
+	NodesProvider->SetNodesMaterial(NodeMaterial);
+	UpdateMesh();
+	Initialize(NodesProvider);
 }
 
 void UNodesContainer::BeginPlay()
 {
 	Super::BeginPlay();
 
-	if (SpawnContext != ECraftSpawnContext::Battle)
-	{
-		if (!GetWorld()->IsServer() && !AttachedNoxel) { //If it's a client and it's not conected to any noxel
-			SetSpawnContext(SpawnContext);
-			if ((ANoxelPlayerController*)GetWorld()->GetFirstPlayerController()) {
-				((ANoxelPlayerController*)GetWorld()->GetFirstPlayerController())->SynchroniseUnconnectedNodes(this);
-			}
-		}
-	}
-	else
+	if (SpawnContext == ECraftSpawnContext::Battle)
 	{
 		UpdateMesh();
+		return;
+	}
+	if (GetWorld()->IsServer() || IsValid(AttachedNoxel)) //attached or server (when attached, the noxel takes care of the connected nodes)
+	{
+		return;
+	}
+	
+	//If it's a client and it's not conected to any noxel
+	SetSpawnContext(SpawnContext);
+	ANoxelPlayerController* pc = CastChecked<ANoxelPlayerController>(GetWorld()->GetFirstPlayerController());
+	if (IsValid(pc))
+	{
+		pc->SynchroniseUnconnectedNodes(this);
 	}
 }
 
@@ -76,7 +83,7 @@ void UNodesContainer::PostInitProperties()
 	Super::PostInitProperties();
 }
 
-void UNodesContainer::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction * ThisTickFunction)
+void UNodesContainer::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 	if (bIsMeshDirty)
@@ -92,7 +99,7 @@ void UNodesContainer::SetNodeSize(float NewNodeSize)
 	NodesProvider->SetWantedMeshBounds(FBoxSphereBounds(FVector::ZeroVector, FVector::OneVector * NodeSize, NodeSize));
 }
 
-UNoxelContainer * UNodesContainer::GetAttachedNoxel()
+UNoxelContainer* UNodesContainer::GetAttachedNoxel()
 {
 	return AttachedNoxel;
 }
@@ -242,28 +249,31 @@ bool UNodesContainer::GetNodeHit(FHitResult Hit, FNodeID& HitNode)
 	{
 		if (Hit.GetComponent()->IsA<UNodesContainer>())
 		{
-			UNodesContainer* HitComp =Cast<UNodesContainer>(Hit.GetComponent());
+			UNodesContainer* HitComp = Cast<UNodesContainer>(Hit.GetComponent());
 			if (Hit.FaceIndex != INDEX_NONE)
 			{
 				int32 HitNodeIdx;
-				if(HitComp->NodesProvider->GetHitNodeIndex(Hit.FaceIndex, HitNodeIdx))
+				if (HitComp->NodesProvider->GetHitNodeIndex(Hit.FaceIndex, HitNodeIdx))
 				{
 					HitNode = FNodeID(HitComp, HitComp->Nodes[HitNodeIdx].Location);
 					return true;
 				}
 				else
 				{
-					UE_LOG(NoxelData, Warning, TEXT("[UNodesContainer::GetNodeHit] Failed because it couldn't find a hit node"));
+					UE_LOG(NoxelData, Warning,
+					       TEXT("[UNodesContainer::GetNodeHit] Failed because it couldn't find a hit node"));
 				}
 			}
 			else
 			{
-				UE_LOG(NoxelData, Warning, TEXT("[UNodesContainer::GetNodeHit] Failed because face index is INDEX_NONE"));
+				UE_LOG(NoxelData, Warning,
+				       TEXT("[UNodesContainer::GetNodeHit] Failed because face index is INDEX_NONE"));
 			}
 		}
 		else
 		{
-			UE_LOG(NoxelData, Warning, TEXT("[UNodesContainer::GetNodeHit] Failed because hit component isn't a NodesContainer"));
+			UE_LOG(NoxelData, Warning,
+			       TEXT("[UNodesContainer::GetNodeHit] Failed because hit component isn't a NodesContainer"));
 		}
 	}
 	else
@@ -271,7 +281,6 @@ bool UNodesContainer::GetNodeHit(FHitResult Hit, FNodeID& HitNode)
 		UE_LOG(NoxelData, Warning, TEXT("[UNodesContainer::GetNodeHit] Failed because hit result was non-blocking"));
 	}
 	return false;
-	
 }
 
 bool UNodesContainer::IsPlayerEditable() const
@@ -292,12 +301,12 @@ void UNodesContainer::UpdateMesh()
 	if (SpawnContext != ECraftSpawnContext::Battle)
 	{
 		TArray<FNoxelRendererNodeData> RendererNodes;
-        RendererNodes.Reserve(Nodes.Num());
-        for (int32 NodeIdx = 0; NodeIdx < Nodes.Num(); NodeIdx++)
-        {
-        	RendererNodes.EmplaceAt(NodeIdx, Nodes[NodeIdx].Location, Nodes[NodeIdx].Color);
-        }
-        NodesProvider->SetNodes(RendererNodes);
+		RendererNodes.Reserve(Nodes.Num());
+		for (int32 NodeIdx = 0; NodeIdx < Nodes.Num(); NodeIdx++)
+		{
+			RendererNodes.EmplaceAt(NodeIdx, Nodes[NodeIdx].Location, Nodes[NodeIdx].Color);
+		}
+		NodesProvider->SetNodes(RendererNodes);
 	}
 	else
 	{
@@ -305,23 +314,29 @@ void UNodesContainer::UpdateMesh()
 	}
 }
 
-void UNodesContainer::AttachToNoxelContainer(UNoxelContainer * NoxelContainer)
+void UNodesContainer::AttachToNoxelContainer(UNoxelContainer* NoxelContainer)
 {
-	if (NoxelContainer) {
-		if (!AttachedNoxel) {
+	if (NoxelContainer)
+	{
+		if (!AttachedNoxel)
+		{
 			AttachedNoxel = NoxelContainer; //Set the noxel
 			NoxelContainer->ConnectedNodesContainers.AddUnique(this);
-			if (GetWorld()->IsServer() && NoxelContainer->GetOwner() != GetOwner()) {
+			if (GetWorld()->IsServer() && NoxelContainer->GetOwner() != GetOwner())
+			{
 				GetOwner()->SetOwner(NoxelContainer->GetOwner());
 				GetOwner()->bNetUseOwnerRelevancy = true;
 			}
 		}
 	}
-	else {
-		if (AttachedNoxel) {
+	else
+	{
+		if (AttachedNoxel)
+		{
 			AttachedNoxel->ConnectedNodesContainers.Remove(this);
 			AttachedNoxel = nullptr;
-			if (GetWorld()->IsServer()) {
+			if (GetWorld()->IsServer())
+			{
 				GetOwner()->bNetUseOwnerRelevancy = false;
 			}
 		}
@@ -343,4 +358,3 @@ bool UNodesContainer::CheckDataValidity()
 {
 	return true;
 }
-

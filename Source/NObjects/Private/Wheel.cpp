@@ -6,8 +6,6 @@
 #include "Noxel.h"
 #include "PhysicsEngine/PhysicsConstraintComponent.h"
 
-AWheel* AWheel::debugactor = nullptr;
-
 AWheel::AWheel()
 {
 	static ConstructorHelpers::FObjectFinder<UStaticMesh> MeshConstructor(
@@ -51,63 +49,73 @@ void AWheel::BeginPlay()
 	PreviousWheelSpeed = 0;
 }
 
-void AWheel::EndPlay(const EEndPlayReason::Type EndPlayReason)
-{
-	if (debugactor == this)
-	{
-		debugactor = nullptr;
-	}
-	Super::EndPlay(EndPlayReason);
-}
-
 void AWheel::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
-	if (Enabled && staticMesh->IsAnySimulatingPhysics())
+	if (!Enabled || !staticMesh->IsAnySimulatingPhysics())
 	{
-		FTransform LocationWorld = GetActorTransform();
-		FVector ActorLoc = LocationWorld.GetLocation();
-		FQuat ActorRot = LocationWorld.GetRotation();
-		FVector LocalSpeed = ActorRot.UnrotateVector(staticMesh->GetPhysicsLinearVelocityAtPoint(ActorLoc));
-
-		//forces applied on car/ground
-		WheelFrictionData fd = GetFrictionData(), pfd = GetPreviousFrictionData();
-
-		float LateralSpeed = LocalSpeed.Y;
-		float LateralFriction = -fd.SuspensionForce * LateralSpeed * LateralFrictionCoefficient / 100.f * fd.IsOnGround;
-		LateralFriction = FMath::Clamp(LateralFriction, -MaxLateralFriction, MaxLateralFriction);
-
-		FVector forceVector = ActorRot.RotateVector(FVector(0, LateralFriction, fd.SuspensionForce));
-
-		FVector forceLoc = fd.GroundCast.ImpactPoint;
-		//ActorLoc - LocationWorld.GetUnitAxis(EAxis::Z) * (GroundDistance + WheelRadius);
-
-		staticMesh->AddForceAtLocation(forceVector, forceLoc); //TODO: Equal but opposite force on ground
-
-		//wheel animation
-		float ForwardSpeed = fd.IsOnGround
-			                     ? LocalSpeed.X
-			                     : PreviousWheelSpeed
-			                     - FMath::Sign(PreviousWheelSpeed) * FMath::Min(
-				                     DeltaTime * 100 + DeltaTime * abs(PreviousWheelSpeed), abs(PreviousWheelSpeed));
-		PreviousWheelSpeed = ForwardSpeed;
-		float AddedRotation = ForwardSpeed / WheelRadius * DeltaTime;
-		FVector WheelLocation = staticMesh->GetSocketLocation(TEXT("WheelSocket")) - GetActorUpVector() * fd.
-			DistanceToGround;
-		WheelMesh->SetWorldLocation(WheelLocation);
-		WheelMesh->AddLocalRotation(FRotator::MakeFromEuler(FVector(0, -FMath::RadiansToDegrees(AddedRotation), 0)));
-
-		//force vectors
-		FVector ArrowLoc = forceLoc + GetActorUpVector() * 10;
-
-		DrawDebugDirectionalArrow(GetWorld(), ArrowLoc,
-		                          ArrowLoc + GetActorRightVector() * LateralFriction / MaxLateralFriction * 1000.f,
-		                          100, FColor::Green, false, 0, 0, 10);
-		DrawDebugDirectionalArrow(GetWorld(), ArrowLoc,
-		                          ArrowLoc + GetActorUpVector() * fd.SuspensionForce / MaxSuspensionWeight / 9.8f,
-		                          100, FColor::Blue, false, 0, 0, 10);
-		//UE_LOG(NObjects, Log, TEXT("[AEDF::Tick] Lift : %f"), lift * MaxLift);
+		return;
 	}
+	
+	FTransform LocationWorld = GetActorTransform();
+	FVector ActorLoc = LocationWorld.GetLocation();
+	FQuat ActorRot = LocationWorld.GetRotation();
+	FVector LocalSpeed = ActorRot.UnrotateVector(staticMesh->GetPhysicsLinearVelocityAtPoint(ActorLoc));
+
+	//forces applied on car/ground
+	WheelFrictionData fd = GetFrictionData(), pfd = GetPreviousFrictionData();
+
+	FVector WheelNormal = (fd.GroundCast.Location - fd.GroundCast.ImpactPoint).GetSafeNormal();
+	FVector LateralVector = (FVector(0,0,1) ^ ActorRot.GetForwardVector()).GetSafeNormal();
+	float LateralReaction = WheelNormal | LateralVector;
+	float NormalReaction = WheelNormal.Z;
+	if (FMath::Abs(LateralReaction/NormalReaction) < LateralFrictionCoefficient)
+	{
+		WheelNormal = WheelNormal - LateralReaction * LateralVector;
+		WheelNormal.Normalize();
+	}
+	else
+	{
+		WheelNormal = WheelNormal - copysign(LateralFrictionCoefficient*NormalReaction, LateralReaction/NormalReaction) * LateralVector;
+		WheelNormal.Normalize();
+	}
+
+	float LateralSpeed = LocalSpeed.Y;
+	float LateralFriction = -fd.SuspensionForce * LateralSpeed * LateralFrictionCoefficient / 100.f * fd.IsOnGround;
+	LateralFriction = FMath::Clamp(LateralFriction, -MaxLateralFriction, MaxLateralFriction);
+
+	FVector SuspensionForce = WheelNormal * fd.SuspensionForce;
+	FVector LateralForce = LateralVector * LateralFriction;
+	FVector forceVector = SuspensionForce + LateralForce;
+
+	FVector forceLoc = fd.GroundCast.ImpactPoint;
+	//ActorLoc - LocationWorld.GetUnitAxis(EAxis::Z) * (GroundDistance + WheelRadius);
+
+	staticMesh->AddForceAtLocation(forceVector, forceLoc); //TODO: Equal but opposite force on ground
+
+	//wheel animation
+	float ForwardSpeed = fd.IsOnGround
+		                     ? LocalSpeed.X
+		                     : PreviousWheelSpeed
+		                     - FMath::Sign(PreviousWheelSpeed) * FMath::Min(
+			                     DeltaTime * 100 + DeltaTime * abs(PreviousWheelSpeed), abs(PreviousWheelSpeed));
+	PreviousWheelSpeed = ForwardSpeed;
+	float AddedRotation = ForwardSpeed / WheelRadius * DeltaTime;
+	FVector WheelLocation = staticMesh->GetSocketLocation(TEXT("WheelSocket")) - GetActorUpVector() * fd.
+		DistanceToGround;
+	WheelMesh->SetWorldLocation(WheelLocation);
+	WheelMesh->AddLocalRotation(FRotator::MakeFromEuler(FVector(0, -FMath::RadiansToDegrees(AddedRotation), 0)));
+
+	//force vectors
+	FVector ArrowLoc = forceLoc + GetActorUpVector() * 10;
+
+	DrawDebugDirectionalArrow(GetWorld(), ArrowLoc,
+	                          ArrowLoc + LateralForce / MaxLateralFriction * 1000.f,
+	                          100, FColor::Green, false, 0, 0, 10);
+	DrawDebugDirectionalArrow(GetWorld(), ArrowLoc,
+	                          ArrowLoc + SuspensionForce / MaxSuspensionWeight / 9.8f,
+	                          100, FColor::Blue, false, 0, 0, 10);
+	//UE_LOG(NObjects, Log, TEXT("[AEDF::Tick] Lift : %f"), lift * MaxLift);
 }
 
 TArray<FTorsor> AWheel::GetMaxTorsor()
@@ -163,6 +171,7 @@ bool AWheel::IsContactingGround(FHitResult& OutHit)
 		OutHit.Distance = SuspensionLength;
 		OutHit.ImpactPoint = endTrace - GetActorUpVector() * WheelRadius;
 		OutHit.ImpactNormal = GetActorUpVector();
+		OutHit.Location = endTrace;
 	}
 
 	if (IsValid(OutHit.GetActor()) && IsValid(OutHit.GetComponent()))
@@ -177,7 +186,7 @@ float AWheel::GetSuspensionForce(float NewDistanceToGround, float dt)
 	//Positive force : Push stuff outwards
 	const float extension = FMath::Clamp(NewDistanceToGround / SuspensionLength, 0.f, 1.f);
 	const float spring = (1 - extension) * MaxSuspensionWeight * 9800.f;
-	const float diffextension = FMath::Clamp(PreviousExtension - extension, 0.f, dt);
+	const float diffextension = FMath::Clamp(PreviousExtension - extension, 0.f, dt / Damping);
 	const float damper = diffextension / dt * Damping * MaxSuspensionWeight * 9800.f;
 	PreviousExtension = extension;
 	return spring + damper;
@@ -197,11 +206,6 @@ AWheel::WheelFrictionData AWheel::GetFrictionData()
 		ThisFrameFriction.DistanceToGround = ThisFrameFriction.GroundCast.Distance;
 		const float dt = GetWorld()->GetDeltaSeconds();
 		ThisFrameFriction.SuspensionForce = GetSuspensionForce(ThisFrameFriction.DistanceToGround, dt);
-		if ((!IsValid(debugactor) || debugactor == this) && !GetWorld()->IsServer())
-		{
-			debugactor = this;
-			//UE_LOG(NObjects, Log, TEXT("[AWheel::GetFrictionData]%d DistanceToGround=%f; SuspensionForce=%f"), GetWorld()->IsServer(), ThisFrameFriction.DistanceToGround, ThisFrameFriction.SuspensionForce)
-		}
 		return ThisFrameFriction;
 	}
 }
@@ -264,7 +268,8 @@ void AWheel::OnSetReceived()
 {
 	WheelFrictionData fd = GetFrictionData(), pfd = GetPreviousFrictionData();
 	FVector forceLoc = fd.GroundCast.ImpactPoint;
-	FVector ForwardForceVector = GetActorRightVector() ^ pfd.GroundCast.Normal;
+	FVector ForwardForceVector = GetActorRightVector() ^ (pfd.GroundCast.Location - pfd.GroundCast.ImpactPoint).
+		GetSafeNormal();
 	float force = FMath::Clamp(ForceIn->GetLastOrder()[0], -1.f, 1.f) * pfd.IsOnGround;
 	float ForwardFriction = pfd.SuspensionForce * force * ForwardFrictionCoefficient;
 	ForwardFriction = FMath::Clamp(ForwardFriction, -MaxForce, MaxForce);
@@ -272,7 +277,7 @@ void AWheel::OnSetReceived()
 	staticMesh->AddForceAtLocation(forceVector, forceLoc);
 	FVector ArrowLoc = forceLoc + GetActorUpVector() * 10;
 	DrawDebugDirectionalArrow(GetWorld(), ArrowLoc,
-	                          ArrowLoc + GetActorForwardVector() * ForwardFriction / MaxForce * 1000.f, 100,
+	                          ArrowLoc + forceVector / MaxForce * 1000.f, 100,
 	                          FColor::Red, false, 0, 0, 10);
 	//UE_LOG(NObjects, Log, TEXT("[AEDF::OnSetReceived] Set received"));
 }

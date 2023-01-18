@@ -65,6 +65,18 @@ void AEditorCharacter::BeginPlay()
 	}
 }
 
+void AEditorCharacter::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+	if (EndPlayReason != EEndPlayReason::EndPlayInEditor)
+	{
+		if (IsValid(CurrentMacro))
+		{
+			CurrentMacro->Destroy();
+		}
+	}
+	Super::EndPlay(EndPlayReason);
+}
+
 UNoxelNetworkingAgent * AEditorCharacter::GetNetworkingAgent() const
 {
 	return NetworkingAgent;
@@ -152,7 +164,7 @@ void AEditorCharacter::Possessed_Implementation()
 {
 	if (wUserUI)
 	{
-		UserUI = CreateWidget<UUserWidget>((APlayerController*)GetController(), wUserUI);
+		UserUI = CreateWidget<UUserWidget>(CastChecked<APlayerController>(GetController()), wUserUI);
 		UserUI->AddToViewport();
 	}
 
@@ -199,7 +211,7 @@ void AEditorCharacter::CraftLoaded()
 	}
 }
 
-void AEditorCharacter::SetMacro(TSubclassOf<class ANoxelMacroBase> Macro)
+void AEditorCharacter::SetMacro(TSubclassOf<ANoxelMacroBase> Macro)
 {
 	if (IsLocallyControlled())
 	{
