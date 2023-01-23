@@ -90,28 +90,15 @@ public:
 		static bool isWithEditor();
 
 	UFUNCTION(BlueprintPure, Category = "Math|Date Time")
-	static void GetUTCFromUnixTimeStamp(int32 UnixTimeStamp, FDateTime& UTCTime)
+	static void GetUTCFromUnixTimeStamp(int64 UnixTimeStamp, FDateTime& UTCTime)
 	{
-		//Please note it should really be int64 but that is not supported by BP yet
 		UTCTime = FDateTime::FromUnixTimestamp(UnixTimeStamp);
 	}
 
 	UFUNCTION(BlueprintPure, Category = "Math|Date Time")
-	static int32 GetUnixTimeStamp(const FDateTime& UTCTime)
+	static int64 GetUnixTimeStamp(const FDateTime& UTCTime)
 	{
-		//Please note it should really be int64 but that is not supported by BP yet
 		return UTCTime.ToUnixTimestamp();
-	}
-
-	template<typename TEnum>
-	static FORCEINLINE FString GetEnumValueAsString(const FString& Name, TEnum Value)
-	{
-		const UEnum* enumPtr = FindObject<UEnum>(ANY_PACKAGE, *Name, true);
-		if (!enumPtr)
-		{
-			return FString("Invalid");
-		}
-		return enumPtr->GetNameByValue((int64)Value).ToString();
 	}
 
 	UFUNCTION(BlueprintCallable)

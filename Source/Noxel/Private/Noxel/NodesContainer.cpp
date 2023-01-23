@@ -58,7 +58,8 @@ void UNodesContainer::OnRegister()
 void UNodesContainer::BeginPlay()
 {
 	Super::BeginPlay();
-
+	
+	UE_LOG(Noxel, Log, TEXT("[UNodesContainer::BeginPlay] Nodes container on %s spawned as %s"), *GetOwner()->GetName(), *UEnum::GetValueAsString(SpawnContext));
 	if (SpawnContext == ECraftSpawnContext::Battle)
 	{
 		UpdateMesh();
@@ -300,6 +301,7 @@ void UNodesContainer::UpdateMesh()
 	bIsMeshDirty = false;
 	if (SpawnContext != ECraftSpawnContext::Battle)
 	{
+		SetVisibility(true);
 		TArray<FNoxelRendererNodeData> RendererNodes;
 		RendererNodes.Reserve(Nodes.Num());
 		for (int32 NodeIdx = 0; NodeIdx < Nodes.Num(); NodeIdx++)
@@ -311,6 +313,7 @@ void UNodesContainer::UpdateMesh()
 	else
 	{
 		NodesProvider->SetNodes({});
+		SetVisibility(false); //hack because sometimes the proxy isn't recreated
 	}
 }
 

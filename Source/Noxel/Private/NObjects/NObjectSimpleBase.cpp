@@ -42,6 +42,23 @@ void ANObjectSimpleBase::BeginPlay()
 	//CheckNetworkAttachment("ANObjectSimpleBase::BeginPlay");
 }
 
+// Called every frame
+void ANObjectSimpleBase::Tick(float DeltaTime)
+{
+	Super::Tick(DeltaTime);
+	if (Enabled != EnabledPrev)
+	{
+		if (Enabled)
+		{
+			INObjectInterface::Execute_OnNObjectEnable(this, ParentCraft);
+		}
+		else
+		{
+			INObjectInterface::Execute_OnNObjectDisable(this);
+		}
+	}
+}
+
 void ANObjectSimpleBase::OnNObjectEnable_Implementation(UCraftDataHandler* Craft)
 {
 	Enabled = true;
@@ -68,22 +85,5 @@ FJsonObjectWrapper ANObjectSimpleBase::OnReadMetadata_Implementation(const TArra
 bool ANObjectSimpleBase::OnWriteMetadata_Implementation(const FJsonObjectWrapper & Metadata, const TArray<AActor*>& Components)
 {
 	return false;
-}
-
-// Called every frame
-void ANObjectSimpleBase::Tick(float DeltaTime)
-{
-	Super::Tick(DeltaTime);
-	if (Enabled != EnabledPrev)
-	{
-		if (Enabled)
-		{
-			INObjectInterface::Execute_OnNObjectEnable(this, ParentCraft);
-		}
-		else
-		{
-			INObjectInterface::Execute_OnNObjectDisable(this);
-		}
-	}
 }
 

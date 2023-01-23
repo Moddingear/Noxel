@@ -45,7 +45,7 @@ bool UFunctionLibrary::isWithEditor()
 
 FColor UFunctionLibrary::getColorFromJson(ENoxelColor color)
 {
-	const FString colorname = GetEnumValueAsString<ENoxelColor>("ENoxelColor", color); //Name of the enum color
+	//const FString colorname = UEnum::GetValueAsString(color); //Name of the enum color
 
 	if (JsonColorCache.Num()==0)
 	{
@@ -58,7 +58,8 @@ FColor UFunctionLibrary::getColorFromJson(ENoxelColor color)
 				TArray<FNoxelSavedColor> Colors;
 				for (auto KeyValuePair : DefaultColors)
 				{
-					FNoxelSavedColor Color(GetEnumValueAsString<ENoxelColor>("ENoxelColor", KeyValuePair.Key), KeyValuePair.Value);
+					
+					FNoxelSavedColor Color(UEnum::GetValueAsString(KeyValuePair.Key), KeyValuePair.Value);
 					Colors.Add(Color);
 				}
 				FNoxelSavedColorArray DefaultStruct(Colors);
@@ -73,7 +74,7 @@ FColor UFunctionLibrary::getColorFromJson(ENoxelColor color)
 		FJsonObjectConverter::JsonObjectStringToUStruct<FNoxelSavedColorArray>(SavedFile, &SavedColors, 0, 0);
 		for (auto KeyValuePair : DefaultColors)
 		{
-			FString keytype = GetEnumValueAsString<ENoxelColor>("ENoxelColor", KeyValuePair.Key);
+			FString keytype = UEnum::GetValueAsString(KeyValuePair.Key);
 			FColor col = KeyValuePair.Value;
 			for (int i = 0; i < SavedColors.Colors.Num(); ++i)
 			{

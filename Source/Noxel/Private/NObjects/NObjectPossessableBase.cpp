@@ -56,7 +56,7 @@ void ANObjectPossessableBase::GetLifetimeReplicatedProps(TArray<FLifetimePropert
 void ANObjectPossessableBase::BeginPlay()
 {
 	Super::BeginPlay();
-	CheckNetworkAttachment("ANObjectPossessableBase::BeginPlay");
+	//CheckNetworkAttachment("ANObjectPossessableBase::BeginPlay");
 }
 
 // Called every frame

@@ -136,29 +136,25 @@ bool AWheel::IsContactingGround(FHitResult& OutHit)
 	//bool hit = GetWorld()->LineTraceSingleByChannel(OutHit, startTrace, endTrace, ECollisionChannel::ECC_WorldStatic);//TODO : better trace
 	bool hit = UKismetSystemLibrary::SphereTraceMultiByProfile(this,
 	                                                           startTrace, endTrace, WheelRadius, TEXT("PhysicsActor"),
-	                                                           true, {},
+	                                                           true, {GetAttachParentActor()},
 	                                                           EDrawDebugTrace::ForOneFrame, OutHits, true);
-	float MinDistance = -WheelRadius; //FMath::Max(PreviousExtension * SuspensionLength - WheelRadius, 0.f);
 	int ChosenIndex = INDEX_NONE;
 	for (int i = 0; i < OutHits.Num(); ++i)
 	{
-		if (OutHits[i].Distance > MinDistance)
+		if (OutHit.GetActor() == this)
 		{
-			if (OutHit.GetActor() == this)
+			continue;
+		}
+		if (IsValid(GetAttachParentActor()))
+		{
+			if (OutHit.GetActor() == GetAttachParentActor())
 			{
 				continue;
 			}
-			if (IsValid(GetAttachParentActor()))
-			{
-				if (OutHit.GetActor() == GetAttachParentActor())
-				{
-					continue;
-				}
-			}
-			if (ChosenIndex == INDEX_NONE || OutHits[i].Distance < OutHits[ChosenIndex].Distance)
-			{
-				ChosenIndex = i;
-			}
+		}
+		if (ChosenIndex == INDEX_NONE || OutHits[i].Distance < OutHits[ChosenIndex].Distance)
+		{
+			ChosenIndex = i;
 		}
 	}
 	if (ChosenIndex != INDEX_NONE)

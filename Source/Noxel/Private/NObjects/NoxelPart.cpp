@@ -4,9 +4,7 @@
 #include "Noxel.h"
 #include "Noxel/NodesContainer.h"
 #include "Noxel/NoxelContainer.h"
-#include "..\..\Public\NObjects\NoxelPart.h"
 
-#include "Kismet/KismetMathLibrary.h"
 #include "Net/UnrealNetwork.h"
 #include "NObjects/NObjectInterface.h"
 #include "Noxel/CraftDataHandler.h"
@@ -68,7 +66,7 @@ void ANoxelPart::Tick(float DeltaTime)
 	}
 	if (IsValid(NoxelSave.Noxel) && GFrameCounter % 60 == 0)
 	{
-		UE_LOG(Noxel, Log, TEXT("[ANoxelPart::Tick]%d Part %s has mass %f, angular %s"), GetWorld()->IsServer(), *GetName(), noxelContainer->GetMass(), *noxelContainer->GetInertiaTensor().ToString());
+		//UE_LOG(Noxel, Log, TEXT("[ANoxelPart::Tick]%d Part %s has mass %f, angular %s"), GetWorld()->IsServer(), *GetName(), noxelContainer->GetMass(), *noxelContainer->GetInertiaTensor().ToString());
 	}
 }
 
