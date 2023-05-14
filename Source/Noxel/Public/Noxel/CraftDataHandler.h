@@ -15,9 +15,28 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE(FCraftLoadedEvent);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FComponentReplicatedEvent);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FEditorQueueExternalRunEvent);
 
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+UENUM()
+enum ECraftDiagnosisSeverity
+{
+	Error,
+	Warning,
+	Info,
+	Verbose
+};
+
+USTRUCT()
+struct FCraftDiagnosisData
+{
+	GENERATED_BODY()
+
+	ECraftDiagnosisSeverity Severity;
+	FText Message;
+
+	FORCEINLINE operator<(FCraftDiagnosisData other) const
+	{
+		
+	}
+};
 
 UCLASS(ClassGroup = "Noxel", Blueprintable, BlueprintType, meta = (BlueprintSpawnableComponent))
 class NOXEL_API UCraftDataHandler: public UActorComponent

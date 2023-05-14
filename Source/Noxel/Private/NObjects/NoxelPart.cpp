@@ -27,7 +27,12 @@ ANoxelPart::ANoxelPart()
 	nodesContainer = CreateDefaultSubobject<UNodesContainer>(TEXT("Nodes Container"));
 	nodesContainer->SetupAttachment(RootComponent);
 	nodesContainer->SetNodesDefault(TArray<FVector>(), true);
+
 	
+	FRepMovement &mov = GetReplicatedMovement_Mutable();
+	mov.LocationQuantizationLevel = EVectorQuantization::RoundOneDecimal;
+	mov.RotationQuantizationLevel = ERotatorQuantization::ShortComponents;
+	mov.VelocityQuantizationLevel = EVectorQuantization::RoundTwoDecimals;
 
 }
 

@@ -201,7 +201,7 @@ void AM_Connector::Tick(float DeltaTime)
 	Super::Tick(DeltaTime);
 	UpdateDisplayedConnectors();
 	ShowOnlyConnectableConnectors();
-	DestroyAllWires();
+	DestroyAllWires(); //TODO : Avoid destroying everything, prefer updating location of objects instead
 	MakeAllWires();
 	FVector CameraPos, CameraDir;
 	GetRayFromFollow(CameraPos, CameraDir);

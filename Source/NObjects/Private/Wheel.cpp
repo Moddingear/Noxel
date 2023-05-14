@@ -138,6 +138,7 @@ bool AWheel::IsContactingGround(FHitResult& OutHit)
 	                                                           startTrace, endTrace, WheelRadius, TEXT("PhysicsActor"),
 	                                                           true, {GetAttachParentActor()},
 	                                                           EDrawDebugTrace::ForOneFrame, OutHits, true);
+	//UE_LOG(NObjects, Log, TEXT("[AWheel::IsContactingGround] %s:%d starting trace at %s"), *GetName(), GetWorld()->IsServer(), *startTrace.ToString());
 	int ChosenIndex = INDEX_NONE;
 	for (int i = 0; i < OutHits.Num(); ++i)
 	{
