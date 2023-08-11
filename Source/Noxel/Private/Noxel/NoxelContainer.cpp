@@ -143,14 +143,14 @@ bool UNoxelContainer::GetIndexOfPanelByPanelIndex(int32 PanelIndex, int32 & OutI
 	return false;
 }
 
-bool UNoxelContainer::IsPanelValid(FPanelData &data)
+bool UNoxelContainer::IsPanelValid(FPanelData &data) const
 {
 	TArray<int32> AdjacentPanels, Occurrences;
 	TArray<TArray<FNodeID>> NodesAttachedBy;
 	return IsPanelValid(data, AdjacentPanels, Occurrences, NodesAttachedBy);
 }
 
-bool UNoxelContainer::IsPanelValid(FPanelData &data, TArray<int32> &AdjacentPanels,TArray<int32> &Occurrences, TArray<TArray<FNodeID>> &NodesAttachedBy)
+bool UNoxelContainer::IsPanelValid(FPanelData &data, TArray<int32> &AdjacentPanels,TArray<int32> &Occurrences, TArray<TArray<FNodeID>> &NodesAttachedBy) const
 {
 	const int32 NumNodes = data.Nodes.Num();
     if (data.ThicknessNormal < 0 || data.ThicknessAntiNormal < 0 || (data.ThicknessNormal == 0 && data.ThicknessAntiNormal == 0 ))//Invalid thickness
@@ -536,7 +536,7 @@ bool UNoxelContainer::GetPanelByNodes(TArray<FNodeID> Nodes, int32 & PanelIndex)
 	return false;
 }
 
-TArray<FPanelData> UNoxelContainer::GetPanels()
+TArray<FPanelData> UNoxelContainer::GetPanels() const
 {
 	return Panels;
 }

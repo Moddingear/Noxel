@@ -32,7 +32,7 @@ struct NOXEL_API FNodeID
 		Location(FVector::ZeroVector)
 	{}
 
-	FNodeID(UNodesContainer* InObject, const FVector InLocation)
+	FNodeID(const UNodesContainer* InObject, const FVector InLocation)
 		: Object(InObject),
 		Location(InLocation)
 	{}
@@ -81,12 +81,12 @@ struct NOXEL_API FPanelID
 		PanelIndex(INT32_MAX) 
 	{}
 
-	FPanelID(UNoxelContainer* InObject)
+	FPanelID(const UNoxelContainer* InObject)
 		:Object(InObject),
 		PanelIndex(INT32_MAX)
 	{}
 
-	FPanelID(UNoxelContainer* InObject, const int32 InPanelIndex)
+	FPanelID(const UNoxelContainer* InObject, const int32 InPanelIndex)
 		:Object(InObject),
 		PanelIndex(InPanelIndex)
 	{}
@@ -147,7 +147,7 @@ struct NOXEL_API FNodeData
 		return Other.Location == Location;
 	}
 
-	FORCEINLINE FNodeID ToNodeID(UNodesContainer* InObject)
+	FORCEINLINE FNodeID ToNodeID(const UNodesContainer* InObject) const
 	{
 		return FNodeID(InObject, Location);
 	}

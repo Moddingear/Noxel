@@ -81,7 +81,7 @@ TArray<ANoxelPart*> UCraftDataHandler::GetParts()
 	return Parts;
 }
 
-bool UCraftDataHandler::HasAnyDataComponentConnected(AActor* Component)
+bool UCraftDataHandler::HasAnyDataComponentConnected(const AActor* Component)
 {
 	TArray<UNoxelDataComponent*> DataComps;
 	Component->GetComponents<UNoxelDataComponent>(DataComps);
@@ -95,7 +95,7 @@ bool UCraftDataHandler::HasAnyDataComponentConnected(AActor* Component)
 	return false;
 }
 
-bool UCraftDataHandler::HasAnyConnectorConnected(AActor* Component)
+bool UCraftDataHandler::HasAnyConnectorConnected(const AActor* Component)
 {
 	TArray<UConnectorBase*> connectors;
 	Component->GetComponents<UConnectorBase>(connectors);
@@ -266,7 +266,7 @@ void UCraftDataHandler::destroyCraft()
 	}
 }
 
-FCraftSave UCraftDataHandler::saveCraft()
+FCraftSave UCraftDataHandler::saveCraft() const
 {
 	//UE_LOG(Noxel, Log, TEXT("[UCraftDataHandler::saveCraft] Starting save"));
 	//UE_LOG(Noxel, Log, TEXT("[UCraftDataHandler::saveCraft] %s : %d components"), *GetFullName(), Components.Num());
@@ -454,6 +454,75 @@ void UCraftDataHandler::loadCraft(FCraftSave Craft, FTransform transform)
 	}
 	//UE_LOG(Noxel, Log, TEXT("[UCraftDataHandler::loadCraft] %s : %d components"), *GetFullName(), Components.Num());
 }
+
+#define LOCTEXT_NAMESPACE "DiagnoseCraft"
+TArray<FCraftDiagnosisData> UCraftDataHandler::DiagnoseCraft() const
+{
+	TArray<FCraftDiagnosisData> errors;
+	
+	TMap<UNoxelContainer*, TSet<AActor*>> NoxelCoverageMap;
+	for (AActor* Component : Components)
+	{
+		//Component must have a nodes container
+		TArray<UNodesContainer*> nodescontainers;
+		Component->GetComponents<UNodesContainer>(nodescontainers);
+		if (nodescontainers.Num() <= 0)
+		{
+			errors.Emplace(ECraftDiagnosisSeverity::SetupError, FText::Format(LOCTEXT("RegisteredNoNodesContainer", "Component {0} is registered but has no nodes container"), *Component->GetName()));
+			continue;
+		}
+		//All nodes container must be connected to a noxel
+		TSet<UNoxelContainer*> ConnectedNoxels;
+		bool unconnectednodescontainer = false;
+		for (auto nodescontainer : nodescontainers)
+		{
+			if (!nodescontainer->IsConnected())
+			{
+				errors.Emplace(ECraftDiagnosisSeverity::Error, FText::Format(LOCTEXT("NotConnectedNodesContainer", "Component {0}, Node container {1} is not connected to any noxel"), *Component->GetName(), *nodescontainer->GetName()));
+				unconnectednodescontainer = true;
+				continue;
+			}
+			ConnectedNoxels.Add(nodescontainer->GetAttachedNoxel());
+			if (nodescontainers.Num() >= 2)
+			{
+				NoxelCoverageMap[nodescontainer->GetAttachedNoxel()].Add(Component);
+			}
+		}
+		//All nodes containers must be connected to different noxels
+		if (!unconnectednodescontainer && ConnectedNoxels.Num() != nodescontainers.Num())
+		{
+			errors.Emplace(ECraftDiagnosisSeverity::Error, FText::Format(LOCTEXT("SharedNoxelNodesContainer", "Component {0}, some node containers are connected to the same noxels"), *Component->GetName()));
+		}
+
+		TArray<UNoxelContainer*> noxelcontainers;
+		Component->GetComponents<UNoxelContainer>(noxelcontainers);
+		for (auto noxelcontainer : noxelcontainers)
+		{
+			//All noxels must be connected to at least a nodes container
+			if (noxelcontainer->GetConnectedNodesContainers().Num() <= 0)
+			{
+				errors.Emplace(ECraftDiagnosisSeverity::Error, FText::Format(LOCTEXT("UnconnectedNoxelContainer", "Component {0}, Noxel container {1} isn't connected to any nodes container"), *Component->GetName(), *noxelcontainer->GetName()));
+				continue;
+			}
+			//All noxels must have at least one panel
+			if (noxelcontainer->GetPanels().Num() <= 0)
+			{
+				errors.Emplace(ECraftDiagnosisSeverity::Error, FText::Format(LOCTEXT("NoPanelsNoxelContainer", "Component {0}, Noxel container {1} has no panels"), *Component->GetName(), *noxelcontainer->GetName()));
+			}
+		}
+	}
+	//All noxels must be connected together by components
+
+	//try to connect each 
+	
+
+	//Must have a controller
+	
+		//Controller must be connected
+
+	return errors;
+}
+#undef LOCTEXT_NAMESPACE
 
 void UCraftDataHandler::enableCraft()
 {
@@ -672,7 +741,7 @@ void UCraftDataHandler::OnRep_Components()
 // Loading and saving of specific nodes / noxels --------------------------------------------------------------------------------------------------------------------------------
 
 //Nodes ----------------------------------------------------------------
-void UCraftDataHandler::saveNodesContainer(UNodesContainer * NodesContainer, int32 parentIndex, int32 nodesContainerIndex, FNodesContainerSave & SavedData, TMap<FNodeID, FNodeSavedRedirector>& RedirectorMap)
+void UCraftDataHandler::saveNodesContainer(const UNodesContainer * NodesContainer, int32 parentIndex, int32 nodesContainerIndex, FNodesContainerSave & SavedData, TMap<FNodeID, FNodeSavedRedirector>& RedirectorMap)
 {
 	SavedData = FNodesContainerSave(NodesContainer->GetName(), NodesContainer->GetNodeSize());
 
@@ -733,7 +802,7 @@ bool UCraftDataHandler::loadNodesContainer(UNodesContainer * NodesContainer, int
 }
 
 //Noxel ----------------------------------------------------------------
-void UCraftDataHandler::saveNoxelContainer(UNoxelContainer * NoxelContainer, TMap<FNodeID, FNodeSavedRedirector>& RedirectorMap, FNoxelContainerSave & SavedData)
+void UCraftDataHandler::saveNoxelContainer(const UNoxelContainer * NoxelContainer, TMap<FNodeID, FNodeSavedRedirector>& RedirectorMap, FNoxelContainerSave & SavedData)
 {
 	SavedData = FNoxelContainerSave(NoxelContainer->GetName());
 
@@ -788,7 +857,7 @@ bool UCraftDataHandler::loadNoxelContainer(UNoxelContainer * NoxelContainer, TMa
 }
 
 //Connectors -----------------------------------------------------------
-void UCraftDataHandler::saveConnector(UConnectorBase * Connector, TArray<AActor*>& Components, FConnectorSavedRedirector & SavedData)
+void UCraftDataHandler::saveConnector(const UConnectorBase * Connector, const TArray<AActor*>& Components, FConnectorSavedRedirector & SavedData)
 {
 	if (!Connector->bIsSender)
 	{
@@ -797,7 +866,7 @@ void UCraftDataHandler::saveConnector(UConnectorBase * Connector, TArray<AActor*
 	SavedData.ConnectorName = Connector->GetName();
 	SavedData.parentIndex.Empty(Connector->Connected.Num());
 	SavedData.OtherConnectorName.Empty(Connector->Connected.Num());
-	for (UConnectorBase* OtherConnector : Connector->Connected)
+	for (const UConnectorBase* OtherConnector : Connector->Connected)
 	{
 		SavedData.parentIndex.Add(Components.Find(OtherConnector->GetOwner()));
 		SavedData.OtherConnectorName.Add(OtherConnector->GetName());

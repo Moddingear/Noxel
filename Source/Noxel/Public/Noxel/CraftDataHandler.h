@@ -15,28 +15,45 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE(FCraftLoadedEvent);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FComponentReplicatedEvent);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FEditorQueueExternalRunEvent);
 
-UENUM()
-enum ECraftDiagnosisSeverity
+UENUM(BlueprintType)
+enum class ECraftDiagnosisSeverity : uint8
 {
-	Error,
-	Warning,
-	Info,
-	Verbose
+	SetupError	UMETA(DisplayName = "Setup Error"),
+	Error		UMETA(DisplayName = "Error"),
+	Warning		UMETA(DisplayName = "Warning"),
+	Info		UMETA(DisplayName = "Information"),
+	Verbose		UMETA(DisplayName = "Verbose")
 };
 
-USTRUCT()
+USTRUCT(BlueprintType)
 struct FCraftDiagnosisData
 {
 	GENERATED_BODY()
 
+	UPROPERTY(BlueprintReadWrite)
 	ECraftDiagnosisSeverity Severity;
+	UPROPERTY(BlueprintReadWrite)
 	FText Message;
 
-	FORCEINLINE operator<(FCraftDiagnosisData other) const
+	FCraftDiagnosisData()
+		:Severity(ECraftDiagnosisSeverity::Verbose), Message()
 	{
 		
 	}
+
+	FCraftDiagnosisData(ECraftDiagnosisSeverity InSeverity, const FText &InMessage)
+		:Severity(InSeverity), Message(InMessage)
+	{
+		
+	}
+
+	FORCEINLINE bool operator<(FCraftDiagnosisData other) const
+	{
+		return Severity < other.Severity;
+	}
 };
+
+class UConnectorBase;
 
 UCLASS(ClassGroup = "Noxel", Blueprintable, BlueprintType, meta = (BlueprintSpawnableComponent))
 class NOXEL_API UCraftDataHandler: public UActorComponent
@@ -93,9 +110,9 @@ public:
 	UFUNCTION(BlueprintPure)
 	TArray<class ANoxelPart*> GetParts();
 
-	bool HasAnyDataComponentConnected(AActor* Component);
+	static bool HasAnyDataComponentConnected(const AActor* Component);
 
-	bool HasAnyConnectorConnected(AActor* Component);
+	static bool HasAnyConnectorConnected(const AActor* Component);
 	
 	//Add a component and registers it in the craft
 	AActor* AddComponent(TSubclassOf<AActor> Class, FTransform Location, FActorSpawnParameters SpawnParameters, bool bSetSpawnContext = true, bool bFinishSpawning = true);
@@ -119,12 +136,18 @@ public:
 
 	void destroyCraft();
 
+	//save craft to file
 	UFUNCTION(BlueprintCallable)
-		FCraftSave saveCraft();
+		FCraftSave saveCraft() const;
 
+	//spawn craft components from save, load all nodes and noxels
 	UFUNCTION(BlueprintCallable)
 		void loadCraft(FCraftSave Craft, FTransform transform);
 
+	UFUNCTION(BlueprintCallable)
+	TArray<FCraftDiagnosisData> DiagnoseCraft() const;
+
+	//attach components, enable physics
 	UFUNCTION(BlueprintCallable)
 		void enableCraft();
 
@@ -165,17 +188,17 @@ private:
 	UFUNCTION()
 	virtual void OnRep_Components();
 	
-	static void saveNodesContainer(UNodesContainer* NodesContainer, int32 parentIndex, int32 nodesContainerIndex, FNodesContainerSave& SavedData, TMap<FNodeID, FNodeSavedRedirector>& RedirectorMap);
+	static void saveNodesContainer(const UNodesContainer* NodesContainer, int32 parentIndex, int32 nodesContainerIndex, FNodesContainerSave& SavedData, TMap<FNodeID, FNodeSavedRedirector>& RedirectorMap);
 
-	static void saveNoxelContainer(UNoxelContainer* NoxelContainer, TMap<FNodeID, FNodeSavedRedirector>& RedirectorMap, FNoxelContainerSave& SavedData);
+	static void saveNoxelContainer(const UNoxelContainer* NoxelContainer, TMap<FNodeID, FNodeSavedRedirector>& RedirectorMap, FNoxelContainerSave& SavedData);
 
-	static void saveConnector(class UConnectorBase* Connector, TArray<AActor*>& Components, FConnectorSavedRedirector& SavedData);
+	static void saveConnector(const UConnectorBase* Connector, const TArray<AActor*>& Components, FConnectorSavedRedirector& SavedData);
 
 	static bool loadNodesContainer(UNodesContainer* NodesContainer, int32 parentIndex, int32 nodesContainerIndex, FNodesContainerSave SavedData, TMap<FNodeSavedRedirector, FNodeID>& RedirectorMap);
 
 	static bool loadNoxelContainer(UNoxelContainer* NoxelContainer, TMap<FNodeSavedRedirector, FNodeID>& RedirectorMap, FNoxelContainerSave SavedData);
 
-	static void loadConnector(class UConnectorBase* Connector, TArray<AActor*>& Components, FConnectorSavedRedirector SavedData);
+	static void loadConnector(UConnectorBase* Connector, TArray<AActor*>& Components, FConnectorSavedRedirector SavedData);
 
 
 public:

@@ -52,18 +52,18 @@ private:
 
 	//OutPanels is an array of PanelIndex, outOccurences is the number of nodes this panel shares with this collection,
 	//OutNodesAttachedBy are the nodes shared, IgnoreFilter is an array of PanelIndex to ignore
-	bool FindPanelsByNodes(TArray<FNodeID>& Nodes, TArray<int32>& OutPanels, TArray<int32>& OutOccurences,
-		TArray<TArray<FNodeID>>& OutNodesAttachedBy, TArray<int32> IgnoreFilter);
+	static bool FindPanelsByNodes(TArray<FNodeID>& Nodes, TArray<int32>& OutPanels, TArray<int32>& OutOccurences,
+	                              TArray<TArray<FNodeID>>& OutNodesAttachedBy, TArray<int32> IgnoreFilter);
 
 	//Gives the index in Panels of the panel with the wanted PanelIndex
 	bool GetIndexOfPanelByPanelIndex(int32 PanelIndex, int32& OutIndexInArray);
 
 private:
 	
-	bool IsPanelValid(FPanelData &data);
+	bool IsPanelValid(FPanelData &data) const;
 
 	//Checks panel validity and outputs intermediate adjacency computations
-	bool IsPanelValid(FPanelData &data, TArray<int32> &AdjacentPanels,TArray<int32> &Occurrences, TArray<TArray<FNodeID>> &NodesAttachedBy);
+	bool IsPanelValid(FPanelData &data, TArray<int32> &AdjacentPanels,TArray<int32> &Occurrences, TArray<TArray<FNodeID>> &NodesAttachedBy) const;
 
 	//Fits a plane, reorder nodes and computes area
 	void ComputePanelGeometricData(FPanelData &data);
@@ -111,7 +111,7 @@ public:
 	bool GetPanelByNodes(TArray<FNodeID> Nodes, int32& PanelIndex);
 
 	UFUNCTION(BlueprintPure)
-	TArray<FPanelData> GetPanels();
+	TArray<FPanelData> GetPanels() const;
 
 	UFUNCTION(BlueprintCallable)
 	static bool GetPanelHit(FHitResult hit, FPanelID& PanelHit);

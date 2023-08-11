@@ -74,7 +74,7 @@ public:
 
 	void SetNodeSize(float NewNodeSize);
 
-	UNoxelContainer* GetAttachedNoxel();
+	UNoxelContainer* GetAttachedNoxel() const;
 	
 	UFUNCTION(BlueprintCallable, BlueprintPure)
 	bool IsPlayerEditable() const;
@@ -99,9 +99,9 @@ public:
 
 	bool FindNode(FVector Location, FNodeID& FoundNode);
 
-	TArray<int32> GetAttachedPanels(FVector Location); //Returns the panel index of the attached panels, belonging to the attached Noxel container
+	TArray<int32> GetAttachedPanels(FVector Location) const; //Returns the panel index of the attached panels, belonging to the attached Noxel container
 
-	TArray<FNodeID> GenerateNodesKeyArray();
+	TArray<FNodeID> GenerateNodesKeyArray() const;
 
 	static bool GetNodeHit(FHitResult Hit, FNodeID& HitNode);
 

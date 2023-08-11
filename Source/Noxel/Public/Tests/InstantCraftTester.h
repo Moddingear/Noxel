@@ -1,7 +1,7 @@
 ﻿#pragma once
 
 #include "CoreMinimal.h"
-#include "Actor.h"
+#include "GameFramework/Actor.h"
 #include "InstantCraftTester.generated.h"
 
 UCLASS(BlueprintType)

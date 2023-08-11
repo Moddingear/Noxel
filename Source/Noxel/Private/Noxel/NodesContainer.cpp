@@ -100,7 +100,7 @@ void UNodesContainer::SetNodeSize(float NewNodeSize)
 	NodesProvider->SetWantedMeshBounds(FBoxSphereBounds(FVector::ZeroVector, FVector::OneVector * NodeSize, NodeSize));
 }
 
-UNoxelContainer* UNodesContainer::GetAttachedNoxel()
+UNoxelContainer* UNodesContainer::GetAttachedNoxel() const
 {
 	return AttachedNoxel;
 }
@@ -224,7 +224,7 @@ bool UNodesContainer::FindNode(FVector Location, FNodeID& FoundNode)
 	return false;
 }
 
-TArray<int32> UNodesContainer::GetAttachedPanels(FVector Location)
+TArray<int32> UNodesContainer::GetAttachedPanels(FVector Location) const
 {
 	int32 NodeIdx = Nodes.Find(Location);
 	if (NodeIdx != INDEX_NONE)
@@ -234,7 +234,7 @@ TArray<int32> UNodesContainer::GetAttachedPanels(FVector Location)
 	return TArray<int32>();
 }
 
-TArray<FNodeID> UNodesContainer::GenerateNodesKeyArray()
+TArray<FNodeID> UNodesContainer::GenerateNodesKeyArray() const
 {
 	TArray<FNodeID> Keys;
 	for (FNodeData Node : Nodes)
