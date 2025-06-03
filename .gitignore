@@ -12,6 +12,7 @@ Saved
 *.suo
 *.xcodeproj
 *.xcworkspace
+*.blend1
 .synkron.syncdb
 .synkron.sync
 *.code-workspace
